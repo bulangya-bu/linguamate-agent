@@ -8,6 +8,8 @@ target/
 logs/
 output/
 database.db
+database.db-shm
+database.db-wal
 *.log
 stderr.log
 stdout.log
