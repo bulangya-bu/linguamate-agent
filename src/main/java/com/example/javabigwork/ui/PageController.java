@@ -19,4 +19,19 @@ public class PageController {
     public String app() {
         return "forward:/index.html";
     }
+
+    @GetMapping("/login")
+    public String login() {
+        return "forward:/login.html";
+    }
+
+    @GetMapping("/register")
+    public String register() {
+        return "forward:/login.html";
+    }
+
+    @GetMapping("/admin")
+    public String admin() {
+        return "forward:/admin.html";
+    }
 }

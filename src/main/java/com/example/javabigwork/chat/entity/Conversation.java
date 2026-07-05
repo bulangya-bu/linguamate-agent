@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class Conversation {
     @TableId(type = IdType.AUTO)
     public Long id;
+    public Long userId;
     public String scene;
     public String title;
     public LocalDateTime createdAt;

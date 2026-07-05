@@ -3,10 +3,12 @@ package com.example.javabigwork.vocabulary.controller;
 import com.example.javabigwork.common.ApiResponse;
 import com.example.javabigwork.news.dto.HoverWordResponse;
 import com.example.javabigwork.tool.DictionaryTool;
+import com.example.javabigwork.vocabulary.dto.WordAiDetailView;
 import com.example.javabigwork.vocabulary.dto.WordCardView;
 import com.example.javabigwork.vocabulary.dto.WordQuizRequest;
 import com.example.javabigwork.vocabulary.dto.WordQuizResult;
 import com.example.javabigwork.vocabulary.service.ReviewScheduleService;
+import com.example.javabigwork.vocabulary.service.WordAiDetailService;
 import com.example.javabigwork.vocabulary.service.VocabularyService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -23,15 +25,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class VocabularyController {
     private final VocabularyService vocabularyService;
     private final ReviewScheduleService reviewScheduleService;
+    private final WordAiDetailService wordAiDetailService;
     private final DictionaryTool dictionaryTool;
 
     public VocabularyController(
             VocabularyService vocabularyService,
             ReviewScheduleService reviewScheduleService,
+            WordAiDetailService wordAiDetailService,
             DictionaryTool dictionaryTool
     ) {
         this.vocabularyService = vocabularyService;
         this.reviewScheduleService = reviewScheduleService;
+        this.wordAiDetailService = wordAiDetailService;
         this.dictionaryTool = dictionaryTool;
     }
 
@@ -43,6 +48,11 @@ public class VocabularyController {
     @PostMapping("/words/{id}/quiz")
     public ApiResponse<WordQuizResult> quiz(@PathVariable Long id, @Valid @RequestBody WordQuizRequest request) {
         return ApiResponse.ok(vocabularyService.submitQuiz(id, request));
+    }
+
+    @GetMapping("/words/{id}/ai-detail")
+    public ApiResponse<WordAiDetailView> aiDetail(@PathVariable Long id) {
+        return ApiResponse.ok(wordAiDetailService.detail(id));
     }
 
     @PostMapping("/words/{id}/favorite")

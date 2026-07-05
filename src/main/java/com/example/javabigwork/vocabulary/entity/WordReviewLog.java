@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class WordReviewLog {
     @TableId(type = IdType.AUTO)
     public Long id;
+    public Long userId;
     public Long wordId;
     public String answer;
     public Boolean correct;

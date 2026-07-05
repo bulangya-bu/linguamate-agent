@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class UserWordProgress {
     @TableId(type = IdType.AUTO)
     public Long id;
+    public Long userId;
     public Long wordId;
     public Integer familiarity;
     public Integer wrongCount;

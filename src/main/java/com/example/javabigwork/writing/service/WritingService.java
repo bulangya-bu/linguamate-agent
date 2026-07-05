@@ -2,6 +2,7 @@ package com.example.javabigwork.writing.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.example.javabigwork.agent.AgentTraceStep;
+import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.tool.EssayScoringResult;
 import com.example.javabigwork.tool.EssayScoringTool;
 import com.example.javabigwork.vocabulary.service.ExperienceService;
@@ -26,19 +27,22 @@ public class WritingService {
     private final EssaySubmissionMapper submissionMapper;
     private final EssayFeedbackMapper feedbackMapper;
     private final ExperienceService experienceService;
+    private final UserContext userContext;
 
     public WritingService(
             EssayReviewAiService essayReviewAiService,
             EssayScoringTool scoringTool,
             EssaySubmissionMapper submissionMapper,
             EssayFeedbackMapper feedbackMapper,
-            ExperienceService experienceService
+            ExperienceService experienceService,
+            UserContext userContext
     ) {
         this.essayReviewAiService = essayReviewAiService;
         this.scoringTool = scoringTool;
         this.submissionMapper = submissionMapper;
         this.feedbackMapper = feedbackMapper;
         this.experienceService = experienceService;
+        this.userContext = userContext;
     }
 
     public EssayReviewResponse review(EssayReviewRequest request) {
@@ -52,11 +56,14 @@ public class WritingService {
     }
 
     public List<EssaySubmission> history() {
-        return submissionMapper.selectList(Wrappers.<EssaySubmission>query().orderByDesc("created_at"));
+        return submissionMapper.selectList(Wrappers.<EssaySubmission>query()
+                .eq("user_id", userContext.userId())
+                .orderByDesc("created_at"));
     }
 
     private EssaySubmission persistSubmission(EssayReviewRequest request, EssayReviewDraft draft) {
         EssaySubmission submission = new EssaySubmission();
+        submission.userId = userContext.userId();
         submission.title = request.title() == null || request.title().isBlank() ? "Untitled Essay" : request.title();
         submission.examType = request.examType() == null || request.examType().isBlank() ? "general" : request.examType();
         submission.originalText = request.essayText();

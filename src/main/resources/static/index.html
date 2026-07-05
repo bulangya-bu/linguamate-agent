@@ -29,6 +29,7 @@
             <button class="nav-item" data-section="news"><span class="nav-dot"></span>阅读</button>
             <button class="nav-item" data-section="wordbank"><span class="nav-dot"></span>词库</button>
         </nav>
+        <button id="logoutBtn" class="nav-logout-button" type="button">退出登录</button>
     </aside>
 
     <main class="workspace">
@@ -46,6 +47,13 @@
                 <div><strong id="readingCount">0</strong><span>阅读记录</span></div>
             </div>
             <div class="level-panel" id="levelPanel">
+                <div class="level-user-row">
+                    <div>
+                        <span id="currentUserName">学习者</span>
+                        <small id="currentUserRole">USER</small>
+                    </div>
+                    <a id="adminEntry" class="level-admin-link" href="/admin" hidden>管理端</a>
+                </div>
                 <div class="level-badge" id="levelDisplay">Lv.1</div>
                 <div class="level-xp-row">
                     <div class="level-xp-bar"><div class="level-xp-fill" id="xpFill"></div></div>
@@ -248,7 +256,7 @@
                         <div class="wordbank-categories" id="wordBankCategories" role="tablist" aria-label="词库分类">
                             <button class="review-tab is-active" type="button" data-category="">全部</button>
                         </div>
-                        <input id="wordBankSearch" class="wordbank-search" autocomplete="off" placeholder="搜索英文或中文释义...">
+                        <input id="wordBankSearch" class="wordbank-search" autocomplete="off" placeholder="按英文或中文开头搜索...">
                     </div>
                     <div id="wordBankGrid" class="word-strip word-bank-grid"></div>
                     <div id="wordBankPagination" class="wordbank-pagination"></div>
@@ -259,7 +267,11 @@
 </div>
 
 <div id="wordTooltip" class="word-tooltip" role="tooltip"></div>
-<button id="settingsFab" class="settings-fab" type="button" aria-label="设置" title="设置">
+<div id="wordBankDialogBackdrop" class="wordbank-dialog-backdrop" aria-hidden="true"></div>
+<aside id="wordBankDialog" class="wordbank-dialog" role="dialog" aria-modal="true" aria-labelledby="wordBankDialogTitle" aria-hidden="true">
+    <div id="wordBankDialogContent"></div>
+</aside>
+<button id="settingsFab" class="settings-fab" type="button" aria-label="我的 API 设置" title="我的 API 设置">
     <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.1 7.1 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 1h-3.8a.5.5 0 0 0-.49.41l-.36 2.54c-.58.22-1.12.53-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 7.47a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94L2.83 13.15a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.41 1.05.73 1.63.94l.36 2.54a.5.5 0 0 0 .49.41h3.8a.5.5 0 0 0 .49-.41l.36-2.54c.58-.22 1.12-.53 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4Z"/>
     </svg>
@@ -268,12 +280,12 @@
 <aside id="settingsPanel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-hidden="true">
     <div class="settings-panel-head">
         <div>
-            <p class="eyebrow compact">AI 设置</p>
+            <p class="eyebrow compact">我的 API 设置</p>
             <h2 id="settingsTitle">模型连接</h2>
         </div>
         <button id="settingsClose" class="settings-close" type="button" aria-label="关闭设置">×</button>
     </div>
-    <p class="settings-note">配置接口地址、密钥和模型名，获取成功后会显示可选模型。</p>
+    <p class="settings-note">这里保存的是当前账号自己的接口地址、密钥和模型名，不会同步到其他用户。</p>
     <div class="settings-form">
         <label class="settings-field" for="aiBaseUrl">
             <span>模型地址</span>

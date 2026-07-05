@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class EssaySubmission {
     @TableId(type = IdType.AUTO)
     public Long id;
+    public Long userId;
     public String title;
     public String examType;
     public String originalText;

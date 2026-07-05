@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class ReadingRecord {
     @TableId(type = IdType.AUTO)
     public Long id;
+    public Long userId;
     public Long articleId;
     public Integer readProgress;
     public Integer lookedUpWords;

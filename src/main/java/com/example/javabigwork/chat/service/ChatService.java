@@ -51,6 +51,7 @@ public class ChatService {
     }
 
     public List<Message> messages(Long conversationId) {
+        conversationService.requireOwned(conversationId);
         return messageMapper.selectList(Wrappers.<Message>query()
                 .eq("conversation_id", conversationId)
                 .orderByAsc("created_at"));

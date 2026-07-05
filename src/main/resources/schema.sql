@@ -1,5 +1,17 @@
+CREATE TABLE IF NOT EXISTS user_account (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(64) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    nickname VARCHAR(64),
+    role VARCHAR(32) NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS conversation (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL DEFAULT 1,
     scene VARCHAR(64),
     title VARCHAR(255),
     created_at TIMESTAMP,
@@ -8,11 +20,13 @@ CREATE TABLE IF NOT EXISTS conversation (
 
 CREATE TABLE IF NOT EXISTS ai_setting (
     id BIGINT PRIMARY KEY,
+    user_id BIGINT NOT NULL DEFAULT 1,
     provider VARCHAR(64),
     base_url VARCHAR(255),
     api_key TEXT,
     chat_model VARCHAR(128),
-    updated_at TIMESTAMP
+    updated_at TIMESTAMP,
+    UNIQUE KEY uk_ai_setting_user (user_id)
 );
 
 CREATE TABLE IF NOT EXISTS message (
@@ -38,6 +52,7 @@ CREATE TABLE IF NOT EXISTS word (
 
 CREATE TABLE IF NOT EXISTS user_word_progress (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL DEFAULT 1,
     word_id BIGINT NOT NULL,
     familiarity INT,
     wrong_count INT,
@@ -49,14 +64,26 @@ CREATE TABLE IF NOT EXISTS user_word_progress (
 
 CREATE TABLE IF NOT EXISTS word_review_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL DEFAULT 1,
     word_id BIGINT NOT NULL,
     answer VARCHAR(255),
     correct BOOLEAN,
     created_at TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS word_ai_detail_cache (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    word_id BIGINT NOT NULL,
+    model_name VARCHAR(128) NOT NULL,
+    content_json TEXT NOT NULL,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    UNIQUE KEY uk_word_ai_detail (word_id, model_name)
+);
+
 CREATE TABLE IF NOT EXISTS essay_submission (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL DEFAULT 1,
     title VARCHAR(255),
     exam_type VARCHAR(64),
     original_text TEXT,
@@ -88,6 +115,7 @@ CREATE TABLE IF NOT EXISTS news_article (
 
 CREATE TABLE IF NOT EXISTS reading_record (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL DEFAULT 1,
     article_id BIGINT,
     read_progress INT,
     looked_up_words INT,
@@ -118,10 +146,9 @@ CREATE TABLE IF NOT EXISTS knowledge_chunk (
 
 CREATE TABLE IF NOT EXISTS user_level (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL DEFAULT 1,
     level INT DEFAULT 1,
     experience INT DEFAULT 0,
     total_experience INT DEFAULT 0,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
-INSERT INTO user_level (id, level, experience, total_experience) VALUES (1, 1, 0, 0) ON DUPLICATE KEY UPDATE level=level;

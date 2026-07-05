@@ -1,11 +1,14 @@
 package com.example.javabigwork.ai.service;
 
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.example.javabigwork.ai.dto.AiConnectionRequest;
 import com.example.javabigwork.ai.dto.AiRuntimeSettings;
 import com.example.javabigwork.ai.dto.AiSettingsRequest;
 import com.example.javabigwork.ai.dto.AiSettingsView;
 import com.example.javabigwork.ai.entity.AiSetting;
 import com.example.javabigwork.ai.mapper.AiSettingMapper;
+import com.example.javabigwork.auth.UserContext;
+import com.example.javabigwork.auth.entity.UserAccount;
 import com.example.javabigwork.config.AiProperties;
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -14,14 +17,16 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class AiSettingsService {
-    private static final Long SINGLETON_ID = 1L;
+    private static final Long DEFAULT_USER_ID = 1L;
 
     private final AiSettingMapper settingMapper;
     private final AiProperties defaults;
+    private final UserContext userContext;
 
-    public AiSettingsService(AiSettingMapper settingMapper, AiProperties defaults) {
+    public AiSettingsService(AiSettingMapper settingMapper, AiProperties defaults, UserContext userContext) {
         this.settingMapper = settingMapper;
         this.defaults = defaults;
+        this.userContext = userContext;
     }
 
     public AiSettingsView currentView() {
@@ -52,11 +57,13 @@ public class AiSettingsService {
     }
 
     public AiSettingsView save(AiSettingsRequest request) {
-        AiSetting setting = load();
+        Long userId = currentUserId();
+        AiSetting setting = load(userId);
         boolean existing = setting != null;
         if (setting == null) {
             setting = new AiSetting();
-            setting.id = SINGLETON_ID;
+            setting.id = userId;
+            setting.userId = userId;
         }
 
         String baseUrl = pick(request == null ? null : request.baseUrl(), effectiveBaseUrl(setting));
@@ -64,6 +71,7 @@ public class AiSettingsService {
         String chatModel = pick(request == null ? null : request.chatModel(), effectiveChatModel(setting));
 
         setting.provider = effectiveProvider(setting);
+        setting.userId = userId;
         setting.baseUrl = normalizeBaseUrl(baseUrl);
         setting.apiKey = apiKey == null ? "" : apiKey.trim();
         setting.chatModel = chatModel == null || chatModel.isBlank() ? defaults.chatModel() : chatModel.trim();
@@ -82,7 +90,16 @@ public class AiSettingsService {
     }
 
     private AiSetting load() {
-        return settingMapper.selectById(SINGLETON_ID);
+        return load(currentUserId());
+    }
+
+    private AiSetting load(Long userId) {
+        return settingMapper.selectOne(Wrappers.<AiSetting>query().eq("user_id", userId).last("LIMIT 1"));
+    }
+
+    private Long currentUserId() {
+        UserAccount user = userContext.currentUser();
+        return user == null || user.id == null ? DEFAULT_USER_ID : user.id;
     }
 
     private String effectiveProvider(AiSetting setting) {

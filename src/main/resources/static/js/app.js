@@ -1,4 +1,5 @@
 const state = {
+    currentUser: null,
     conversationId: null,
     words: [],
     tooltipWord: null,
@@ -20,8 +21,11 @@ const state = {
         index: 0,
         answers: {},
         options: [],
-        completed: false
+        completed: false,
+        aiDetails: {}
     },
+    wordAiDetails: {},
+    inlineAnsweredWords: {},
     wordBank: {
         categories: [],
         words: [],
@@ -30,7 +34,8 @@ const state = {
         size: 50,
         category: "",
         search: "",
-        loaded: false
+        loaded: false,
+        selectedWordId: null
     }
 };
 
@@ -41,6 +46,10 @@ const api = async (url, options = {}) => {
     });
     const payload = await response.json();
     if (!payload.success) {
+        if (response.status === 401) {
+            window.location.href = "/login";
+            return null;
+        }
         throw new Error(payload.message || "请求失败");
     }
     return payload.data;
@@ -218,6 +227,8 @@ function wordMeta(word) {
 }
 
 function wordCard(word, compact = false) {
+    const aiState = state.wordAiDetails[word.id];
+    const inlineAnswered = Boolean(state.inlineAnsweredWords[word.id]);
     const quiz = compact ? "" : `
         <form class="mini-quiz" data-word-id="${word.id}">
             <input placeholder="输入英文或中文释义">
@@ -234,7 +245,95 @@ function wordCard(word, compact = false) {
             </div>
             <p>${word.meaningCn}</p>
             ${quiz}
+            ${inlineAnswered ? renderInlineWordExample(word) : ""}
+            ${inlineAnswered ? renderInlineDetailAction(word, aiState) : ""}
+            ${inlineAnswered ? renderWordAiDetail(word, aiState, "inline") : ""}
         </article>`;
+}
+
+function renderWordBankDialog(word) {
+    if (!word) return "";
+    const aiState = state.wordAiDetails[word.id];
+    const english = word.exampleEn || `Try to use ${word.word} in a complete sentence.`;
+    const chinese = word.exampleCn || "试着把这个单词放进一个完整句子里。";
+    return `
+        <div class="wordbank-dialog-shell" data-wordbank-dialog-word-id="${word.id}">
+            <div class="wordbank-dialog-head">
+                <div>
+                    <p class="eyebrow compact">词库详情</p>
+                    <h2 id="wordBankDialogTitle">${escapeHtml(word.word)}</h2>
+                    ${wordMeta(word)}
+                </div>
+                <div class="wordbank-dialog-actions">
+                    ${favoriteButton(word, "wordbank-dialog-favorite")}
+                    <button id="wordBankDialogClose" class="wordbank-dialog-close" type="button" aria-label="关闭词库详情">×</button>
+                </div>
+            </div>
+            <div class="wordbank-dialog-meaning">
+                <span>中文释义</span>
+                <p>${escapeHtml(word.meaningCn || "暂无释义")}</p>
+            </div>
+            <div class="wordbank-dialog-example">
+                <span>例句</span>
+                <p>${highlightTerm(english, word.word)}</p>
+                ${chinese ? `<small>${escapeHtml(chinese)}</small>` : ""}
+            </div>
+            ${renderWordBankDetailAction(word, aiState)}
+            <div id="wordBankDialogAiDetail" class="wordbank-dialog-ai">
+                ${renderWordAiDetail(word, aiState, "wordbank")}
+            </div>
+        </div>`;
+}
+
+function renderWordBankDetailAction(word, aiState) {
+    const loading = aiState?.status === "loading";
+    const ready = aiState?.status === "ready";
+    return `
+        <div class="wordbank-dialog-detail-actions">
+            <button class="quiz-detail-button ${loading ? "is-loading" : ""} ${ready ? "is-done" : ""}"
+                    type="button"
+                    data-wordbank-ai-detail-word-id="${word.id}"
+                    ${loading ? "disabled" : ""}>
+                ${loading ? "生成中..." : ready ? "已生成解析" : "深度解析"}
+            </button>
+        </div>`;
+}
+
+function openWordBankDialog(wordId) {
+    const word = findWordById(wordId);
+    if (!word) return;
+    state.wordBank.selectedWordId = Number(wordId);
+    refreshWordBankDialog();
+    $("#wordBankDialog")?.classList.add("is-open");
+    $("#wordBankDialog")?.setAttribute("aria-hidden", "false");
+    $("#wordBankDialogBackdrop")?.classList.add("is-open");
+}
+
+function closeWordBankDialog() {
+    state.wordBank.selectedWordId = null;
+    $("#wordBankDialog")?.classList.remove("is-open");
+    $("#wordBankDialog")?.setAttribute("aria-hidden", "true");
+    $("#wordBankDialogBackdrop")?.classList.remove("is-open");
+}
+
+function refreshWordBankDialog() {
+    const content = $("#wordBankDialogContent");
+    const word = findWordById(state.wordBank.selectedWordId);
+    if (!content || !word) return;
+    content.innerHTML = renderWordBankDialog(word);
+    bindWordBankDialogActions();
+}
+
+function bindWordBankDialogActions() {
+    $("#wordBankDialogClose")?.addEventListener("click", closeWordBankDialog);
+    $("#wordBankDialogContent")?.querySelector("[data-wordbank-ai-detail-word-id]")?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        loadWordAiDetail(event.currentTarget.dataset.wordbankAiDetailWordId, "wordbank");
+    });
+    $("#wordBankDialogContent")?.querySelector("[data-ai-detail-retry-id]")?.addEventListener("click", (event) => {
+        event.stopPropagation();
+        loadWordAiDetail(event.currentTarget.dataset.aiDetailRetryId, "wordbank", true);
+    });
 }
 
 function renderTodayWords() {
@@ -260,7 +359,8 @@ async function loadWords() {
         index: 0,
         answers: {},
         options: state.words.map((word, index) => buildQuizOptions(word, index)),
-        completed: false
+        completed: false,
+        aiDetails: {}
     };
     renderWordQuiz();
 }
@@ -291,6 +391,12 @@ function renderReviewWords() {
         : `<div class="empty-state review-empty">${emptyText}</div>`;
 }
 
+function findWordById(wordId) {
+    const numericId = Number(wordId);
+    return [...state.words, ...state.review.words, ...state.wordBank.words]
+        .find((item) => item.id === numericId);
+}
+
 function bindQuizForms() {
     $$(".mini-quiz").forEach((form) => {
         form.addEventListener("submit", async (event) => {
@@ -301,11 +407,58 @@ function bindQuizForms() {
                 method: "POST",
                 body: JSON.stringify({ answer: input.value })
             });
+            applyQuizResultToWord(Number(wordId), result);
             input.value = result.correct ? "已答对" : result.expectedMeaning;
-            form.closest(".word-card").classList.add(result.correct ? "is-correct" : "is-wrong");
+            const card = form.closest(".word-card");
+            card.classList.add(result.correct ? "is-correct" : "is-wrong");
+            form.querySelector("button").disabled = true;
+            const updatedWord = findWordById(wordId);
+            renderInlineAnswerResult(card, updatedWord);
             await loadReviews();
             await loadReport();
         });
+    });
+}
+
+function renderInlineAnswerResult(card, word) {
+    if (!card || !word) return;
+    state.inlineAnsweredWords[word.id] = true;
+    if (!card.querySelector(".word-card-example")) {
+        card.insertAdjacentHTML("beforeend", renderInlineWordExample(word));
+    }
+    if (!card.querySelector(".word-card-detail-actions")) {
+        card.insertAdjacentHTML("beforeend", renderInlineDetailAction(word, state.wordAiDetails[word.id]));
+    }
+    bindInlineDetailAction(card);
+}
+
+function renderInlineWordExample(word) {
+    const english = word.exampleEn || `Try to use ${word.word} in a complete sentence.`;
+    const chinese = word.exampleCn || "";
+    return `
+        <div class="word-card-example">
+            <p>${highlightTerm(english, word.word)}</p>
+            ${chinese ? `<span>${escapeHtml(chinese)}</span>` : ""}
+        </div>`;
+}
+
+function renderInlineDetailAction(word, aiState) {
+    const loading = aiState?.status === "loading";
+    const ready = aiState?.status === "ready";
+    return `
+        <div class="word-card-detail-actions">
+            <button class="quiz-detail-button inline-detail-button ${loading ? "is-loading" : ""} ${ready ? "is-done" : ""}"
+                    type="button"
+                    data-inline-ai-detail-word-id="${word.id}"
+                    ${loading ? "disabled" : ""}>
+                ${loading ? "生成中..." : ready ? "已生成解析" : "深度解析"}
+            </button>
+        </div>`;
+}
+
+function bindInlineDetailAction(root) {
+    root.querySelector("[data-inline-ai-detail-word-id]")?.addEventListener("click", (event) => {
+        loadWordAiDetail(event.currentTarget.dataset.inlineAiDetailWordId, "inline");
     });
 }
 
@@ -353,9 +506,11 @@ function renderWordQuiz() {
     const answered = Boolean(answer);
     const options = state.quiz.options[index] || [];
     const progress = Math.round(((index + (answered ? 1 : 0)) / state.words.length) * 100);
+    const aiState = state.quiz.aiDetails[word.id];
+    const expanded = Boolean(aiState);
 
     container.innerHTML = `
-        <article class="word-quiz-card ${answered ? "is-answered" : ""}">
+        <article class="word-quiz-card ${answered ? "is-answered" : ""} ${expanded ? "has-ai-detail" : ""}">
             <div class="quiz-progress">
                 <span>第 ${index + 1} / ${state.words.length} 题</span>
                 <div class="quiz-progress-track"><i style="width: ${progress}%"></i></div>
@@ -366,9 +521,11 @@ function renderWordQuiz() {
                     <div class="quiz-word" aria-label="当前单词">${word.word}</div>
                 </div>
                 <div class="quiz-example-slot ${answered ? "is-visible" : ""}">
-                    ${answered ? renderWordExample(word) : ""}
+                    ${answered ? renderWordExample(word, aiState) : ""}
                 </div>
             </div>
+            ${answered ? renderQuizDetailAction(word, aiState) : ""}
+            ${answered ? renderWordAiDetail(word, aiState) : ""}
             <div class="quiz-options" role="list">
                 ${options.map((meaning) => renderQuizOption(meaning, answer, word)).join("")}
             </div>
@@ -396,7 +553,7 @@ function renderQuizOption(meaning, answer, word) {
         </button>`;
 }
 
-function renderWordExample(word) {
+function renderWordExample(word, aiState) {
     const english = word.exampleEn || `Try to use ${word.word} in a complete sentence.`;
     const chinese = word.exampleCn || "试着把这个单词放进一个完整句子里。";
     const source = word.exampleSource || word.sourceName || "";
@@ -406,6 +563,77 @@ function renderWordExample(word) {
             <p class="quiz-example-cn">${escapeHtml(chinese)}</p>
             ${source ? `<span class="quiz-example-source">出处：${escapeHtml(source)}</span>` : ""}
         </aside>`;
+}
+
+function renderQuizDetailAction(word, aiState) {
+    const loading = aiState?.status === "loading";
+    const ready = aiState?.status === "ready";
+    return `
+        <div class="quiz-detail-actions">
+            <button class="quiz-detail-button ${loading ? "is-loading" : ""} ${ready ? "is-done" : ""}"
+                    type="button"
+                    data-ai-detail-word-id="${word.id}"
+                    ${loading ? "disabled" : ""}>
+                ${loading ? "生成中..." : ready ? "已生成解析" : "深度解析"}
+            </button>
+        </div>`;
+}
+
+function renderWordAiDetail(word, aiState, variant = "") {
+    if (!aiState) return "";
+    if (aiState.status === "loading") {
+        return `
+            <section class="quiz-ai-detail ${variant} is-loading">
+                <span class="quiz-ai-spinner" aria-hidden="true"></span>
+                <span>正在生成 ${escapeHtml(word.word)} 的深度解析...</span>
+            </section>`;
+    }
+    if (aiState.status === "error") {
+        return `
+            <section class="quiz-ai-detail ${variant} is-error">
+                <span>${escapeHtml(aiState.message || "模型未配置或暂时不可用，请检查 AI 设置")}</span>
+                <button class="quiz-detail-button retry-detail-button" type="button" data-ai-detail-retry-id="${word.id}">
+                    重试
+                </button>
+            </section>`;
+    }
+    const detail = aiState.data || {};
+    const examples = Array.isArray(detail.examples) ? detail.examples : [];
+    const variants = Array.isArray(detail.variants) ? detail.variants : [];
+    const usageNotes = Array.isArray(detail.usageNotes) ? detail.usageNotes : [];
+    const collocations = Array.isArray(detail.collocations) ? detail.collocations : [];
+    return `
+        <section class="quiz-ai-detail ${variant}">
+            <div class="quiz-ai-head">
+                <strong>深度解析 · ${escapeHtml(detail.word || word.word)}</strong>
+                <span>${escapeHtml(detail.modelName || "")}${detail.cached ? " · 已缓存" : ""}</span>
+            </div>
+            <div class="quiz-ai-grid">
+                ${renderAiSection("更多例句", examples.map((item) => `
+                    <p>${highlightTerm(item.en || "", word.word)}</p>
+                    ${item.cn ? `<small>${escapeHtml(item.cn)}</small>` : ""}
+                `))}
+                ${renderAiSection("词性变种", variants.map((item) => `
+                    <p><b>${escapeHtml(item.form || "")}</b> ${escapeHtml(item.type || "")}</p>
+                    ${item.meaningCn ? `<small>${escapeHtml(item.meaningCn)}</small>` : ""}
+                `))}
+                ${renderAiSection("用法提示", usageNotes.map((item) => `<p>${escapeHtml(item)}</p>`))}
+                ${renderAiSection("固定搭配", collocations.map((item) => `
+                    <p><b>${escapeHtml(item.phrase || "")}</b> ${escapeHtml(item.meaningCn || "")}</p>
+                    ${item.exampleEn ? `<small>${highlightTerm(item.exampleEn, word.word)}</small>` : ""}
+                `))}
+            </div>
+        </section>`;
+}
+
+function renderAiSection(title, rows) {
+    const cleanRows = rows.filter((row) => row && row.trim());
+    if (!cleanRows.length) return "";
+    return `
+        <div class="quiz-ai-section">
+            <h3>${escapeHtml(title)}</h3>
+            ${cleanRows.map((row) => `<div class="quiz-ai-row">${row}</div>`).join("")}
+        </div>`;
 }
 
 function highlightTerm(text, term) {
@@ -453,6 +681,14 @@ function bindWordQuizActions() {
             }
         });
     });
+    $$("[data-ai-detail-word-id]").forEach((button) => {
+        button.addEventListener("click", () => loadWordAiDetail(button.dataset.aiDetailWordId, "quiz"));
+    });
+    $$("[data-ai-detail-retry-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+            loadWordAiDetail(button.dataset.aiDetailRetryId, button.closest(".quiz-ai-detail")?.classList.contains("inline") ? "inline" : "quiz", true);
+        });
+    });
 }
 
 async function answerCurrentWord(selectedMeaning) {
@@ -464,6 +700,7 @@ async function answerCurrentWord(selectedMeaning) {
         method: "POST",
         body: JSON.stringify({ answer: selectedMeaning })
     });
+    applyQuizResultToWord(word.id, result);
     state.quiz.answers[word.id] = {
         selected: selectedMeaning,
         correct: result.correct,
@@ -473,6 +710,99 @@ async function answerCurrentWord(selectedMeaning) {
     window.scrollTo(scrollX, scrollY);
     await loadReviews();
     await loadReport();
+}
+
+function applyQuizResultToWord(wordId, result) {
+    const patch = (word) => word.id === wordId ? {
+        ...word,
+        exampleEn: result.exampleEn || word.exampleEn,
+        exampleCn: result.exampleCn || word.exampleCn
+    } : word;
+    state.words = state.words.map(patch);
+    state.review.words = state.review.words.map(patch);
+    state.wordBank.words = state.wordBank.words.map(patch);
+}
+
+async function loadWordAiDetail(wordId, source = "quiz", force = false) {
+    if (!wordId) return;
+    const store = source === "quiz" ? state.quiz.aiDetails : state.wordAiDetails;
+    if (source === "inline") {
+        state.inlineAnsweredWords[wordId] = true;
+    }
+    const existing = store[wordId];
+    if (!force && (existing?.status === "loading" || existing?.status === "ready")) return;
+    store[wordId] = { status: "loading" };
+    refreshWordAiDetailUi(wordId, source);
+    try {
+        const detail = await api(`/api/words/${wordId}/ai-detail`);
+        store[wordId] = { status: "ready", data: detail };
+    } catch (error) {
+        store[wordId] = {
+            status: "error",
+            message: error.message || "模型未配置或暂时不可用，请检查 AI 设置"
+        };
+    }
+    refreshWordAiDetailUi(wordId, source);
+}
+
+function refreshWordAiDetailUi(wordId, source) {
+    if (source === "inline") {
+        refreshInlineWordAiDetail(wordId);
+    } else if (source === "wordbank") {
+        refreshWordBankDialog();
+    } else {
+        renderWordQuiz();
+    }
+}
+
+async function requireCurrentUser() {
+    const user = await api("/api/auth/me");
+    if (!user) {
+        window.location.href = "/login";
+        return null;
+    }
+    state.currentUser = user;
+    renderCurrentUser(user);
+    return user;
+}
+
+function renderCurrentUser(user) {
+    const name = user.nickname || user.username;
+    const nameEl = $("#currentUserName");
+    const roleEl = $("#currentUserRole");
+    const adminLink = $("#adminEntry");
+    if (nameEl) nameEl.textContent = name;
+    if (roleEl) roleEl.textContent = user.role === "ADMIN" ? "管理员" : "学习者";
+    if (adminLink) adminLink.hidden = user.role !== "ADMIN";
+    document.body.classList.toggle("is-admin", user.role === "ADMIN");
+}
+
+async function logout() {
+    await api("/api/auth/logout", { method: "POST" });
+    window.location.href = "/login";
+}
+
+function refreshInlineWordAiDetail(wordId) {
+    const word = findWordById(wordId);
+    if (!word) return;
+    document.querySelectorAll(`[data-word-card-id="${wordId}"]`).forEach((card) => {
+        const example = card.querySelector(".word-card-example");
+        if (example) {
+            example.outerHTML = renderInlineWordExample(word);
+        }
+        const detailActions = card.querySelector(".word-card-detail-actions");
+        if (detailActions) {
+            detailActions.outerHTML = renderInlineDetailAction(word, state.wordAiDetails[wordId]);
+        } else {
+            card.insertAdjacentHTML("beforeend", renderInlineDetailAction(word, state.wordAiDetails[wordId]));
+        }
+        bindInlineDetailAction(card);
+        card.querySelector(".quiz-ai-detail.inline")?.remove();
+        card.insertAdjacentHTML("beforeend", renderWordAiDetail(word, state.wordAiDetails[wordId], "inline"));
+        card.querySelector("[data-ai-detail-retry-id]")?.addEventListener("click", (event) => {
+            loadWordAiDetail(event.currentTarget.dataset.aiDetailRetryId, "inline", true);
+        });
+    });
 }
 
 async function toggleFavorite(wordId, button) {
@@ -511,6 +841,9 @@ function applyFavoriteUpdate(updatedWord) {
     renderReviewWords();
     renderWordQuiz();
     renderWordBank();
+    if (state.wordBank.selectedWordId === updatedWord.id) {
+        refreshWordBankDialog();
+    }
 }
 
 function escapeAttribute(value) {
@@ -905,6 +1238,16 @@ function renderWordBank() {
 
     // Re-bind mini quizzes
     bindQuizForms();
+    bindWordBankCards();
+}
+
+function bindWordBankCards() {
+    $("#wordBankGrid")?.querySelectorAll("[data-word-card-id]").forEach((card) => {
+        card.addEventListener("click", (event) => {
+            if (event.target.closest("button, input, form, a, [data-favorite-id]")) return;
+            openWordBankDialog(card.dataset.wordCardId);
+        });
+    });
 }
 
 function bindWordBankEvents() {
@@ -937,6 +1280,8 @@ function bindWordBankEvents() {
         loadWordBankWords().catch(console.error);
         $("#wordbank").scrollIntoView({ behavior: "smooth", block: "start" });
     });
+
+    $("#wordBankDialogBackdrop")?.addEventListener("click", closeWordBankDialog);
 }
 
 async function loadWordBank() {
@@ -1115,6 +1460,8 @@ function initialSectionFromPath() {
 }
 
 async function boot() {
+    const user = await requireCurrentUser();
+    if (!user) return;
     initAmbientCanvas();
     $$(".nav-item").forEach((item) => item.addEventListener("click", () => {
         const section = item.dataset.section;
@@ -1127,6 +1474,7 @@ async function boot() {
     document.addEventListener("click", (event) => {
         const favorite = event.target.closest("[data-favorite-id]");
         if (favorite) {
+            event.stopPropagation();
             toggleFavorite(favorite.dataset.favoriteId, favorite).catch((error) => console.error(error));
             return;
         }
@@ -1137,14 +1485,15 @@ async function boot() {
         }
     });
     $("#settingsFab")?.addEventListener("click", () => {
-        openSettings();
-        if (!state.ai.loaded) {
-            loadAiSettings().catch((error) => {
+        loadAiSettings()
+            .then(openSettings)
+            .catch((error) => {
                 console.error(error);
-                setAiStatus("\u8bbe\u7f6e\u52a0\u8f7d\u5931\u8d25");
+                setAiStatus(error.message || "加载设置失败");
+                openSettings();
             });
-        }
     });
+    $("#logoutBtn")?.addEventListener("click", () => logout().catch(console.error));
     $("#settingsClose")?.addEventListener("click", closeSettings);
     $("#settingsBackdrop")?.addEventListener("click", closeSettings);
     $("#fetchModelsBtn")?.addEventListener("click", () => {
@@ -1162,6 +1511,7 @@ async function boot() {
     document.addEventListener("keydown", (event) => {
         if (event.key === "Escape") {
             closeSettings();
+            closeWordBankDialog();
         }
     });
     $("#chatForm").addEventListener("submit", sendChat);
@@ -1192,11 +1542,7 @@ async function boot() {
         loadWords(),
         loadReviews(),
         loadNews(),
-        loadGNews("technology"),
-        loadAiSettings().catch((error) => {
-            console.error(error);
-            setAiStatus("\u8bbe\u7f6e\u52a0\u8f7d\u5931\u8d25");
-        })
+        loadGNews("technology")
     ]);
     const conversations = await loadConversations();
     if (!conversations.length) {

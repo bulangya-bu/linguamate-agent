@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class UserLevel {
     @TableId(type = IdType.AUTO)
     public Long id;
+    public Long userId;
     public Integer level;
     public Integer experience;
     public Integer totalExperience;

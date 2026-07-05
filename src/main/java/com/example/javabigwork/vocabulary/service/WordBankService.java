@@ -54,9 +54,9 @@ public class WordBankService {
         if (search != null && !search.isBlank()) {
             String trimmed = search.trim();
             wrapper.and(w -> w
-                    .like("word", trimmed)
+                    .likeRight("word", trimmed)
                     .or()
-                    .like("meaning_cn", trimmed));
+                    .likeRight("meaning_cn", trimmed));
         }
 
         wrapper.orderByAsc("word");

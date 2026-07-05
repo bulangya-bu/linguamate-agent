@@ -42,11 +42,13 @@ public class LocalWordBankLoader {
     public void loadWordBank() {
         int total = 0;
         int skipped = 0;
+        int enriched = 0;
         Set<String> seen = new HashSet<>();
         for (String[] bankFile : BANK_FILES) {
             String path = bankFile[0];
             String tag = bankFile[1];
             int fileInserted = 0;
+            int fileEnriched = 0;
             try {
                 ClassPathResource resource = new ClassPathResource(path);
                 if (!resource.exists()) {
@@ -61,8 +63,19 @@ public class LocalWordBankLoader {
                         Word word = parseEntry(entry, tag);
                         if (word == null) continue;
                         String key = word.word.toLowerCase(Locale.ROOT);
-                        if (!seen.add(key) || exists(key)) {
+                        if (!seen.add(key)) {
                             skipped++;
+                            continue;
+                        }
+                        Word existing = findExisting(key);
+                        if (existing != null) {
+                            if (fillMissingExamples(existing, word)) {
+                                wordMapper.updateById(existing);
+                                enriched++;
+                                fileEnriched++;
+                            } else {
+                                skipped++;
+                            }
                             continue;
                         }
                         wordMapper.insert(word);
@@ -70,12 +83,14 @@ public class LocalWordBankLoader {
                         fileInserted++;
                     }
                 }
-                log.info("Loaded {} new words from {} [{}] ({} in file)", fileInserted, path, tag, entries.size());
+                log.info("Loaded {} new words and enriched {} words from {} [{}] ({} in file)",
+                        fileInserted, fileEnriched, path, tag, entries.size());
             } catch (Exception e) {
                 log.error("Failed to load word bank: {}", path, e);
             }
         }
-        log.info("Word bank ready: {} new words inserted, {} duplicates skipped", total, skipped);
+        log.info("Word bank ready: {} new words inserted, {} words enriched, {} duplicates skipped",
+                total, enriched, skipped);
     }
 
     @SuppressWarnings("unchecked")
@@ -117,6 +132,9 @@ public class LocalWordBankLoader {
             word.phoneticUk = formatPhonetic(ukphone);
             word.meaningCn = meaningCn;
             word.partOfSpeech = pos;
+            ExampleSentence example = firstExample(wordContent);
+            word.exampleEn = example.en();
+            word.exampleCn = example.cn();
             word.levelTag = tag;
             return word;
         } catch (Exception e) {
@@ -131,9 +149,73 @@ public class LocalWordBankLoader {
         return "/" + trimmed + "/";
     }
 
-    private boolean exists(String word) {
-        Long count = wordMapper.selectCount(
-                Wrappers.<Word>query().eq("word", word));
-        return count != null && count > 0;
+    @SuppressWarnings("unchecked")
+    private ExampleSentence firstExample(Map<String, Object> wordContent) {
+        ExampleSentence sentence = firstSentenceFromBlock((Map<String, Object>) wordContent.get("sentence"));
+        if (sentence.hasEnglish()) {
+            return sentence;
+        }
+        return firstSentenceFromBlock((Map<String, Object>) wordContent.get("realExamSentence"));
+    }
+
+    @SuppressWarnings("unchecked")
+    private ExampleSentence firstSentenceFromBlock(Map<String, Object> block) {
+        if (block == null) return ExampleSentence.empty();
+        Object sentencesObj = block.get("sentences");
+        if (!(sentencesObj instanceof List<?> sentences)) {
+            return ExampleSentence.empty();
+        }
+        for (Object item : sentences) {
+            if (!(item instanceof Map<?, ?> rawSentence)) {
+                continue;
+            }
+            Map<String, Object> sentence = (Map<String, Object>) rawSentence;
+            String en = cleanText(sentence.get("sContent"));
+            if (en.isBlank()) {
+                en = cleanText(sentence.get("content"));
+            }
+            String cn = cleanText(sentence.get("sCn"));
+            if (en.isBlank()) {
+                continue;
+            }
+            return new ExampleSentence(en, cn);
+        }
+        return ExampleSentence.empty();
+    }
+
+    private String cleanText(Object value) {
+        return value == null ? "" : value.toString().trim();
+    }
+
+    private boolean fillMissingExamples(Word target, Word source) {
+        boolean changed = false;
+        if ((target.exampleEn == null || target.exampleEn.isBlank())
+                && source.exampleEn != null && !source.exampleEn.isBlank()) {
+            target.exampleEn = source.exampleEn;
+            changed = true;
+        }
+        if ((target.exampleCn == null || target.exampleCn.isBlank())
+                && source.exampleCn != null && !source.exampleCn.isBlank()) {
+            target.exampleCn = source.exampleCn;
+            changed = true;
+        }
+        return changed;
+    }
+
+    private Word findExisting(String word) {
+        return wordMapper.selectList(Wrappers.<Word>query().eq("word", word).last("LIMIT 1"))
+                .stream()
+                .findFirst()
+                .orElse(null);
+    }
+
+    private record ExampleSentence(String en, String cn) {
+        static ExampleSentence empty() {
+            return new ExampleSentence("", "");
+        }
+
+        boolean hasEnglish() {
+            return en != null && !en.isBlank();
+        }
     }
 }

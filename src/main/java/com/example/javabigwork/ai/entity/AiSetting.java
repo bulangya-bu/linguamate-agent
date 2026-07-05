@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class AiSetting {
     @TableId(type = IdType.INPUT)
     public Long id;
+    public Long userId;
     public String provider;
     public String baseUrl;
     public String apiKey;

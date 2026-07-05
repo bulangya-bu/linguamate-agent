@@ -1,6 +1,7 @@
 package com.example.javabigwork.tool;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.dictionary.service.OnlineWordService;
 import com.example.javabigwork.news.dto.HoverWordResponse;
 import com.example.javabigwork.vocabulary.entity.UserWordProgress;
@@ -24,15 +25,18 @@ public class DictionaryTool {
     private final WordMapper wordMapper;
     private final UserWordProgressMapper progressMapper;
     private final OnlineWordService onlineWordService;
+    private final UserContext userContext;
 
     public DictionaryTool(
             WordMapper wordMapper,
             UserWordProgressMapper progressMapper,
-            OnlineWordService onlineWordService
+            OnlineWordService onlineWordService,
+            UserContext userContext
     ) {
         this.wordMapper = wordMapper;
         this.progressMapper = progressMapper;
         this.onlineWordService = onlineWordService;
+        this.userContext = userContext;
     }
 
     public HoverWordResponse lookup(String rawWord) {
@@ -63,9 +67,12 @@ public class DictionaryTool {
         if (word.id == null) {
             wordMapper.insert(word);
         }
-        long existing = progressMapper.selectCount(Wrappers.<UserWordProgress>query().eq("word_id", word.id));
+        long existing = progressMapper.selectCount(Wrappers.<UserWordProgress>query()
+                .eq("user_id", userContext.userId())
+                .eq("word_id", word.id));
         if (existing == 0) {
             UserWordProgress progress = new UserWordProgress();
+            progress.userId = userContext.userId();
             progress.wordId = word.id;
             progress.familiarity = 1;
             progress.wrongCount = 1;
@@ -95,7 +102,9 @@ public class DictionaryTool {
 
     private HoverWordResponse toHoverResponse(Word word) {
         boolean saved = word.id != null && progressMapper.selectCount(
-                Wrappers.<UserWordProgress>query().eq("word_id", word.id)) > 0;
+                Wrappers.<UserWordProgress>query()
+                        .eq("user_id", userContext.userId())
+                        .eq("word_id", word.id)) > 0;
         return new HoverWordResponse(
                 word.word,
                 word.phoneticUs,

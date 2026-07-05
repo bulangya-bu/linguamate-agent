@@ -1,6 +1,7 @@
 package com.example.javabigwork.vocabulary.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.dictionary.service.OnlineWordService;
 import com.example.javabigwork.vocabulary.dto.WordCardView;
 import com.example.javabigwork.vocabulary.dto.WordQuizRequest;
@@ -22,19 +23,22 @@ public class VocabularyService {
     private final UserWordProgressMapper progressMapper;
     private final WordReviewLogMapper logMapper;
     private final ExperienceService experienceService;
+    private final UserContext userContext;
 
     public VocabularyService(
             OnlineWordService onlineWordService,
             WordMapper wordMapper,
             UserWordProgressMapper progressMapper,
             WordReviewLogMapper logMapper,
-            ExperienceService experienceService
+            ExperienceService experienceService,
+            UserContext userContext
     ) {
         this.onlineWordService = onlineWordService;
         this.wordMapper = wordMapper;
         this.progressMapper = progressMapper;
         this.logMapper = logMapper;
         this.experienceService = experienceService;
+        this.userContext = userContext;
     }
 
     public List<WordCardView> todayWords(int limit) {
@@ -47,6 +51,7 @@ public class VocabularyService {
 
     public List<WordCardView> favoriteWords(int limit) {
         return progressMapper.selectList(new QueryWrapper<UserWordProgress>()
+                        .eq("user_id", userContext.userId())
                         .eq("favorite", true)
                         .orderByDesc("last_review_at")
                         .orderByDesc("id")
@@ -62,6 +67,7 @@ public class VocabularyService {
 
     public List<WordCardView> masteredWords(int limit) {
         return progressMapper.selectList(new QueryWrapper<UserWordProgress>()
+                        .eq("user_id", userContext.userId())
                         .ge("familiarity", 3)
                         .orderByDesc("familiarity")
                         .orderByDesc("last_review_at")
@@ -108,6 +114,7 @@ public class VocabularyService {
         progressMapper.updateById(progress);
 
         WordReviewLog log = new WordReviewLog();
+        log.userId = userContext.userId();
         log.wordId = wordId;
         log.answer = request.answer();
         log.correct = correct;
@@ -120,6 +127,8 @@ public class VocabularyService {
                 wordId,
                 correct,
                 word.meaningCn,
+                word.exampleEn,
+                word.exampleCn,
                 progress.familiarity,
                 progress.wrongCount,
                 correct ? "答对了，下次复习会稍后出现" : "已加入高优先级错词复习"
@@ -155,7 +164,10 @@ public class VocabularyService {
     }
 
     private UserWordProgress findProgress(Long wordId) {
-        return progressMapper.selectList(new QueryWrapper<UserWordProgress>().eq("word_id", wordId).last("LIMIT 1"))
+        return progressMapper.selectList(new QueryWrapper<UserWordProgress>()
+                        .eq("user_id", userContext.userId())
+                        .eq("word_id", wordId)
+                        .last("LIMIT 1"))
                 .stream()
                 .findFirst()
                 .orElse(null);
@@ -167,6 +179,7 @@ public class VocabularyService {
             return progress;
         }
         progress = new UserWordProgress();
+        progress.userId = userContext.userId();
         progress.wordId = wordId;
         progress.familiarity = 0;
         progress.wrongCount = 0;

@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: linguamate-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?请设置 DB_PASSWORD 环境变量}
+      MYSQL_DATABASE: linguamate
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./src/main/resources/data.sql:/docker-entrypoint-initdb.d/02-data.sql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --skip-character-set-client-handshake
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: linguamate-app
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-4040}:4040"
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/linguamate?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf-8
+      DB_DRIVER: com.mysql.cj.jdbc.Driver
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:?请设置 DB_PASSWORD 环境变量}
+      DB_INIT_MODE: never
+      LINGUAMATE_AI_BASE_URL: ${LINGUAMATE_AI_BASE_URL:-https://api.openai.com/v1}
+      LINGUAMATE_AI_API_KEY: ${LINGUAMATE_AI_API_KEY:-}
+      LINGUAMATE_AI_CHAT_MODEL: ${LINGUAMATE_AI_CHAT_MODEL:-gpt-4o-mini}
+      LINGUAMATE_AI_EMBEDDING_MODEL: ${LINGUAMATE_AI_EMBEDDING_MODEL:-text-embedding-3-small}
+      LINGUAMATE_GNEWS_API_KEY: ${LINGUAMATE_GNEWS_API_KEY:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:

@@ -1,6 +1,7 @@
 package com.example.javabigwork.tool;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.vocabulary.entity.UserWordProgress;
 import com.example.javabigwork.vocabulary.mapper.UserWordProgressMapper;
 import java.time.LocalDateTime;
@@ -14,18 +15,22 @@ import org.springframework.stereotype.Component;
 public class ReviewPlannerTool {
     private static final Logger log = LoggerFactory.getLogger(ReviewPlannerTool.class);
     private final UserWordProgressMapper progressMapper;
+    private final UserContext userContext;
 
-    public ReviewPlannerTool(UserWordProgressMapper progressMapper) {
+    public ReviewPlannerTool(UserWordProgressMapper progressMapper, UserContext userContext) {
         this.progressMapper = progressMapper;
+        this.userContext = userContext;
     }
 
     public List<UserWordProgress> planToday(int limit) {
         log.info("ReviewPlannerTool.planToday: limit={}", limit);
         LocalDateTime now = LocalDateTime.now();
         return progressMapper.selectList(Wrappers.<UserWordProgress>query()
+                        .eq("user_id", userContext.userId())
+                        .and(wrapper -> wrapper
                         .le("next_review_at", now)
                         .or()
-                        .gt("wrong_count", 0))
+                        .gt("wrong_count", 0)))
                 .stream()
                 .sorted(Comparator
                         .comparing((UserWordProgress progress) -> progress.wrongCount == null ? 0 : -progress.wrongCount)
