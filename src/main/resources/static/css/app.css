@@ -3,7 +3,12 @@
     --muted: #6f7f8f;
     --line: #dfe8ef;
     --surface: #ffffff;
-    --page: #f7fbff;
+    --page: #f2f9ff;
+    --map-paper: #fbfdff;
+    --map-line: rgba(92, 124, 153, 0.07);
+    --map-route: rgba(88, 204, 2, 0.13);
+    --map-route-blue: rgba(28, 176, 246, 0.12);
+    --map-checkpoint: rgba(255, 200, 0, 0.18);
     --green: #58cc02;
     --green-dark: #44a700;
     --blue: #1cb0f6;
@@ -29,11 +34,11 @@ body {
     color: var(--ink);
     font-family: Inter, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
     background:
-            radial-gradient(circle at 18px 18px, rgba(88, 204, 2, 0.12) 0 4px, transparent 5px),
-            repeating-linear-gradient(90deg, rgba(28, 176, 246, 0.058) 0 1px, transparent 1px 96px),
-            repeating-linear-gradient(0deg, rgba(88, 204, 2, 0.052) 0 1px, transparent 1px 88px),
-            linear-gradient(180deg, #fbfeff 0%, var(--page) 100%);
-    background-size: 72px 72px, 96px 96px, 88px 88px, auto;
+            repeating-linear-gradient(90deg, var(--map-line) 0 1px, transparent 1px 104px),
+            repeating-linear-gradient(0deg, rgba(88, 204, 2, 0.045) 0 1px, transparent 1px 96px),
+            radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.94) 0 9%, transparent 28%),
+            linear-gradient(180deg, var(--map-paper) 0%, var(--page) 52%, #edf8ff 100%);
+    background-size: 104px 104px, 96px 96px, auto, auto;
     overflow-x: hidden;
 }
 
@@ -42,13 +47,30 @@ body::before {
     inset: 0;
     z-index: 0;
     background:
-            linear-gradient(115deg, transparent 0 38%, rgba(88, 204, 2, 0.095) 38% 39.2%, transparent 39.2% 100%),
-            linear-gradient(155deg, transparent 0 56%, rgba(28, 176, 246, 0.075) 56% 57.2%, transparent 57.2% 100%);
-    background-size: 340px 280px, 420px 320px;
+            linear-gradient(128deg, transparent 0 13%, var(--map-route) 13.4% 18.2%, transparent 18.6% 100%),
+            linear-gradient(148deg, transparent 0 54%, var(--map-route-blue) 54.4% 58.4%, transparent 58.8% 100%),
+            linear-gradient(24deg, transparent 0 72%, rgba(255, 200, 0, 0.11) 72.4% 75.5%, transparent 75.9% 100%);
+    background-size: 520px 380px, 620px 440px, 700px 500px;
     content: "";
-    opacity: 0.9;
+    opacity: 0.8;
     pointer-events: none;
-    animation: paperDrift 18s linear infinite;
+    animation: mapRouteDrift 42s linear infinite;
+}
+
+body::after {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+            radial-gradient(circle at 10% 24%, var(--map-checkpoint) 0 14px, transparent 15px),
+            radial-gradient(circle at 72% 16%, rgba(88, 204, 2, 0.12) 0 18px, transparent 19px),
+            radial-gradient(circle at 88% 64%, rgba(28, 176, 246, 0.11) 0 20px, transparent 21px),
+            radial-gradient(circle at 28% 82%, rgba(255, 107, 107, 0.09) 0 16px, transparent 17px);
+    background-size: 560px 420px, 680px 500px, 720px 540px, 640px 460px;
+    content: "";
+    opacity: 0.72;
+    pointer-events: none;
+    animation: mapCheckpointDrift 58s linear infinite;
 }
 
 .ambient-canvas {
@@ -307,12 +329,27 @@ button {
 }
 
 .topbar {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto auto;
     gap: 16px;
     align-items: center;
     margin-bottom: 26px;
+    padding: 4px 0 2px;
     animation: rise 360ms ease both;
+}
+
+.topbar::before {
+    position: absolute;
+    inset: -18px -18px -16px;
+    z-index: -1;
+    background:
+            linear-gradient(110deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.18)),
+            radial-gradient(circle at 20% 34%, rgba(88, 204, 2, 0.12), transparent 34%),
+            radial-gradient(circle at 86% 22%, rgba(28, 176, 246, 0.1), transparent 30%);
+    border-radius: 28px;
+    content: "";
+    pointer-events: none;
 }
 
 .eyebrow {
@@ -372,10 +409,11 @@ h3 {
     min-width: 0;
     min-height: 82px;
     padding: 12px;
-    background: var(--surface);
-    border: 2px solid var(--line);
+    background: rgba(255, 255, 255, 0.88);
+    border: 2px solid rgba(206, 223, 234, 0.9);
     border-radius: 16px;
-    box-shadow: 0 6px 0 #e5edf3;
+    box-shadow: 0 5px 0 rgba(210, 226, 235, 0.9), 0 12px 28px rgba(35, 49, 67, 0.06);
+    backdrop-filter: blur(10px);
 }
 
 .status-grid strong,
@@ -511,18 +549,35 @@ h3 {
 .panel {
     min-width: 0;
     padding: 24px;
-    background: var(--surface);
-    border: 2px solid var(--line);
+    background: rgba(255, 255, 255, 0.92);
+    border: 2px solid rgba(211, 226, 235, 0.92);
     border-radius: 18px;
-    box-shadow: var(--soft-shadow);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.78) inset, var(--soft-shadow);
+    backdrop-filter: blur(10px);
 }
 
 .learning-path {
+    position: relative;
     overflow: hidden;
-    border-color: #ccefb8;
+    border-color: rgba(183, 236, 154, 0.9);
     background:
-            linear-gradient(180deg, rgba(88, 204, 2, 0.11), rgba(255, 255, 255, 0) 210px),
-            var(--surface);
+            radial-gradient(circle at 9% 22%, rgba(255, 200, 0, 0.16) 0 34px, transparent 35px),
+            linear-gradient(180deg, rgba(88, 204, 2, 0.12), rgba(255, 255, 255, 0) 230px),
+            rgba(255, 255, 255, 0.94);
+}
+
+.learning-path::before {
+    position: absolute;
+    right: -60px;
+    bottom: -120px;
+    width: 360px;
+    height: 240px;
+    background:
+            linear-gradient(145deg, transparent 0 42%, rgba(28, 176, 246, 0.1) 42.8% 48%, transparent 48.8% 100%),
+            linear-gradient(18deg, transparent 0 50%, rgba(88, 204, 2, 0.12) 50.6% 56%, transparent 56.6% 100%);
+    border-radius: 50%;
+    content: "";
+    pointer-events: none;
 }
 
 .path-heading,
@@ -568,9 +623,12 @@ h3 {
     left: 7%;
     right: 7%;
     top: 72px;
-    height: 8px;
-    background: #e7eef4;
+    height: 10px;
+    background:
+            linear-gradient(90deg, rgba(88, 204, 2, 0.72), rgba(28, 176, 246, 0.5), rgba(255, 200, 0, 0.54), rgba(255, 107, 107, 0.45), rgba(139, 116, 255, 0.42)),
+            #e6f0f6;
     border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(88, 204, 2, 0.13);
 }
 
 .lesson-node {
@@ -581,16 +639,17 @@ h3 {
     min-height: 164px;
     padding: 18px 12px 14px;
     color: var(--ink);
-    background: white;
-    border: 2px solid var(--line);
+    background: rgba(255, 255, 255, 0.96);
+    border: 2px solid rgba(213, 228, 236, 0.96);
     border-radius: 20px;
-    box-shadow: 0 8px 0 #d8e3eb;
-    transition: transform 160ms ease, box-shadow 160ms ease;
+    box-shadow: 0 8px 0 rgba(216, 227, 235, 0.95), 0 12px 24px rgba(35, 49, 67, 0.06);
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
 }
 
 .lesson-node:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 0 #d8e3eb;
+    border-color: rgba(183, 236, 154, 0.95);
+    box-shadow: 0 12px 0 rgba(216, 227, 235, 0.95), 0 18px 30px rgba(35, 49, 67, 0.08);
 }
 
 .lesson-node span {
@@ -642,8 +701,9 @@ h3 {
 }
 
 .lesson-node.is-current {
-    border-color: #b7ec9a;
+    border-color: rgba(88, 204, 2, 0.72);
     background: #fbfff8;
+    box-shadow: 0 9px 0 rgba(188, 229, 166, 0.96), 0 18px 32px rgba(68, 167, 0, 0.13);
 }
 
 .daily-panel {
@@ -1980,6 +2040,9 @@ textarea {
     display: grid;
     min-height: 100vh;
     place-items: center;
+    background:
+            linear-gradient(115deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.2) 46%, rgba(232, 247, 255, 0.56)),
+            inherit;
 }
 
 .auth-shell {
@@ -1993,8 +2056,24 @@ textarea {
 }
 
 .auth-brand-panel {
+    position: relative;
     display: grid;
     gap: 24px;
+    padding: 8px 0;
+}
+
+.auth-brand-panel::before {
+    position: absolute;
+    inset: -34px -28px -32px;
+    z-index: -1;
+    background:
+            linear-gradient(132deg, transparent 0 31%, rgba(88, 204, 2, 0.1) 31.6% 37%, transparent 37.6% 100%),
+            linear-gradient(24deg, transparent 0 58%, rgba(28, 176, 246, 0.09) 58.6% 64%, transparent 64.6% 100%),
+            rgba(255, 255, 255, 0.34);
+    border: 1px solid rgba(255, 255, 255, 0.58);
+    border-radius: 30px;
+    content: "";
+    pointer-events: none;
 }
 
 .auth-brand {
@@ -2014,10 +2093,13 @@ textarea {
     right: 10%;
     left: 10%;
     top: 28px;
-    height: 8px;
-    background: #dfe8ef;
+    height: 10px;
+    background:
+            linear-gradient(90deg, rgba(88, 204, 2, 0.75), rgba(28, 176, 246, 0.62), rgba(255, 200, 0, 0.64), rgba(255, 107, 107, 0.52)),
+            #dfe8ef;
     border-radius: 999px;
     content: "";
+    box-shadow: 0 5px 16px rgba(35, 49, 67, 0.08);
 }
 
 .auth-path span {
@@ -2028,7 +2110,7 @@ textarea {
     color: white;
     border: 2px solid rgba(35, 49, 67, 0.08);
     border-radius: 18px;
-    box-shadow: 0 7px 0 #d8e3eb;
+    box-shadow: 0 7px 0 rgba(216, 227, 235, 0.95), 0 13px 24px rgba(35, 49, 67, 0.08);
     font-weight: 900;
 }
 
@@ -2071,10 +2153,11 @@ textarea {
     display: grid;
     gap: 18px;
     padding: 24px;
-    background: rgba(255, 255, 255, 0.96);
-    border: 2px solid var(--line);
+    background: rgba(255, 255, 255, 0.97);
+    border: 2px solid rgba(211, 226, 235, 0.94);
     border-radius: 22px;
-    box-shadow: 0 10px 0 #d6eecb, var(--soft-shadow);
+    box-shadow: 0 10px 0 rgba(214, 238, 203, 0.98), 0 24px 48px rgba(35, 49, 67, 0.12);
+    backdrop-filter: blur(14px);
     animation: rise 320ms ease both;
 }
 
@@ -3097,6 +3180,24 @@ textarea {
     }
 }
 
+@keyframes mapRouteDrift {
+    from {
+        background-position: 0 0, 0 0, 0 0;
+    }
+    to {
+        background-position: 520px 380px, -620px 440px, 700px -500px;
+    }
+}
+
+@keyframes mapCheckpointDrift {
+    from {
+        background-position: 0 0, 0 0, 0 0, 0 0;
+    }
+    to {
+        background-position: 560px 420px, -680px 500px, 720px -540px, -640px -460px;
+    }
+}
+
 @keyframes quizWordShiftLeft {
     from {
         transform: translateX(34%);
@@ -3213,11 +3314,21 @@ textarea {
 
 @media (max-width: 760px) {
     .ambient-canvas {
-        opacity: 0.78;
+        opacity: 0.62;
     }
 
     body::before {
-        opacity: 0.62;
+        opacity: 0.46;
+    }
+
+    body::after {
+        opacity: 0.36;
+    }
+
+    .topbar::before,
+    .auth-brand-panel::before,
+    .learning-path::before {
+        opacity: 0.58;
     }
 
     .cursor-canvas,
@@ -3369,6 +3480,14 @@ textarea {
         bottom: 42px;
         width: 8px;
         height: auto;
+    }
+
+    .auth-brand-panel {
+        padding: 0;
+    }
+
+    .auth-brand-panel::before {
+        inset: -16px -12px;
     }
 
     .lesson-node {
@@ -3705,6 +3824,11 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    body::before,
+    body::after {
+        animation: none !important;
+    }
+
     .ambient-canvas,
     .cursor-canvas,
     .cursor-orb {
