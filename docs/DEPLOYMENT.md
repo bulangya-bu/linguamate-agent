@@ -25,7 +25,6 @@ All sensitive or environment-specific settings are configurable through environm
 | `LINGUAMATE_AI_API_KEY` | *(empty)* | AI API key |
 | `LINGUAMATE_AI_CHAT_MODEL` | `gpt-4o-mini` | Chat model name |
 | `LINGUAMATE_AI_EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model name |
-| `LINGUAMATE_GNEWS_API_KEY` | *(empty)* | GNews API key (optional) |
 
 When no AI API key is configured, the app still starts and local fallback logic keeps the demo usable.
 

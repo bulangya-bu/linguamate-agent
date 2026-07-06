@@ -41,8 +41,11 @@ public class VocabularyController {
     }
 
     @GetMapping("/words/today")
-    public ApiResponse<List<WordCardView>> todayWords(@RequestParam(defaultValue = "8") int limit) {
-        return ApiResponse.ok(vocabularyService.todayWords(limit));
+    public ApiResponse<List<WordCardView>> todayWords(
+            @RequestParam(defaultValue = "8") int limit,
+            @RequestParam(required = false) String category
+    ) {
+        return ApiResponse.ok(vocabularyService.todayWords(limit, category));
     }
 
     @PostMapping("/words/{id}/quiz")

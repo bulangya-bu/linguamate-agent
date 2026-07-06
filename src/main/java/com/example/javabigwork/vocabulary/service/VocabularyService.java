@@ -49,6 +49,14 @@ public class VocabularyService {
                 .toList();
     }
 
+    public List<WordCardView> todayWords(int limit, String category) {
+        int safeLimit = Math.max(1, Math.min(80, limit));
+        return onlineWordService.randomWords(safeLimit, category)
+                .stream()
+                .map(this::toView)
+                .toList();
+    }
+
     public List<WordCardView> favoriteWords(int limit) {
         return progressMapper.selectList(new QueryWrapper<UserWordProgress>()
                         .eq("user_id", userContext.userId())

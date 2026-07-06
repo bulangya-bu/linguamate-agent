@@ -73,6 +73,16 @@ public class OnlineWordService {
         return results.stream().limit(safeLimit).toList();
     }
 
+    public List<Word> randomWords(int limit, String category) {
+        if (!StringUtils.hasText(category)) {
+            return randomWords(limit);
+        }
+        int safeLimit = Math.max(1, Math.min(80, limit));
+        return wordMapper.selectList(Wrappers.<Word>query()
+                .eq("level_tag", category.trim())
+                .last("ORDER BY RAND() LIMIT " + safeLimit));
+    }
+
     public Word resolveWord(String rawWord) {
         return resolveWord(rawWord, true);
     }
@@ -194,7 +204,9 @@ public class OnlineWordService {
         String tag = cached.levelTag;
         return "local-fast".equalsIgnoreCase(tag)
                 || "cet4-bank".equalsIgnoreCase(tag)
-                || "cet6-bank".equalsIgnoreCase(tag);
+                || "cet6-bank".equalsIgnoreCase(tag)
+                || "kaoyan-bank".equalsIgnoreCase(tag)
+                || "ielts-bank".equalsIgnoreCase(tag);
     }
 
     private boolean isEnglishOnly(String text) {

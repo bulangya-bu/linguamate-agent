@@ -160,7 +160,12 @@
             <section class="panel">
                 <div class="panel-heading">
                     <h2>单词闯关</h2>
-                    <span class="energy-pill">选择正确中文释义</span>
+                    <div class="quiz-heading-actions">
+                        <select id="quizCategorySelect" aria-label="选择闯关词库">
+                            <option value="">默认混合</option>
+                        </select>
+                        <span class="energy-pill">选择正确中文释义</span>
+                    </div>
                 </div>
                 <div id="wordCards" class="word-quiz-shell"></div>
             </section>
@@ -217,18 +222,6 @@
                         </select>
                     </div>
                     <div id="newsList" class="news-list"></div>
-                    <div class="gnews-divider"></div>
-                    <div class="gnews-heading">
-                        <span class="gnews-title">最新新闻</span>
-                        <div class="gnews-cats" id="gnewsCats">
-                            <button class="gnews-tab" data-cat="technology">Tech</button>
-                            <button class="gnews-tab" data-cat="world">World</button>
-                            <button class="gnews-tab" data-cat="business">Business</button>
-                            <button class="gnews-tab" data-cat="science">Science</button>
-                            <button class="gnews-tab" data-cat="sports">Sports</button>
-                        </div>
-                    </div>
-                    <div id="gnewsList" class="news-list"></div>
                 </section>
                 <section class="panel reader-panel">
                     <div class="panel-heading">

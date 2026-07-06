@@ -16,11 +16,11 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 /**
- * Loads CET-4/CET-6 word bank JSON files into the H2 database on startup.
+ * Loads local exam word bank JSON files into the database on startup.
  * Skips words that already exist (unique constraint safe).
  * <p>
  * JSON source: KyleBing/english-vocabulary (kajweb/dict format).
- * Files expected at: classpath:word-bank/CET4_3.json, classpath:word-bank/CET6_3.json
+ * Files expected under classpath:word-bank/.
  */
 @Component
 public class LocalWordBankLoader {
@@ -28,7 +28,9 @@ public class LocalWordBankLoader {
     private static final Pattern ENGLISH_WORD = Pattern.compile("^[a-zA-Z'\\-]+$");
     private static final String[][] BANK_FILES = {
             {"word-bank/CET4_3.json", "cet4-bank"},
-            {"word-bank/CET6_3.json", "cet6-bank"}
+            {"word-bank/CET6_3.json", "cet6-bank"},
+            {"word-bank/KaoYan_3.json", "kaoyan-bank"},
+            {"word-bank/IELTS_3.json", "ielts-bank"}
     };
 
     private final WordMapper wordMapper;

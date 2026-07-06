@@ -55,6 +55,51 @@ class JavaBigWorkApplicationTests {
     }
 
     @Test
+    void wordBankCategoriesIncludeExamBanks() throws Exception {
+        mockMvc.perform(get("/api/word-bank/categories").session(studentSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(content().string(containsString("cet4-bank")))
+                .andExpect(content().string(containsString("cet6-bank")))
+                .andExpect(content().string(containsString("kaoyan-bank")))
+                .andExpect(content().string(containsString("ielts-bank")));
+    }
+
+    @Test
+    void todayWordsCanFilterByExamCategory() throws Exception {
+        mockMvc.perform(get("/api/words/today")
+                        .param("limit", "8")
+                        .param("category", "kaoyan-bank")
+                        .session(studentSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data", hasSize(8)))
+                .andExpect(jsonPath("$.data[*].levelTag").value(
+                        org.hamcrest.Matchers.everyItem(equalTo("kaoyan-bank"))));
+
+        mockMvc.perform(get("/api/words/today")
+                        .param("limit", "8")
+                        .param("category", "ielts-bank")
+                        .session(studentSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data", hasSize(8)))
+                .andExpect(jsonPath("$.data[*].levelTag").value(
+                        org.hamcrest.Matchers.everyItem(equalTo("ielts-bank"))));
+    }
+
+    @Test
+    void todayWordsUnknownCategoryReturnsEmptyList() throws Exception {
+        mockMvc.perform(get("/api/words/today")
+                        .param("limit", "8")
+                        .param("category", "missing-bank")
+                        .session(studentSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data", hasSize(0)));
+    }
+
+    @Test
     void quizResultReturnsExampleSentence() throws Exception {
         String body = """
                 {
@@ -232,6 +277,62 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.length()", greaterThan(0)))
                 .andExpect(jsonPath("$.data[0].title").isNotEmpty());
+    }
+
+    @Test
+    void newsDetailLookupAndTranslateRemainAvailable() throws Exception {
+        MockHttpSession session = studentSession();
+        MvcResult recommendations = mockMvc.perform(get("/api/news/recommendations").session(session))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode root = objectMapper.readTree(recommendations.getResponse().getContentAsString());
+        long articleId = root.path("data").path(0).path("id").asLong();
+
+        mockMvc.perform(get("/api/news/" + articleId).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.title").isNotEmpty())
+                .andExpect(jsonPath("$.data.content").isNotEmpty());
+
+        mockMvc.perform(get("/api/news/lookup").param("word", "learning").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.word").isNotEmpty())
+                .andExpect(jsonPath("$.data.meaningCn").isNotEmpty());
+
+        mockMvc.perform(post("/api/news/translate")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "title": "Learning English",
+                                  "content": "Reading helps students learn new words."
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.titleCn").exists())
+                .andExpect(jsonPath("$.data.contentCn").exists());
+    }
+
+    @Test
+    void realtimeNewsEndpointsAreRemoved() throws Exception {
+        MockHttpSession session = studentSession();
+
+        mockMvc.perform(get("/api/news/gsearch")
+                        .param("q", "technology")
+                        .session(session))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/news/fetch-content")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "url": "https://example.com"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
     }
 
     @Test

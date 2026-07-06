@@ -46,31 +46,19 @@ body::before {
     position: fixed;
     inset: 0;
     z-index: 0;
-    background:
-            linear-gradient(128deg, transparent 0 13%, var(--map-route) 13.4% 18.2%, transparent 18.6% 100%),
-            linear-gradient(148deg, transparent 0 54%, var(--map-route-blue) 54.4% 58.4%, transparent 58.8% 100%),
-            linear-gradient(24deg, transparent 0 72%, rgba(255, 200, 0, 0.11) 72.4% 75.5%, transparent 75.9% 100%);
-    background-size: 520px 380px, 620px 440px, 700px 500px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent 38%, rgba(232, 247, 255, 0.28));
     content: "";
-    opacity: 0.8;
+    opacity: 1;
     pointer-events: none;
-    animation: mapRouteDrift 42s linear infinite;
 }
 
 body::after {
     position: fixed;
     inset: 0;
     z-index: 0;
-    background:
-            radial-gradient(circle at 10% 24%, var(--map-checkpoint) 0 14px, transparent 15px),
-            radial-gradient(circle at 72% 16%, rgba(88, 204, 2, 0.12) 0 18px, transparent 19px),
-            radial-gradient(circle at 88% 64%, rgba(28, 176, 246, 0.11) 0 20px, transparent 21px),
-            radial-gradient(circle at 28% 82%, rgba(255, 107, 107, 0.09) 0 16px, transparent 17px);
-    background-size: 560px 420px, 680px 500px, 720px 540px, 640px 460px;
     content: "";
-    opacity: 0.72;
+    opacity: 0;
     pointer-events: none;
-    animation: mapCheckpointDrift 58s linear infinite;
 }
 
 .ambient-canvas {
@@ -79,7 +67,7 @@ body::after {
     z-index: 0;
     width: 100vw;
     height: 100vh;
-    opacity: 1;
+    opacity: 0.96;
     pointer-events: none;
 }
 
@@ -558,26 +546,29 @@ h3 {
 
 .learning-path {
     position: relative;
+    isolation: isolate;
     overflow: hidden;
     border-color: rgba(183, 236, 154, 0.9);
     background:
-            radial-gradient(circle at 9% 22%, rgba(255, 200, 0, 0.16) 0 34px, transparent 35px),
-            linear-gradient(180deg, rgba(88, 204, 2, 0.12), rgba(255, 255, 255, 0) 230px),
-            rgba(255, 255, 255, 0.94);
+            linear-gradient(180deg, rgba(88, 204, 2, 0.09), rgba(255, 255, 255, 0.76) 250px),
+            rgba(255, 255, 255, 0.86);
 }
 
 .learning-path::before {
     position: absolute;
-    right: -60px;
-    bottom: -120px;
-    width: 360px;
-    height: 240px;
+    inset: 0;
+    z-index: 0;
     background:
-            linear-gradient(145deg, transparent 0 42%, rgba(28, 176, 246, 0.1) 42.8% 48%, transparent 48.8% 100%),
-            linear-gradient(18deg, transparent 0 50%, rgba(88, 204, 2, 0.12) 50.6% 56%, transparent 56.6% 100%);
-    border-radius: 50%;
+            repeating-linear-gradient(90deg, rgba(28, 176, 246, 0.04) 0 1px, transparent 1px 96px),
+            repeating-linear-gradient(0deg, rgba(88, 204, 2, 0.035) 0 1px, transparent 1px 88px);
     content: "";
     pointer-events: none;
+}
+
+.learning-path .path-heading,
+.learning-path .lesson-map {
+    position: relative;
+    z-index: 2;
 }
 
 .path-heading,
@@ -1271,6 +1262,18 @@ textarea {
     margin: 0;
 }
 
+.quiz-heading-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.quiz-heading-actions select {
+    min-width: 150px;
+}
+
 .word-quiz-shell {
     display: grid;
     justify-items: center;
@@ -1848,67 +1851,6 @@ textarea {
     max-width: 920px;
     margin-bottom: 18px;
     font-size: 16px;
-}
-
-.gnews-divider {
-    height: 1px;
-    margin: 16px 0 14px;
-    background: var(--line);
-}
-
-.gnews-heading {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.gnews-title {
-    font-size: 15px;
-    font-weight: 900;
-    color: var(--ink);
-}
-
-.gnews-cats {
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: 4px;
-}
-
-.gnews-tab {
-    min-height: 28px;
-    padding: 0 10px;
-    color: var(--muted);
-    background: transparent;
-    border: 1.5px solid var(--line);
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: 800;
-    transition: color 140ms ease, background 140ms ease, border-color 140ms ease, transform 140ms ease;
-}
-
-.gnews-tab:hover,
-.gnews-tab.is-active {
-    color: var(--green-dark);
-    background: #f0ffe8;
-    border-color: #b7ec9a;
-    transform: translateY(-1px);
-}
-
-.gnews-cn {
-    margin-top: 14px;
-    padding: 10px 14px;
-    background: #f5faff;
-    border: 1.5px solid #d3eaf7;
-    border-radius: 12px;
-    font-size: 16px;
-    line-height: 1.6;
-    color: var(--ink);
-}
-
-.gnews-item strong {
-    font-size: 15px;
 }
 
 .translation-area {
@@ -3426,11 +3368,6 @@ textarea {
     .level-panel {
         width: 100%;
         margin-top: 12px;
-    }
-
-    .gnews-heading {
-        flex-direction: column;
-        align-items: flex-start;
     }
 
     h1 {

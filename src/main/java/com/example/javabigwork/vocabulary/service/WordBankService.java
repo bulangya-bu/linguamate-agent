@@ -28,9 +28,11 @@ public class WordBankService {
         Map<String, String> labelMap = Map.of(
                 "cet4-bank", "CET-4",
                 "cet6-bank", "CET-6",
+                "kaoyan-bank", "考研",
+                "ielts-bank", "雅思",
                 "local-fast", "核心词"
         );
-        for (String tag : List.of("cet4-bank", "cet6-bank", "local-fast")) {
+        for (String tag : List.of("cet4-bank", "cet6-bank", "kaoyan-bank", "ielts-bank", "local-fast")) {
             Long count = wordMapper.selectCount(
                     new QueryWrapper<Word>().eq("level_tag", tag));
             if (count != null && count > 0) {

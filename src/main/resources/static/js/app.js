@@ -18,6 +18,9 @@ const state = {
         words: []
     },
     quiz: {
+        words: [],
+        category: "",
+        categories: [],
         index: 0,
         answers: {},
         options: [],
@@ -342,23 +345,59 @@ function renderTodayWords() {
         : `<div class="empty-state">暂无单词，稍后重试。</div>`;
 }
 
-async function loadWords() {
-    $("#todayWords").innerHTML = `<div class="empty-state">正在准备今日单词...</div>`;
-    $("#wordCards").innerHTML = `<div class="quiz-empty">正在加载单词闯关...</div>`;
+function renderQuizCategorySelect() {
+    const select = $("#quizCategorySelect");
+    if (!select) return;
+    const current = state.quiz.category || "";
+    select.innerHTML = `<option value="">默认混合</option>` +
+        state.quiz.categories.map((cat) => (
+            `<option value="${escapeAttribute(cat.tag)}">${escapeHtml(cat.label)}</option>`
+        )).join("");
+    select.value = current && state.quiz.categories.some((cat) => cat.tag === current) ? current : "";
+}
+
+async function loadQuizCategories() {
     try {
-        state.words = await api("/api/words/today?limit=8");
+        state.quiz.categories = await api("/api/word-bank/categories");
     } catch (error) {
         console.error(error);
-        state.words = [];
-        $("#todayWords").innerHTML = `<div class="empty-state">单词加载失败，请刷新重试。</div>`;
+        state.quiz.categories = [];
+    }
+    renderQuizCategorySelect();
+}
+
+async function loadWords({ updateToday = true } = {}) {
+    if (updateToday) {
+        $("#todayWords").innerHTML = `<div class="empty-state">正在准备今日单词...</div>`;
+    }
+    $("#wordCards").innerHTML = `<div class="quiz-empty">正在加载单词闯关...</div>`;
+    try {
+        if (updateToday) {
+            state.words = await api("/api/words/today?limit=8");
+        }
+        const params = new URLSearchParams({ limit: 8 });
+        if (state.quiz.category) {
+            params.set("category", state.quiz.category);
+        }
+        state.quiz.words = await api(`/api/words/today?${params}`);
+    } catch (error) {
+        console.error(error);
+        if (updateToday) {
+            state.words = [];
+            $("#todayWords").innerHTML = `<div class="empty-state">单词加载失败，请刷新重试。</div>`;
+        }
+        state.quiz.words = [];
         $("#wordCards").innerHTML = `<div class="quiz-empty">单词加载失败，请刷新重试。</div>`;
         return;
     }
-    renderTodayWords();
+    if (updateToday) {
+        renderTodayWords();
+    }
     state.quiz = {
+        ...state.quiz,
         index: 0,
         answers: {},
-        options: state.words.map((word, index) => buildQuizOptions(word, index)),
+        options: state.quiz.words.map((word, index) => buildQuizOptions(word, index)),
         completed: false,
         aiDetails: {}
     };
@@ -393,7 +432,7 @@ function renderReviewWords() {
 
 function findWordById(wordId) {
     const numericId = Number(wordId);
-    return [...state.words, ...state.review.words, ...state.wordBank.words]
+    return [...state.words, ...state.quiz.words, ...state.review.words, ...state.wordBank.words]
         .find((item) => item.id === numericId);
 }
 
@@ -464,8 +503,9 @@ function bindInlineDetailAction(root) {
 
 function buildQuizOptions(word, index) {
     const distractors = [];
-    for (let offset = 1; offset < state.words.length && distractors.length < 3; offset += 1) {
-        const candidate = state.words[(index + offset) % state.words.length];
+    const quizWords = state.quiz.words;
+    for (let offset = 1; offset < quizWords.length && distractors.length < 3; offset += 1) {
+        const candidate = quizWords[(index + offset) % quizWords.length];
         if (candidate.id !== word.id && candidate.meaningCn !== word.meaningCn && !distractors.includes(candidate.meaningCn)) {
             distractors.push(candidate.meaningCn);
         }
@@ -484,8 +524,8 @@ function buildQuizOptions(word, index) {
 function renderWordQuiz() {
     const container = $("#wordCards");
     if (!container) return;
-    if (!state.words.length) {
-        container.innerHTML = `<div class="quiz-empty">今天暂时没有单词。</div>`;
+    if (!state.quiz.words.length) {
+        container.innerHTML = `<div class="quiz-empty">当前分类暂时没有单词。</div>`;
         return;
     }
     if (state.quiz.completed) {
@@ -501,18 +541,18 @@ function renderWordQuiz() {
     }
 
     const index = state.quiz.index;
-    const word = state.words[index];
+    const word = state.quiz.words[index];
     const answer = state.quiz.answers[word.id];
     const answered = Boolean(answer);
     const options = state.quiz.options[index] || [];
-    const progress = Math.round(((index + (answered ? 1 : 0)) / state.words.length) * 100);
+    const progress = Math.round(((index + (answered ? 1 : 0)) / state.quiz.words.length) * 100);
     const aiState = state.quiz.aiDetails[word.id];
     const expanded = Boolean(aiState);
 
     container.innerHTML = `
         <article class="word-quiz-card ${answered ? "is-answered" : ""} ${expanded ? "has-ai-detail" : ""}">
             <div class="quiz-progress">
-                <span>第 ${index + 1} / ${state.words.length} 题</span>
+                <span>第 ${index + 1} / ${state.quiz.words.length} 题</span>
                 <div class="quiz-progress-track"><i style="width: ${progress}%"></i></div>
             </div>
             <div class="quiz-study-stage">
@@ -531,8 +571,8 @@ function renderWordQuiz() {
             </div>
             <div class="quiz-nav">
                 <button class="quiz-secondary" type="button" data-quiz-action="prev" ${index === 0 ? "disabled" : ""}>上一题</button>
-                <button class="quiz-primary" type="button" data-quiz-action="${index === state.words.length - 1 ? "finish" : "next"}" ${answered ? "" : "disabled"}>
-                    ${index === state.words.length - 1 ? "完成" : "下一题"}
+                <button class="quiz-primary" type="button" data-quiz-action="${index === state.quiz.words.length - 1 ? "finish" : "next"}" ${answered ? "" : "disabled"}>
+                    ${index === state.quiz.words.length - 1 ? "完成" : "下一题"}
                 </button>
             </div>
         </article>`;
@@ -669,7 +709,7 @@ function bindWordQuizActions() {
                 renderWordQuiz();
             }
             if (action === "next") {
-                state.quiz.index = Math.min(state.words.length - 1, state.quiz.index + 1);
+                state.quiz.index = Math.min(state.quiz.words.length - 1, state.quiz.index + 1);
                 renderWordQuiz();
             }
             if (action === "finish") {
@@ -677,7 +717,7 @@ function bindWordQuizActions() {
                 renderWordQuiz();
             }
             if (action === "restart") {
-                loadWords().catch((error) => console.error(error));
+                loadWords({ updateToday: false }).catch((error) => console.error(error));
             }
         });
     });
@@ -692,7 +732,7 @@ function bindWordQuizActions() {
 }
 
 async function answerCurrentWord(selectedMeaning) {
-    const word = state.words[state.quiz.index];
+    const word = state.quiz.words[state.quiz.index];
     if (!word || state.quiz.answers[word.id]) return;
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;
@@ -719,6 +759,7 @@ function applyQuizResultToWord(wordId, result) {
         exampleCn: result.exampleCn || word.exampleCn
     } : word;
     state.words = state.words.map(patch);
+    state.quiz.words = state.quiz.words.map(patch);
     state.review.words = state.review.words.map(patch);
     state.wordBank.words = state.wordBank.words.map(patch);
 }
@@ -832,6 +873,7 @@ async function toggleFavorite(wordId, button) {
 function applyFavoriteUpdate(updatedWord) {
     const patch = (word) => word.id === updatedWord.id ? { ...word, favorite: updatedWord.favorite } : word;
     state.words = state.words.map(patch);
+    state.quiz.words = state.quiz.words.map(patch);
     state.review.words = state.review.words.map(patch);
     state.wordBank.words = state.wordBank.words.map(patch);
     if (state.review.mode === "favorites" && !updatedWord.favorite) {
@@ -1066,71 +1108,6 @@ function makeReaderHtml(text) {
         .join("");
 }
 
-async function loadGNews(category) {
-    $$(".gnews-tab").forEach((t) => t.classList.toggle("is-active", t.dataset.cat === category));
-    try {
-        const articles = await api(`/api/news/gsearch?q=${encodeURIComponent(category)}&max=3`);
-        const list = $("#gnewsList");
-        if (!articles || articles.length === 0) {
-            list.innerHTML = `<div class="review-empty">暂无相关新闻</div>`;
-            return;
-        }
-        const prevActive = list.querySelector(".gnews-item.is-active");
-        list.innerHTML = articles.map((a, i) => `
-            <button class="news-item gnews-item" data-gnews-index="${i}">
-                <strong>${escapeHtml(a.title)}</strong>
-                <span>${escapeHtml(a.sourceName)} · ${escapeHtml(a.publishedAt)}</span>
-                <p>${escapeHtml(a.description)}</p>
-            </button>`).join("");
-        $$(".gnews-item").forEach((item) => {
-            item.addEventListener("click", () => {
-                const idx = parseInt(item.dataset.gnewsIndex);
-                showGNewsArticle(articles[idx]);
-                $$(".gnews-item").forEach((i) => i.classList.remove("is-active"));
-                item.classList.add("is-active");
-            });
-        });
-        if (articles[0]) {
-            showGNewsArticle(articles[0]);
-            $$(".gnews-item")[0]?.classList.add("is-active");
-        }
-    } catch (error) {
-        console.error(error);
-        $("#gnewsList").innerHTML = `<div class="review-empty">加载失败</div>`;
-    }
-}
-
-function showGNewsArticle(article) {
-    const snippet = article.content || article.description || "";
-    state.currentArticle = { title: article.title, content: snippet };
-    const descHtml = makeReaderHtml(snippet);
-    const extraHtml = [];
-    if (article.titleCn) {
-        extraHtml.push(`<p class="gnews-cn">${escapeHtml(article.titleCn)}</p>`);
-    }
-    if (article.descriptionCn) {
-        extraHtml.push(`<p class="gnews-cn">${escapeHtml(article.descriptionCn)}</p>`);
-    }
-    $("#readerTitle").textContent = article.title;
-    $("#readerSummary").innerHTML = `<a href="${escapeAttribute(article.url)}" target="_blank" rel="noopener">${escapeHtml(article.sourceName)}</a> · ${escapeHtml(article.publishedAt)}`;
-    $("#readerContent").innerHTML = descHtml + extraHtml.join("");
-    clearTranslation();
-
-    fetchFullContent(article.url, snippet.length).catch(() => {});
-}
-
-async function fetchFullContent(url, snippetLen) {
-    if (!url) return;
-    const result = await api("/api/news/fetch-content", {
-        method: "POST",
-        body: JSON.stringify({ url }),
-    });
-    if (!result.content || result.content.length <= snippetLen) return;
-    state.currentArticle.content = result.content;
-    const cnBlocks = Array.from(document.querySelectorAll("#readerContent .gnews-cn")).map(el => el.outerHTML).join("");
-    $("#readerContent").innerHTML = makeReaderHtml(result.content) + cnBlocks;
-}
-
 function clearTranslation() {
     $("#translationOutput").innerHTML = "";
     state.translateBusy = false;
@@ -1306,12 +1283,20 @@ function initAmbientCanvas() {
 
     const ctx = canvas.getContext("2d");
     const cursorCtx = cursorCanvas?.getContext("2d");
-    const tokens = ["context", "review", "essay", "listen", "speak", "read", "word", "/i/", "/e/", "/oi/", "/sh/"];
+    const tokens = ["context", "review", "essay", "listen", "speak", "read", "word", "grammar", "story", "phrase", "focus", "fluent"];
+    const palette = [
+        { core: "rgba(88, 204, 2, 0.18)", glow: "rgba(88, 204, 2, 0.07)", rim: "rgba(88, 204, 2, 0.38)", ink: "rgba(61, 146, 0, 0.68)" },
+        { core: "rgba(28, 176, 246, 0.18)", glow: "rgba(28, 176, 246, 0.07)", rim: "rgba(28, 176, 246, 0.36)", ink: "rgba(7, 99, 146, 0.68)" },
+        { core: "rgba(255, 200, 0, 0.18)", glow: "rgba(255, 200, 0, 0.07)", rim: "rgba(255, 200, 0, 0.36)", ink: "rgba(106, 82, 0, 0.66)" },
+        { core: "rgba(139, 116, 255, 0.14)", glow: "rgba(139, 116, 255, 0.06)", rim: "rgba(139, 116, 255, 0.3)", ink: "rgba(77, 59, 165, 0.62)" }
+    ];
     const nodes = [];
     const trail = [];
     let width = 0;
     let height = 0;
     let ratio = 1;
+    let hoveredNode = null;
+    let lastFrameTime = 0;
 
     function resize() {
         ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -1332,19 +1317,69 @@ function initAmbientCanvas() {
         seedNodes();
     }
 
+    function desiredNodeCount() {
+        const base = Math.round((width * height) / (width < 760 ? 62000 : 56000));
+        return Math.max(width < 760 ? 8 : 15, Math.min(width < 760 ? 16 : 32, base));
+    }
+
     function seedNodes() {
-        const target = Math.max(24, Math.min(58, Math.round((width * height) / 30000)));
+        const target = desiredNodeCount();
         while (nodes.length < target) {
-            nodes.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                vx: (Math.random() - 0.5) * 0.18,
-                vy: (Math.random() - 0.5) * 0.14,
-                phase: Math.random() * Math.PI * 2,
-                token: tokens[nodes.length % tokens.length]
-            });
+            const node = createCanvasNode(nodes.length);
+            nodes.push(node);
         }
         nodes.length = target;
+        nodes.forEach((node, index) => {
+            prepareCanvasNode(node, index, false);
+            containCanvasNode(node);
+        });
+        resolveCanvasCollisions(8);
+    }
+
+    function randomSpeed() {
+        const min = width < 760 ? 0.2 : 0.28;
+        const max = width < 760 ? 0.34 : 0.5;
+        return min + Math.random() * (max - min);
+    }
+
+    function setRandomVelocity(node) {
+        const angle = Math.random() * Math.PI * 2;
+        node.speed = randomSpeed();
+        node.vx = Math.cos(angle) * node.speed;
+        node.vy = Math.sin(angle) * node.speed;
+    }
+
+    function createCanvasNode(index) {
+        const node = {
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            speed: 0,
+            phase: Math.random() * Math.PI * 2,
+            scale: 1,
+            theme: palette[index % palette.length],
+            token: tokens[index % tokens.length],
+            age: 0,
+            life: 12,
+            bump: 0
+        };
+        prepareCanvasNode(node, index, true);
+        return node;
+    }
+
+    function prepareCanvasNode(node, index, shouldPlace) {
+        node.token = tokens[Math.floor(Math.random() * tokens.length)];
+        node.theme = palette[(index + Math.floor(Math.random() * palette.length)) % palette.length];
+        node.scale = 0.92 + Math.random() * 0.34;
+        node.phase = Math.random() * Math.PI * 2;
+        node.age = 0;
+        node.life = 10 + Math.random() * 8;
+        node.bump = 0;
+        setRandomVelocity(node);
+        if (shouldPlace) {
+            placeCanvasNode(node);
+        }
     }
 
     function recordPointer(event) {
@@ -1353,8 +1388,179 @@ function initAmbientCanvas() {
             cursorOrb.style.left = `${event.clientX}px`;
             cursorOrb.style.top = `${event.clientY}px`;
         }
+        hoveredNode = findHoveredNode(event.clientX, event.clientY);
         trail.unshift({ x: event.clientX, y: event.clientY, life: 1 });
         if (trail.length > 42) trail.length = 42;
+    }
+
+    function nodeFontSize(node) {
+        const base = width < 760 ? 12 : 15;
+        return Math.round(base * Math.min(1.14, Math.max(0.94, node.scale)));
+    }
+
+    function nodeRadius(node) {
+        ctx.save();
+        ctx.font = `900 ${nodeFontSize(node)}px Segoe UI, Arial`;
+        const textWidth = ctx.measureText(node.token).width;
+        ctx.restore();
+        const minRadius = (width < 760 ? 34 : 42) * node.scale;
+        const textRadius = (textWidth / 2) + (width < 760 ? 18 : 23);
+        return Math.max(minRadius, textRadius);
+    }
+
+    function collisionRadius(node) {
+        return nodeRadius(node) + 8;
+    }
+
+    function placeCanvasNode(node) {
+        const radius = collisionRadius(node);
+        let best = null;
+        let bestGap = -Infinity;
+        for (let attempt = 0; attempt < 120; attempt += 1) {
+            const x = radius + Math.random() * Math.max(1, width - radius * 2);
+            const y = radius + Math.random() * Math.max(1, height - radius * 2);
+            let nearestGap = Infinity;
+            const clear = nodes.every((other) => {
+                if (other === node) return true;
+                const minDistance = radius + collisionRadius(other) + 10;
+                const gap = Math.hypot(x - other.x, y - other.y) - minDistance;
+                nearestGap = Math.min(nearestGap, gap);
+                return gap >= 0;
+            });
+            if (nearestGap > bestGap) {
+                bestGap = nearestGap;
+                best = { x, y };
+            }
+            if (clear) {
+                node.x = x;
+                node.y = y;
+                return;
+            }
+        }
+        node.x = best?.x ?? radius + Math.random() * Math.max(1, width - radius * 2);
+        node.y = best?.y ?? radius + Math.random() * Math.max(1, height - radius * 2);
+    }
+
+    function findHoveredNode(x, y) {
+        for (let i = nodes.length - 1; i >= 0; i -= 1) {
+            const node = nodes[i];
+            const radius = nodeRadius(node);
+            if (Math.hypot(x - node.x, y - node.y) <= radius) {
+                return node;
+            }
+        }
+        return null;
+    }
+
+    function containCanvasNode(node) {
+        const radius = collisionRadius(node);
+        if (node.x < radius) {
+            node.x = radius;
+            node.vx = Math.abs(node.vx);
+        } else if (node.x > width - radius) {
+            node.x = width - radius;
+            node.vx = -Math.abs(node.vx);
+        }
+        if (node.y < radius) {
+            node.y = radius;
+            node.vy = Math.abs(node.vy);
+        } else if (node.y > height - radius) {
+            node.y = height - radius;
+            node.vy = -Math.abs(node.vy);
+        }
+    }
+
+    function limitCanvasVelocity(node) {
+        const minSpeed = width < 760 ? 0.18 : 0.25;
+        const maxSpeed = width < 760 ? 0.4 : 0.56;
+        const speed = Math.hypot(node.vx, node.vy);
+        if (!speed) {
+            setRandomVelocity(node);
+            return;
+        }
+        if (speed < minSpeed) {
+            node.vx = (node.vx / speed) * minSpeed;
+            node.vy = (node.vy / speed) * minSpeed;
+            node.speed = minSpeed;
+            return;
+        }
+        if (speed > maxSpeed) {
+            node.vx = (node.vx / speed) * maxSpeed;
+            node.vy = (node.vy / speed) * maxSpeed;
+            node.speed = maxSpeed;
+            return;
+        }
+        node.speed = speed;
+    }
+
+    function resolveCanvasCollisions(iterations = 2) {
+        for (let pass = 0; pass < iterations; pass += 1) {
+            for (let i = 0; i < nodes.length; i += 1) {
+                for (let j = i + 1; j < nodes.length; j += 1) {
+                    const a = nodes[i];
+                    const b = nodes[j];
+                    const minDistance = collisionRadius(a) + collisionRadius(b) + 2;
+                    let dx = a.x - b.x;
+                    let dy = a.y - b.y;
+                    let distance = Math.hypot(dx, dy);
+                    if (!distance) {
+                        dx = 1;
+                        dy = 0;
+                        distance = 1;
+                    }
+                    if (distance >= minDistance) continue;
+
+                    const nx = dx / distance;
+                    const ny = dy / distance;
+                    const overlap = minDistance - distance;
+                    const aFixed = a === hoveredNode;
+                    const bFixed = b === hoveredNode;
+
+                    if (aFixed && !bFixed) {
+                        b.x -= nx * overlap;
+                        b.y -= ny * overlap;
+                    } else if (bFixed && !aFixed) {
+                        a.x += nx * overlap;
+                        a.y += ny * overlap;
+                    } else {
+                        a.x += nx * overlap * 0.5;
+                        a.y += ny * overlap * 0.5;
+                        b.x -= nx * overlap * 0.5;
+                        b.y -= ny * overlap * 0.5;
+                    }
+
+                    const relativeVelocity = ((a.vx - b.vx) * nx) + ((a.vy - b.vy) * ny);
+                    if (relativeVelocity < 0) {
+                        const impulse = -relativeVelocity * 1.04;
+                        if (!aFixed) {
+                            a.vx += impulse * nx;
+                            a.vy += impulse * ny;
+                        }
+                        if (!bFixed) {
+                            b.vx -= impulse * nx;
+                            b.vy -= impulse * ny;
+                        }
+                    }
+                    a.bump = 1;
+                    b.bump = 1;
+                    limitCanvasVelocity(a);
+                    limitCanvasVelocity(b);
+                    containCanvasNode(a);
+                    containCanvasNode(b);
+                }
+            }
+        }
+    }
+
+    function nodeLifeAlpha(node) {
+        const fadeIn = Math.min(1, node.age / 1.2);
+        const fadeOut = Math.min(1, Math.max(0, (node.life - node.age) / 1.6));
+        return Math.max(0, Math.min(fadeIn, fadeOut));
+    }
+
+    function respawnCanvasNode(node, index) {
+        prepareCanvasNode(node, index, true);
+        resolveCanvasCollisions(4);
     }
 
     function drawTrail() {
@@ -1392,40 +1598,80 @@ function initAmbientCanvas() {
     }
 
     function drawNodes(time) {
-        const maxDistance = width < 760 ? 110 : 150;
+        const dt = Math.min(2.2, Math.max(0.5, (time - lastFrameTime) / 16.67 || 1));
+        lastFrameTime = time;
         for (let i = 0; i < nodes.length; i += 1) {
             const node = nodes[i];
-            node.x += node.vx + Math.cos(time / 2800 + node.phase) * 0.035;
-            node.y += node.vy + Math.sin(time / 3200 + node.phase) * 0.03;
-            if (node.x < -80) node.x = width + 80;
-            if (node.x > width + 80) node.x = -80;
-            if (node.y < -60) node.y = height + 60;
-            if (node.y > height + 60) node.y = -60;
-
-            for (let j = i + 1; j < nodes.length; j += 1) {
-                const other = nodes[j];
-                const dx = node.x - other.x;
-                const dy = node.y - other.y;
-                const distance = Math.hypot(dx, dy);
-                if (distance < maxDistance) {
-                    ctx.strokeStyle = `rgba(31, 42, 68, ${(1 - distance / maxDistance) * 0.075})`;
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(node.x, node.y);
-                    ctx.lineTo(other.x, other.y);
-                    ctx.stroke();
+            if (node !== hoveredNode) {
+                node.age += dt / 60;
+                if (node.age >= node.life) {
+                    respawnCanvasNode(node, i);
                 }
+                node.x += node.vx * dt;
+                node.y += node.vy * dt;
             }
+            containCanvasNode(node);
         }
+        resolveCanvasCollisions();
+        nodes.forEach(limitCanvasVelocity);
 
-        ctx.font = width < 760 ? "700 11px Segoe UI, Arial" : "800 13px Segoe UI, Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
         nodes.forEach((node) => {
-            const pulse = 0.072 + Math.sin(time / 1100 + node.phase) * 0.026;
-            ctx.fillStyle = `rgba(35, 49, 67, ${pulse})`;
+            const hovered = node === hoveredNode;
+            const lifeAlpha = nodeLifeAlpha(node);
+            const pulse = hovered ? 1 : 0.78 + Math.sin(time / 1100 + node.phase) * 0.06;
+            const bump = Math.max(0, node.bump || 0);
+            const bumpScale = 1 + bump * 0.08;
+            const radius = nodeRadius(node) * bumpScale;
+            const theme = node.theme || palette[0];
+            ctx.save();
+            ctx.globalAlpha = lifeAlpha * pulse * (width < 760 ? 0.72 : 0.88);
+            if (hovered || bump > 0.02) {
+                ctx.shadowColor = "rgba(35, 49, 67, 0.12)";
+                ctx.shadowBlur = hovered ? 12 : 8;
+            }
+            const fill = ctx.createRadialGradient(
+                node.x - radius * 0.36,
+                node.y - radius * 0.42,
+                1,
+                node.x,
+                node.y,
+                radius * 1.28
+            );
+            fill.addColorStop(0, "rgba(255, 255, 255, 0.96)");
+            fill.addColorStop(0.2, "rgba(255, 255, 255, 0.5)");
+            fill.addColorStop(0.62, theme.core);
+            fill.addColorStop(1, theme.glow);
+            ctx.fillStyle = fill;
+            ctx.strokeStyle = theme.rim;
+            ctx.lineWidth = hovered ? 2 : 1.4;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.58)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(node.x - radius * 0.08, node.y - radius * 0.1, radius * 0.67, Math.PI * 1.06, Math.PI * 1.73);
+            ctx.stroke();
+            ctx.fillStyle = "rgba(255, 255, 255, 0.62)";
+            ctx.beginPath();
+            ctx.arc(node.x - radius * 0.36, node.y - radius * 0.42, radius * 0.14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.26)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, radius - 5, Math.PI * 0.15, Math.PI * 0.8);
+            ctx.stroke();
+            ctx.fillStyle = theme.ink;
+            ctx.font = `900 ${nodeFontSize(node)}px Segoe UI, Arial`;
             ctx.fillText(node.token, node.x, node.y);
-            ctx.fillStyle = "rgba(88, 204, 2, 0.15)";
-            ctx.fillRect(node.x - 9, node.y + 5, 18, 2);
+            ctx.restore();
+            node.bump = bump * 0.86;
         });
+        ctx.textAlign = "start";
+        ctx.textBaseline = "alphabetic";
     }
 
     function render(time) {
@@ -1517,9 +1763,9 @@ async function boot() {
     $("#chatForm").addEventListener("submit", sendChat);
     $("#writingForm").addEventListener("submit", reviewEssay);
     $("#newsDifficulty").addEventListener("change", loadNews);
-    $("#gnewsCats").addEventListener("click", (event) => {
-        const tab = event.target.closest(".gnews-tab");
-        if (tab) loadGNews(tab.dataset.cat);
+    $("#quizCategorySelect")?.addEventListener("change", (event) => {
+        state.quiz.category = event.target.value;
+        loadWords({ updateToday: false }).catch((error) => console.error(error));
     });
     $("#translateBtn").addEventListener("click", translateArticle);
     $("#readerContent").addEventListener("mouseover", (event) => {
@@ -1539,10 +1785,9 @@ async function boot() {
     }
     await Promise.all([
         loadReport(),
-        loadWords(),
+        loadQuizCategories().then(() => loadWords()),
         loadReviews(),
-        loadNews(),
-        loadGNews("technology")
+        loadNews()
     ]);
     const conversations = await loadConversations();
     if (!conversations.length) {
