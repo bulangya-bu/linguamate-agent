@@ -27,10 +27,7 @@ public class ReviewPlannerTool {
         LocalDateTime now = LocalDateTime.now();
         return progressMapper.selectList(Wrappers.<UserWordProgress>query()
                         .eq("user_id", userContext.userId())
-                        .and(wrapper -> wrapper
-                        .le("next_review_at", now)
-                        .or()
-                        .gt("wrong_count", 0)))
+                        .gt("wrong_count", 0))
                 .stream()
                 .sorted(Comparator
                         .comparing((UserWordProgress progress) -> progress.wrongCount == null ? 0 : -progress.wrongCount)

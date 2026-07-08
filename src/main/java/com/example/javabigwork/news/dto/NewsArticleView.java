@@ -7,6 +7,8 @@ public record NewsArticleView(
         String content,
         String sourceName,
         String difficulty,
-        String topicTags
+        String topicTags,
+        Integer readProgress,
+        Boolean finished
 ) {
 }

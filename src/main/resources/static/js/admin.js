@@ -226,6 +226,10 @@ async function loadUserProfile(userId) {
     const reading = profile.readingOverview || {};
     const vocabMax = Math.max(vocab.learnedWords || 0, vocab.masteredWords || 0, vocab.reviewWords || 0, vocab.dueWords || 0, vocab.favoriteWords || 0, 1);
     const completion = reading.readings ? Math.round(((reading.finishedReadings || 0) / reading.readings) * 100) : 0;
+    const profileLevelCards = profile.role === "ADMIN" ? "" : `
+            <div><strong>Lv.${profile.level}</strong><span>等级</span></div>
+            <div><strong>${profile.experience}</strong><span>当前经验</span></div>
+            <div><strong>${profile.totalExperience}</strong><span>累计经验</span></div>`;
     $("#userProfilePanel").classList.remove("empty-state");
     $("#userProfilePanel").innerHTML = `
         <div class="admin-profile-head">
@@ -236,9 +240,7 @@ async function loadUserProfile(userId) {
             <mark class="${profile.aiConfigured ? "ok" : "danger"}">${profile.aiConfigured ? "已配置 AI" : "未配置 AI"}</mark>
         </div>
         <div class="admin-profile-grid">
-            <div><strong>Lv.${profile.level}</strong><span>等级</span></div>
-            <div><strong>${profile.experience}</strong><span>当前经验</span></div>
-            <div><strong>${profile.totalExperience}</strong><span>累计经验</span></div>
+            ${profileLevelCards}
             <div><strong>${profile.learnedWords}</strong><span>已背单词</span></div>
             <div><strong>${profile.favoriteWords}</strong><span>收藏单词</span></div>
             <div><strong>${profile.masteredWords}</strong><span>已掌握</span></div>
@@ -288,7 +290,7 @@ async function loadUserProfile(userId) {
                         <span><strong>${escapeHtml(record.title)}</strong><small>${escapeHtml(record.difficulty || "")}</small></span>
                         <span><mark class="${record.finished ? "ok" : ""}">${record.readProgress || 0}%</mark></span>
                         <span>${record.lookedUpWords || 0}</span>
-                        <span>${formatDate(record.createdAt)}</span>
+                        <span>${formatDate(record.updatedAt || record.createdAt)}</span>
                     </div>
                 `).join("") : `<p class="empty-state">暂无阅读记录。</p>`}
             </div>

@@ -7,6 +7,7 @@ import com.example.javabigwork.vocabulary.dto.WordAiDetailView;
 import com.example.javabigwork.vocabulary.dto.WordCardView;
 import com.example.javabigwork.vocabulary.dto.WordQuizRequest;
 import com.example.javabigwork.vocabulary.dto.WordQuizResult;
+import com.example.javabigwork.vocabulary.dto.WordReviewRequest;
 import com.example.javabigwork.vocabulary.service.ReviewScheduleService;
 import com.example.javabigwork.vocabulary.service.WordAiDetailService;
 import com.example.javabigwork.vocabulary.service.VocabularyService;
@@ -64,7 +65,7 @@ public class VocabularyController {
     }
 
     @GetMapping("/reviews/today")
-    public ApiResponse<List<WordCardView>> todayReviews(@RequestParam(defaultValue = "6") int limit) {
+    public ApiResponse<List<WordCardView>> todayReviews(@RequestParam(defaultValue = "8") int limit) {
         return ApiResponse.ok(reviewScheduleService.todayReviewWords(limit));
     }
 
@@ -79,8 +80,8 @@ public class VocabularyController {
     }
 
     @PostMapping("/reviews/{wordId}")
-    public ApiResponse<WordQuizResult> review(@PathVariable Long wordId, @Valid @RequestBody WordQuizRequest request) {
-        return ApiResponse.ok(vocabularyService.submitQuiz(wordId, request));
+    public ApiResponse<WordQuizResult> review(@PathVariable Long wordId, @Valid @RequestBody WordReviewRequest request) {
+        return ApiResponse.ok(vocabularyService.submitStrictReview(wordId, request));
     }
 
     @GetMapping("/dictionary/lookup")

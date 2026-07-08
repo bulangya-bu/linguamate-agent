@@ -18,6 +18,8 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class WordAiDetailService {
+    private static final String LOCAL_MODEL_NAME = "local-rules";
+
     private final WordMapper wordMapper;
     private final WordAiDetailCacheMapper cacheMapper;
     private final AiSettingsService settingsService;
@@ -45,8 +47,10 @@ public class WordAiDetailService {
         }
 
         AiRuntimeSettings settings = settingsService.resolveCurrent();
-        if (!StringUtils.hasText(settings.baseUrl()) || !StringUtils.hasText(settings.chatModel())) {
-            throw new IllegalArgumentException("模型未配置或暂时不可用，请检查 AI 设置");
+        if (!StringUtils.hasText(settings.baseUrl())
+                || !StringUtils.hasText(settings.chatModel())
+                || !StringUtils.hasText(settings.apiKey())) {
+            return localDetail(word);
         }
 
         String modelName = settings.chatModel().trim();
@@ -70,11 +74,43 @@ public class WordAiDetailService {
             cache.updatedAt = cache.createdAt;
             cacheMapper.insert(cache);
             return generated;
-        } catch (IllegalArgumentException exception) {
-            throw exception;
         } catch (Exception exception) {
-            throw new IllegalArgumentException("模型未配置或暂时不可用，请检查 AI 设置");
+            return localDetail(word);
         }
+    }
+
+    private WordAiDetailView localDetail(Word word) {
+        String wordText = safe(word.word);
+        String partOfSpeech = StringUtils.hasText(word.partOfSpeech) ? word.partOfSpeech.trim() : "unknown";
+        String meaning = StringUtils.hasText(word.meaningCn) ? word.meaningCn.trim() : "请结合上下文理解含义";
+        String exampleEn = StringUtils.hasText(word.exampleEn)
+                ? word.exampleEn.trim()
+                : "I want to use the word \"%s\" correctly.".formatted(wordText);
+        String exampleCn = StringUtils.hasText(word.exampleCn)
+                ? word.exampleCn.trim()
+                : "我想正确使用这个单词。";
+        return new WordAiDetailView(
+                wordText,
+                partOfSpeech,
+                List.of(
+                        new WordAiDetailView.Example(exampleEn, exampleCn),
+                        new WordAiDetailView.Example("Try to make your own sentence with \"%s\".".formatted(wordText),
+                                "试着用这个单词造一个自己的句子。")
+                ),
+                List.of(new WordAiDetailView.Variant(wordText, partOfSpeech, meaning)),
+                List.of(
+                        "当前使用本地词库生成详情，配置 AI 后可获得更丰富解释。",
+                        "先记住核心中文含义，再结合例句理解真实语境。"
+                ),
+                List.of(
+                        new WordAiDetailView.Collocation(wordText + " practice", "单词练习",
+                                "Short practice helps you remember \"%s\".".formatted(wordText)),
+                        new WordAiDetailView.Collocation("use " + wordText, "使用该词",
+                                "Use \"%s\" in a clear sentence.".formatted(wordText))
+                ),
+                LOCAL_MODEL_NAME,
+                false
+        );
     }
 
     private WordAiDetailCache findCache(Long wordId, String modelName) {

@@ -12,6 +12,11 @@ public class WordReviewLog {
     public Long userId;
     public Long wordId;
     public String answer;
+    public String spellingAnswer;
+    public String meaningAnswer;
     public Boolean correct;
+    public Boolean spellingCorrect;
+    public Boolean meaningCorrect;
+    public String reviewType;
     public LocalDateTime createdAt;
 }

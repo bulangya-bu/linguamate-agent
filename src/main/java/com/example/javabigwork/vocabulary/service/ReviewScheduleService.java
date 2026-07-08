@@ -25,7 +25,7 @@ public class ReviewScheduleService {
                 })
                 .filter(item -> item != null)
                 .toList();
-        return planned.isEmpty() ? vocabularyService.todayWords(limit) : planned;
+        return planned;
     }
 
     public List<WordCardView> favoriteWords(int limit) {

@@ -6,6 +6,7 @@ import com.example.javabigwork.dictionary.service.OnlineWordService;
 import com.example.javabigwork.vocabulary.dto.WordCardView;
 import com.example.javabigwork.vocabulary.dto.WordQuizRequest;
 import com.example.javabigwork.vocabulary.dto.WordQuizResult;
+import com.example.javabigwork.vocabulary.dto.WordReviewRequest;
 import com.example.javabigwork.vocabulary.entity.UserWordProgress;
 import com.example.javabigwork.vocabulary.entity.Word;
 import com.example.javabigwork.vocabulary.entity.WordReviewLog;
@@ -13,7 +14,10 @@ import com.example.javabigwork.vocabulary.mapper.UserWordProgressMapper;
 import com.example.javabigwork.vocabulary.mapper.WordMapper;
 import com.example.javabigwork.vocabulary.mapper.WordReviewLogMapper;
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -126,6 +130,7 @@ public class VocabularyService {
         log.wordId = wordId;
         log.answer = request.answer();
         log.correct = correct;
+        log.reviewType = "QUIZ";
         log.createdAt = LocalDateTime.now();
         logMapper.insert(log);
 
@@ -140,6 +145,60 @@ public class VocabularyService {
                 progress.familiarity,
                 progress.wrongCount,
                 correct ? "答对了，下次复习会稍后出现" : "已加入高优先级错词复习"
+        );
+    }
+
+    public WordQuizResult submitStrictReview(Long wordId, WordReviewRequest request) {
+        Word word = wordMapper.selectById(wordId);
+        if (word == null) {
+            throw new IllegalArgumentException("单词不存在");
+        }
+        boolean spellingCorrect = isSpellingCorrect(word, request.spellingAnswer());
+        boolean meaningCorrect = isMeaningCorrect(word.meaningCn, request.meaningAnswer());
+        boolean correct = spellingCorrect && meaningCorrect;
+        LocalDateTime now = LocalDateTime.now();
+
+        UserWordProgress progress = findOrCreateProgress(wordId);
+        progress.reviewCount = value(progress.reviewCount) + 1;
+        progress.lastReviewAt = now;
+        if (correct) {
+            progress.wrongCount = 0;
+            progress.familiarity = Math.max(3, Math.min(5, value(progress.familiarity) + 1));
+            progress.nextReviewAt = now.plusDays(Math.max(1, progress.familiarity));
+        } else {
+            progress.wrongCount = value(progress.wrongCount) + 1;
+            progress.familiarity = Math.max(0, value(progress.familiarity) - 1);
+            progress.nextReviewAt = now.plusHours(6);
+        }
+        progressMapper.updateById(progress);
+
+        WordReviewLog log = new WordReviewLog();
+        log.userId = userContext.userId();
+        log.wordId = wordId;
+        log.answer = joinReviewAnswer(request);
+        log.spellingAnswer = request.spellingAnswer();
+        log.meaningAnswer = request.meaningAnswer();
+        log.correct = correct;
+        log.spellingCorrect = spellingCorrect;
+        log.meaningCorrect = meaningCorrect;
+        log.reviewType = "STRICT_REVIEW";
+        log.createdAt = now;
+        logMapper.insert(log);
+
+        experienceService.addXp(correct ? 12 : 3);
+
+        return new WordQuizResult(
+                wordId,
+                correct,
+                word.word,
+                word.meaningCn,
+                word.exampleEn,
+                word.exampleCn,
+                progress.familiarity,
+                progress.wrongCount,
+                correct ? "本组已通过，错词已移出队列" : "未过关，已放回本组最后继续复习",
+                spellingCorrect,
+                meaningCorrect
         );
     }
 
@@ -169,6 +228,71 @@ public class VocabularyService {
         String trimmed = answer == null ? "" : answer.trim();
         return !trimmed.isBlank()
                 && (word.word.equalsIgnoreCase(trimmed) || (word.meaningCn != null && word.meaningCn.contains(trimmed)));
+    }
+
+    private boolean isSpellingCorrect(Word word, String answer) {
+        String trimmed = answer == null ? "" : answer.trim();
+        return !trimmed.isBlank() && word.word.equalsIgnoreCase(trimmed);
+    }
+
+    private boolean isMeaningCorrect(String expectedMeaning, String answer) {
+        String normalizedExpected = normalizeMeaning(expectedMeaning);
+        String normalizedAnswer = normalizeMeaning(answer);
+        if (normalizedExpected.isBlank() || normalizedAnswer.isBlank()) {
+            return false;
+        }
+        if (normalizedAnswer.length() < 2) {
+            return normalizedAnswer.equals(normalizedExpected)
+                    || meaningKeywords(expectedMeaning).stream().anyMatch(normalizedAnswer::equals);
+        }
+        if (normalizedExpected.contains(normalizedAnswer) || normalizedAnswer.contains(normalizedExpected)) {
+            return true;
+        }
+        return meaningKeywords(expectedMeaning).stream()
+                .anyMatch(keyword -> keyword.contains(normalizedAnswer) || normalizedAnswer.contains(keyword));
+    }
+
+    private Set<String> meaningKeywords(String expectedMeaning) {
+        Set<String> keywords = new LinkedHashSet<>();
+        if (expectedMeaning == null) {
+            return keywords;
+        }
+        for (String part : expectedMeaning.split("[,，;；、/／|｜()（）\\[\\]【】\\s]+")) {
+            String normalized = normalizeMeaning(part);
+            if (normalized.length() >= 2) {
+                keywords.add(normalized);
+            }
+        }
+        return keywords;
+    }
+
+    private String normalizeMeaning(String value) {
+        if (value == null) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        value.toLowerCase(Locale.ROOT).codePoints()
+                .filter(codePoint -> !Character.isWhitespace(codePoint) && !isPunctuation(codePoint))
+                .forEach(builder::appendCodePoint);
+        return builder.toString();
+    }
+
+    private boolean isPunctuation(int codePoint) {
+        int type = Character.getType(codePoint);
+        return type == Character.CONNECTOR_PUNCTUATION
+                || type == Character.DASH_PUNCTUATION
+                || type == Character.START_PUNCTUATION
+                || type == Character.END_PUNCTUATION
+                || type == Character.INITIAL_QUOTE_PUNCTUATION
+                || type == Character.FINAL_QUOTE_PUNCTUATION
+                || type == Character.OTHER_PUNCTUATION;
+    }
+
+    private String joinReviewAnswer(WordReviewRequest request) {
+        return "%s | %s".formatted(
+                request.spellingAnswer() == null ? "" : request.spellingAnswer().trim(),
+                request.meaningAnswer() == null ? "" : request.meaningAnswer().trim()
+        );
     }
 
     private UserWordProgress findProgress(Long wordId) {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinguaMate 英语学习助手</title>
     <link rel="icon" type="image/svg+xml" href="/assets/linguamate-icon.svg">
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/app.css?v=adventure-map">
 </head>
 <body>
 <canvas id="ambientCanvas" class="ambient-canvas" aria-hidden="true"></canvas>
@@ -48,16 +48,29 @@
             </div>
             <div class="level-panel" id="levelPanel">
                 <div class="level-user-row">
-                    <div>
+                    <div class="level-avatar" id="currentUserAvatar" aria-hidden="true">学</div>
+                    <div class="level-user-copy">
                         <span id="currentUserName">学习者</span>
-                        <small id="currentUserRole">USER</small>
+                        <small id="currentUserRole">学习者</small>
                     </div>
-                    <a id="adminEntry" class="level-admin-link" href="/admin" hidden>管理端</a>
+                    <span class="level-role-pill" id="currentRoleBadge">学习中</span>
                 </div>
-                <div class="level-badge" id="levelDisplay">Lv.1</div>
-                <div class="level-xp-row">
-                    <div class="level-xp-bar"><div class="level-xp-fill" id="xpFill"></div></div>
-                    <span class="level-xp-text" id="xpDisplay">0 / 100</span>
+                <div class="level-student-block" id="studentLevelBlock">
+                    <div class="level-badge-row">
+                        <div class="level-badge" id="levelDisplay">Lv.1</div>
+                        <span>下一等级</span>
+                    </div>
+                    <div class="level-xp-row">
+                        <div class="level-xp-bar"><div class="level-xp-fill" id="xpFill"></div></div>
+                        <span class="level-xp-text" id="xpDisplay">0 / 100</span>
+                    </div>
+                </div>
+                <div class="level-admin-block" id="adminLevelBlock" hidden>
+                    <div>
+                        <strong>管理工作台</strong>
+                        <span>维护用户、词库与阅读内容</span>
+                    </div>
+                    <a id="adminEntry" class="level-admin-link" href="/admin" hidden>进入管理端</a>
                 </div>
             </div>
         </header>
@@ -68,51 +81,33 @@
                     <div class="path-heading">
                         <div>
                             <p class="eyebrow compact">今日路线</p>
-                            <h2>完成 4 个小关卡</h2>
+                            <h2 id="journeyTitle">探索今日学习岛</h2>
                         </div>
-                        <span class="energy-pill">能量 86%</span>
+                        <span class="energy-pill" id="energyPill">能量 0%</span>
                     </div>
-                    <div class="lesson-map">
-                        <button class="lesson-node node-green is-current" data-section="chat">
-                            <span>1</span>
-                            <strong>开口练</strong>
-                            <small>3 轮对话</small>
-                        </button>
-                        <button class="lesson-node node-blue" data-section="vocabulary">
-                            <span>2</span>
-                            <strong>记单词</strong>
-                            <small>6 个新词</small>
-                        </button>
-                        <button class="lesson-node node-amber" data-section="review">
-                            <span>3</span>
-                            <strong>复习错词</strong>
-                            <small>优先巩固</small>
-                        </button>
-                        <button class="lesson-node node-coral" data-section="writing">
-                            <span>4</span>
-                            <strong>改作文</strong>
-                            <small>句子升级</small>
-                        </button>
-                        <button class="lesson-node node-violet" data-section="news">
-                            <span>5</span>
-                            <strong>读新闻</strong>
-                            <small>悬停查词</small>
-                        </button>
-                    </div>
+                    <div class="lesson-map" id="lessonMap" aria-live="polite"></div>
                 </section>
 
                 <aside class="daily-panel">
                     <section class="panel streak-panel">
-                        <h2>学习状态</h2>
-                        <div class="streak-meter">
-                            <div>
-                                <strong>7</strong>
-                                <span>连续天数</span>
+                        <h2>探索状态</h2>
+                        <div class="route-status" id="routeProgressSummary">
+                            <div class="route-status-card">
+                                <strong>0/5</strong>
+                                <span>已点亮</span>
+                            </div>
+                            <div class="route-status-card">
+                                <strong>0%</strong>
+                                <span>路线能量</span>
                             </div>
                         </div>
                     </section>
                     <section class="panel">
-                        <h2>下一步</h2>
+                        <div class="panel-heading">
+                            <h2>建议前往</h2>
+                            <button class="soft-action route-focus-action" id="routeFocusAction" type="button" data-section="review">前往</button>
+                        </div>
+                        <div class="route-focus" id="routeFocus">正在整理今日建议...</div>
                         <ul id="nextActions" class="clean-list"></ul>
                     </section>
                 </aside>
@@ -215,11 +210,16 @@
                 <section class="panel">
                     <div class="panel-heading">
                         <h2>新闻精读</h2>
-                        <select id="newsDifficulty" aria-label="新闻难度">
-                            <option value="easy">简单</option>
-                            <option value="medium">进阶</option>
-                            <option value="">全部</option>
-                        </select>
+                        <div class="news-filters">
+                            <select id="newsDifficulty" aria-label="新闻难度">
+                                <option value="easy">简单</option>
+                                <option value="medium">进阶</option>
+                                <option value="">全部</option>
+                            </select>
+                            <select id="newsTopic" aria-label="阅读主题">
+                                <option value="">全部主题</option>
+                            </select>
+                        </div>
                     </div>
                     <div id="newsList" class="news-list"></div>
                 </section>
@@ -232,6 +232,11 @@
                         </button>
                     </div>
                     <p id="readerSummary" class="reader-summary">鼠标放在英文单词上，会显示中文释义和音标。</p>
+                    <div class="reader-progress" aria-label="阅读进度">
+                        <div class="reader-progress-track"><span id="readerProgressFill"></span></div>
+                        <span id="readerProgressText">0%</span>
+                        <button id="finishReadingBtn" class="reader-finish-btn" type="button">完成阅读</button>
+                    </div>
                     <article id="readerContent" class="reader-content"></article>
                     <div id="translationOutput" class="translation-area"></div>
                 </section>
@@ -301,6 +306,6 @@
         </div>
     </div>
 </aside>
-<script src="/js/app.js"></script>
+<script src="/js/app.js?v=adventure-map"></script>
 </body>
 </html>

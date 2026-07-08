@@ -6,6 +6,8 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.hamcrest.Matchers.not;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -116,6 +119,84 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.data.correct").value(false))
                 .andExpect(jsonPath("$.data.expectedMeaning").isNotEmpty())
                 .andExpect(jsonPath("$.data.exampleEn").isNotEmpty());
+    }
+
+    @Test
+    void strictReviewPassesOnlyWhenSpellingAndMeaningAreCorrect() throws Exception {
+        ReviewWord reviewWord = seedWrongReviewWord();
+
+        mockMvc.perform(post("/api/reviews/" + reviewWord.wordId())
+                        .session(reviewWord.session())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reviewBody(reviewWord.word(), reviewWord.meaningCn())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.correct").value(true))
+                .andExpect(jsonPath("$.data.spellingCorrect").value(true))
+                .andExpect(jsonPath("$.data.meaningCorrect").value(true))
+                .andExpect(jsonPath("$.data.expectedWord").value(reviewWord.word()))
+                .andExpect(jsonPath("$.data.wrongCount").value(0))
+                .andExpect(jsonPath("$.data.familiarity").value(greaterThan(2)));
+
+        MvcResult mastered = mockMvc.perform(get("/api/reviews/mastered")
+                        .param("limit", "20")
+                        .session(reviewWord.session()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn();
+        assertTrue(responseContainsWord(mastered, reviewWord.wordId()));
+    }
+
+    @Test
+    void strictReviewRejectsPartialAnswersAndCountsEveryWrongAttempt() throws Exception {
+        ReviewWord reviewWord = seedWrongReviewWord();
+
+        mockMvc.perform(post("/api/reviews/" + reviewWord.wordId())
+                        .session(reviewWord.session())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reviewBody(reviewWord.word(), "not-the-meaning")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(false))
+                .andExpect(jsonPath("$.data.spellingCorrect").value(true))
+                .andExpect(jsonPath("$.data.meaningCorrect").value(false))
+                .andExpect(jsonPath("$.data.wrongCount").value(2));
+
+        mockMvc.perform(post("/api/reviews/" + reviewWord.wordId())
+                        .session(reviewWord.session())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reviewBody("bad-spelling", reviewWord.meaningCn())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(false))
+                .andExpect(jsonPath("$.data.spellingCorrect").value(false))
+                .andExpect(jsonPath("$.data.meaningCorrect").value(true))
+                .andExpect(jsonPath("$.data.wrongCount").value(3));
+    }
+
+    @Test
+    void todayReviewsReturnWrongWordsOnlyAndRemovePassedWord() throws Exception {
+        ReviewWord reviewWord = seedWrongReviewWord();
+
+        MvcResult before = mockMvc.perform(get("/api/reviews/today")
+                        .param("limit", "8")
+                        .session(reviewWord.session()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn();
+        assertTrue(responseContainsWord(before, reviewWord.wordId()));
+
+        mockMvc.perform(post("/api/reviews/" + reviewWord.wordId())
+                        .session(reviewWord.session())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reviewBody(reviewWord.word(), reviewWord.meaningCn())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(true));
+
+        MvcResult after = mockMvc.perform(get("/api/reviews/today")
+                        .param("limit", "8")
+                        .session(reviewWord.session()))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertFalse(responseContainsWord(after, reviewWord.wordId()));
     }
 
     @Test
@@ -280,6 +361,25 @@ class JavaBigWorkApplicationTests {
     }
 
     @Test
+    void newsTopicsAndTopicFilterUseArticleTags() throws Exception {
+        MockHttpSession session = studentSession();
+
+        mockMvc.perform(get("/api/news/topics").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(content().string(containsString("story")));
+
+        mockMvc.perform(get("/api/news/recommendations")
+                        .param("topic", "story")
+                        .session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.length()", greaterThan(0)))
+                .andExpect(jsonPath("$.data[*].topicTags").value(
+                        org.hamcrest.Matchers.everyItem(containsString("story"))));
+    }
+
+    @Test
     void newsDetailLookupAndTranslateRemainAvailable() throws Exception {
         MockHttpSession session = studentSession();
         MvcResult recommendations = mockMvc.perform(get("/api/news/recommendations").session(session))
@@ -292,7 +392,9 @@ class JavaBigWorkApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.title").isNotEmpty())
-                .andExpect(jsonPath("$.data.content").isNotEmpty());
+                .andExpect(jsonPath("$.data.content").isNotEmpty())
+                .andExpect(jsonPath("$.data.readProgress").value(0))
+                .andExpect(jsonPath("$.data.finished").value(false));
 
         mockMvc.perform(get("/api/news/lookup").param("word", "learning").session(session))
                 .andExpect(status().isOk())
@@ -313,6 +415,240 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.titleCn").exists())
                 .andExpect(jsonPath("$.data.contentCn").exists());
+    }
+
+    @Test
+    void articleProgressAndLookupAreScopedToCurrentUser() throws Exception {
+        String username = "reader" + System.nanoTime();
+        long userId = registerUser(username, "Reader");
+        MockHttpSession session = login(username, "userpass123");
+        long otherUserId = registerUser("readerOther" + System.nanoTime(), "Other Reader");
+
+        MvcResult recommendations = mockMvc.perform(get("/api/news/recommendations").session(session))
+                .andExpect(status().isOk())
+                .andReturn();
+        long articleId = objectMapper.readTree(recommendations.getResponse().getContentAsString())
+                .path("data").path(0).path("id").asLong();
+
+        mockMvc.perform(get("/api/news/" + articleId).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.readProgress").value(0))
+                .andExpect(jsonPath("$.data.finished").value(false));
+        mockMvc.perform(get("/api/news/" + articleId + "/lookup").param("word", "learning").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.word").isNotEmpty());
+        mockMvc.perform(get("/api/news/" + articleId + "/lookup").param("word", "practice").session(session))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/report/summary").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.readingCount").value(0));
+
+        MockHttpSession admin = adminSession();
+        mockMvc.perform(get("/api/admin/users/" + userId + "/profile").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.readingOverview.readings").value(1))
+                .andExpect(jsonPath("$.data.readingOverview.finishedReadings").value(0))
+                .andExpect(jsonPath("$.data.readingOverview.lookedUpWords").value(2));
+        mockMvc.perform(get("/api/admin/users/" + otherUserId + "/profile").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.readingOverview.lookedUpWords").value(0));
+
+        mockMvc.perform(get("/api/admin/users/" + userId + "/readings").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].readProgress").value(0))
+                .andExpect(jsonPath("$.data[0].finished").value(false));
+
+        mockMvc.perform(post("/api/news/" + articleId + "/progress")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "readProgress": 40
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.readProgress").value(40))
+                .andExpect(jsonPath("$.data.finished").value(false));
+
+        mockMvc.perform(post("/api/news/" + articleId + "/progress")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "readProgress": 20
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.readProgress").value(40))
+                .andExpect(jsonPath("$.data.finished").value(false));
+
+        mockMvc.perform(post("/api/news/" + articleId + "/progress")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "readProgress": 90
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.readProgress").value(90))
+                .andExpect(jsonPath("$.data.finished").value(true));
+
+        mockMvc.perform(get("/api/report/summary").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.readingCount").value(1));
+
+        mockMvc.perform(get("/api/admin/users/" + userId + "/readings").session(admin))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].readProgress").value(90))
+                .andExpect(jsonPath("$.data[0].finished").value(true))
+                .andExpect(jsonPath("$.data[0].lookedUpWords").value(2));
+    }
+
+    @Test
+    void recommendationsPreferInProgressArticlesOverFinishedArticles() throws Exception {
+        String username = "recommend" + System.nanoTime();
+        registerUser(username, "Recommend User");
+        MockHttpSession session = login(username, "userpass123");
+
+        MvcResult initial = mockMvc.perform(get("/api/news/recommendations").session(session))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode articles = objectMapper.readTree(initial.getResponse().getContentAsString()).path("data");
+        assertTrue(articles.size() > 1);
+        long finishedArticleId = articles.path(0).path("id").asLong();
+        long inProgressArticleId = articles.path(1).path("id").asLong();
+
+        mockMvc.perform(get("/api/news/" + finishedArticleId).session(session))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/news/" + finishedArticleId + "/progress")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "readProgress": 100,
+                                  "finished": true
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.finished").value(true));
+
+        mockMvc.perform(get("/api/news/" + inProgressArticleId).session(session))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/news/" + inProgressArticleId + "/progress")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "readProgress": 40
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.finished").value(false));
+
+        mockMvc.perform(get("/api/news/recommendations").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(inProgressArticleId));
+    }
+
+    @Test
+    void readingLookupCanSaveWordToReviewBookWithoutDuplicates() throws Exception {
+        String username = "saveword" + System.nanoTime();
+        registerUser(username, "Save Word User");
+        MockHttpSession session = login(username, "userpass123");
+
+        MvcResult recommendations = mockMvc.perform(get("/api/news/recommendations").session(session))
+                .andExpect(status().isOk())
+                .andReturn();
+        long articleId = objectMapper.readTree(recommendations.getResponse().getContentAsString())
+                .path("data").path(0).path("id").asLong();
+
+        mockMvc.perform(get("/api/news/" + articleId + "/lookup").param("word", "learning").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.savedInReviewBook").value(false));
+
+        mockMvc.perform(post("/api/dictionary/save").param("word", "learning").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.savedInReviewBook").value(true));
+        mockMvc.perform(post("/api/dictionary/save").param("word", "learning").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.savedInReviewBook").value(true));
+
+        mockMvc.perform(get("/api/news/" + articleId + "/lookup").param("word", "learning").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.savedInReviewBook").value(true));
+
+        mockMvc.perform(get("/api/report/summary").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reviewWords").value(1));
+    }
+
+    @Test
+    void wordAiDetailFallsBackToLocalRulesWhenModelUnavailable() throws Exception {
+        mockMvc.perform(get("/api/words/1/ai-detail").session(studentSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.modelName").value("local-rules"))
+                .andExpect(jsonPath("$.data.examples.length()", greaterThan(0)))
+                .andExpect(jsonPath("$.data.usageNotes.length()", greaterThan(0)));
+    }
+
+    @Test
+    void reportSuggestionsReflectUserProgress() throws Exception {
+        String username = "report" + System.nanoTime();
+        registerUser(username, "Report User");
+        MockHttpSession session = login(username, "userpass123");
+
+        mockMvc.perform(get("/api/report/summary").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.weakPoints", hasSize(greaterThan(0))))
+                .andExpect(content().string(containsString("阅读输入不足")))
+                .andExpect(content().string(containsString("输出练习不足")));
+
+        MvcResult recommendations = mockMvc.perform(get("/api/news/recommendations").session(session))
+                .andExpect(status().isOk())
+                .andReturn();
+        long articleId = objectMapper.readTree(recommendations.getResponse().getContentAsString())
+                .path("data").path(0).path("id").asLong();
+        mockMvc.perform(get("/api/news/" + articleId + "/lookup").param("word", "learning").session(session))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/news/" + articleId + "/progress")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "readProgress": 90
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/report/summary").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("提交 1 篇 80-120 词短作文批改")))
+                .andExpect(content().string(containsString("收藏 5 个高频词")));
+    }
+
+    @Test
+    void inputBoundariesReturnBadRequest() throws Exception {
+        MockHttpSession session = studentSession();
+        String longMessageBody = objectMapper.writeValueAsString(Map.of(
+                "scene", "daily",
+                "message", "x".repeat(2001)
+        ));
+
+        mockMvc.perform(post("/api/chat")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(longMessageBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(get("/api/news/lookup").param("word", " ").session(session))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
     }
 
     @Test
@@ -526,6 +862,55 @@ class JavaBigWorkApplicationTests {
 
         mockMvc.perform(delete("/api/admin/news/" + articleId).session(admin))
                 .andExpect(status().isOk());
+    }
+
+    private ReviewWord seedWrongReviewWord() throws Exception {
+        String username = "review" + System.nanoTime();
+        registerUser(username, "Review User");
+        MockHttpSession session = login(username, "userpass123");
+        MvcResult words = mockMvc.perform(get("/api/words/today")
+                        .param("limit", "1")
+                        .session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andReturn();
+        JsonNode wordNode = objectMapper.readTree(words.getResponse().getContentAsString()).path("data").path(0);
+        long wordId = wordNode.path("id").asLong();
+        String word = wordNode.path("word").asText();
+        String meaningCn = wordNode.path("meaningCn").asText();
+
+        mockMvc.perform(post("/api/words/" + wordId + "/quiz")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answer": "definitely-not-the-answer"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.correct").value(false));
+
+        return new ReviewWord(session, wordId, word, meaningCn);
+    }
+
+    private String reviewBody(String spellingAnswer, String meaningAnswer) throws Exception {
+        return objectMapper.writeValueAsString(Map.of(
+                "spellingAnswer", spellingAnswer,
+                "meaningAnswer", meaningAnswer
+        ));
+    }
+
+    private boolean responseContainsWord(MvcResult result, long wordId) throws Exception {
+        JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+        for (JsonNode item : data) {
+            if (item.path("id").asLong() == wordId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private record ReviewWord(MockHttpSession session, long wordId, String word, String meaningCn) {
     }
 
     private MockHttpSession studentSession() throws Exception {

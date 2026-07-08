@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS user_word_progress (
     review_count INT,
     favorite BOOLEAN DEFAULT FALSE,
     next_review_at TIMESTAMP,
-    last_review_at TIMESTAMP
+    last_review_at TIMESTAMP,
+    UNIQUE KEY uk_user_word_progress_user_word (user_id, word_id)
 );
 
 CREATE TABLE IF NOT EXISTS word_review_log (
@@ -67,7 +68,12 @@ CREATE TABLE IF NOT EXISTS word_review_log (
     user_id BIGINT NOT NULL DEFAULT 1,
     word_id BIGINT NOT NULL,
     answer VARCHAR(255),
+    spelling_answer VARCHAR(255),
+    meaning_answer VARCHAR(255),
     correct BOOLEAN,
+    spelling_correct BOOLEAN,
+    meaning_correct BOOLEAN,
+    review_type VARCHAR(32),
     created_at TIMESTAMP
 );
 
@@ -120,7 +126,9 @@ CREATE TABLE IF NOT EXISTS reading_record (
     read_progress INT,
     looked_up_words INT,
     finished BOOLEAN,
-    created_at TIMESTAMP
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    UNIQUE KEY uk_reading_record_user_article (user_id, article_id)
 );
 
 CREATE TABLE IF NOT EXISTS knowledge_document (

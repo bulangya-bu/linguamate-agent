@@ -264,6 +264,7 @@ public class AdminService {
         }
         return readingRecordMapper.selectList(Wrappers.<ReadingRecord>query()
                         .eq("user_id", userId)
+                        .orderByDesc("updated_at")
                         .orderByDesc("created_at")
                         .last("LIMIT 100"))
                 .stream()
@@ -513,7 +514,8 @@ public class AdminService {
             Integer readProgress,
             Integer lookedUpWords,
             Boolean finished,
-            LocalDateTime createdAt
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
     ) {
         static AdminReadingRecordView from(ReadingRecord record, NewsArticle article) {
             return new AdminReadingRecordView(
@@ -524,7 +526,8 @@ public class AdminService {
                     record.readProgress,
                     record.lookedUpWords,
                     record.finished,
-                    record.createdAt
+                    record.createdAt,
+                    record.updatedAt
             );
         }
     }

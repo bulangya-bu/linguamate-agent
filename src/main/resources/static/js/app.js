@@ -2,9 +2,22 @@ const state = {
     currentUser: null,
     conversationId: null,
     words: [],
+    home: {
+        report: null,
+        level: null,
+        conversations: [],
+        chatCompleted: false
+    },
     tooltipWord: null,
+    tooltipHideTimer: null,
     currentArticle: null,
     translateBusy: false,
+    news: {
+        topics: [],
+        lookupCache: {},
+        progressTimer: null,
+        skipProgressEvent: false
+    },
     ai: {
         loaded: false,
         models: [],
@@ -15,7 +28,12 @@ const state = {
     },
     review: {
         mode: "today",
-        words: []
+        words: [],
+        queue: [],
+        completed: false,
+        lastResult: null,
+        pendingReview: false,
+        submitting: false
     },
     quiz: {
         words: [],
@@ -71,19 +89,243 @@ function showSection(id) {
     $$(".section").forEach((section) => section.classList.toggle("active", section.id === id));
 }
 
+function sameLocalDay(value) {
+    if (!value) return false;
+    const date = new Date(String(value).replace(" ", "T"));
+    if (Number.isNaN(date.getTime())) return false;
+    const now = new Date();
+    return date.getFullYear() === now.getFullYear()
+        && date.getMonth() === now.getMonth()
+        && date.getDate() === now.getDate();
+}
+
+function count(value) {
+    return Number(value || 0);
+}
+
+function buildJourneySteps() {
+    const report = state.home.report || {};
+    const level = state.home.level || {};
+    const answeredWords = Object.keys(state.quiz.answers || {}).length;
+    const todayConversation = (state.home.conversations || []).some((item) => sameLocalDay(item.updatedAt));
+    const learnedWords = count(report.learnedWords);
+    const reviewWords = count(report.reviewWords);
+    const essayCount = count(report.essayCount);
+    const readingCount = count(report.readingCount);
+    const quizTarget = Math.min(6, state.quiz.words.length || 6);
+    const chatDone = state.home.chatCompleted || todayConversation;
+    const vocabularyDone = state.quiz.completed || answeredWords >= quizTarget || learnedWords >= 6;
+    const reviewDone = reviewWords === 0
+        && (state.review.mode !== "today" || state.review.completed || state.review.words.length === 0);
+    const writingDone = essayCount > 0;
+    const readingDone = readingCount > 0;
+
+    return [
+        {
+            id: "chat",
+            section: "chat",
+            title: "开口练",
+            landmark: "会话营地",
+            symbol: "说",
+            tone: "green",
+            mapX: 16,
+            mapY: 63,
+            done: chatDone,
+            recommended: !chatDone,
+            detail: chatDone ? "今日已开口" : "先来一轮对话"
+        },
+        {
+            id: "vocabulary",
+            section: "vocabulary",
+            title: "记单词",
+            landmark: "词汇树林",
+            symbol: "词",
+            tone: "blue",
+            mapX: 34,
+            mapY: 31,
+            done: vocabularyDone,
+            recommended: !vocabularyDone && learnedWords < 6,
+            detail: vocabularyDone ? `已掌握 ${learnedWords} 个` : `${quizTarget} 个新词`
+        },
+        {
+            id: "review",
+            section: "review",
+            title: "复习错词",
+            landmark: "复习山口",
+            symbol: "复",
+            tone: "amber",
+            mapX: 53,
+            mapY: 56,
+            done: reviewDone,
+            recommended: !reviewDone,
+            detail: reviewDone ? "队列清爽" : `${reviewWords} 个待巩固`
+        },
+        {
+            id: "writing",
+            section: "writing",
+            title: "改作文",
+            landmark: "写作工坊",
+            symbol: "写",
+            tone: "coral",
+            mapX: 72,
+            mapY: 78,
+            done: writingDone,
+            recommended: !writingDone,
+            detail: writingDone ? `已批改 ${essayCount} 篇` : "句子升级"
+        },
+        {
+            id: "news",
+            section: "news",
+            title: "读新闻",
+            landmark: "阅读灯塔",
+            symbol: "读",
+            tone: "violet",
+            mapX: 82,
+            mapY: 25,
+            done: readingDone,
+            recommended: !readingDone,
+            detail: readingDone ? `阅读 ${readingCount} 篇` : "悬停查词"
+        }
+    ].map((step, index) => ({ ...step, index: index + 1, xp: level.experience || 0 }));
+}
+
+function chooseRecommendedSteps(steps) {
+    const priority = ["review", "vocabulary", "chat", "news", "writing"];
+    return [...steps]
+        .filter((step) => !step.done)
+        .sort((a, b) => priority.indexOf(a.id) - priority.indexOf(b.id))
+        .slice(0, 2);
+}
+
+function journeyEnergyPercent(steps) {
+    const level = state.home.level;
+    if (level?.nextLevelXp) {
+        return Math.min(100, Math.round((count(level.experience) / count(level.nextLevelXp)) * 100));
+    }
+    return Math.round((steps.filter((step) => step.done).length / steps.length) * 100);
+}
+
+function renderJourneyMap() {
+    const map = $("#lessonMap");
+    if (!map) return;
+    const steps = buildJourneySteps();
+    const doneCount = steps.filter((step) => step.done).length;
+    const recommended = chooseRecommendedSteps(steps);
+    const recommendedIds = new Set(recommended.map((step) => step.id));
+    const stepById = Object.fromEntries(steps.map((step) => [step.id, step]));
+    const linkClass = (id) => [
+        "trail-link",
+        stepById[id]?.done ? "is-lit" : "",
+        recommendedIds.has(id) ? "is-guide" : ""
+    ].filter(Boolean).join(" ");
+    const energy = journeyEnergyPercent(steps);
+    const focus = recommended[0] || steps.find((step) => !step.done) || steps[0];
+    $("#journeyTitle").textContent = doneCount === steps.length
+        ? "今日学习岛已点亮"
+        : "探索今日学习岛";
+    $("#energyPill").textContent = `能量 ${energy}%`;
+    map.innerHTML = `
+        <svg class="adventure-map-bg" viewBox="0 0 840 430" aria-hidden="true" focusable="false">
+            <defs>
+                <linearGradient id="mapWater" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#eaf8ff" />
+                    <stop offset="100%" stop-color="#d8f2ff" />
+                </linearGradient>
+                <linearGradient id="mapLand" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#f6ffe9" />
+                    <stop offset="58%" stop-color="#e7f9d5" />
+                    <stop offset="100%" stop-color="#d6f0c4" />
+                </linearGradient>
+                <filter id="mapSoftShadow" x="-12%" y="-12%" width="124%" height="124%">
+                    <feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#7fb3c9" flood-opacity="0.16" />
+                </filter>
+            </defs>
+            <rect class="map-paper" x="18" y="18" width="804" height="394" rx="30" />
+            <path class="map-water" d="M45 84 C130 34 233 76 310 52 C410 22 493 78 586 58 C690 35 755 78 795 130 L795 384 L45 384 Z" />
+            <path class="map-island-shadow" d="M94 264 C87 173 151 95 246 82 C325 71 362 116 429 100 C517 78 610 100 669 165 C727 227 723 324 648 359 C559 400 492 354 405 370 C289 391 116 372 94 264 Z" />
+            <path class="map-island" d="M95 251 C90 166 154 94 247 82 C326 72 363 119 428 102 C516 79 604 100 664 160 C727 223 719 315 650 351 C563 397 492 349 405 366 C291 388 116 362 95 251 Z" />
+            <path class="map-river" d="M310 92 C324 132 301 153 332 184 C356 207 416 205 435 238 C455 273 419 306 450 350" />
+            <path class="trail-main" d="M139 271 C204 204 259 158 336 134 C421 108 509 147 581 199 C646 246 704 195 739 111" />
+            <path class="${linkClass("chat")}" d="M200 230 C178 236 157 250 139 271" />
+            <path class="${linkClass("vocabulary")}" d="M336 134 C326 117 306 104 285 97" />
+            <path class="${linkClass("review")}" d="M459 173 C456 197 454 222 451 244" />
+            <path class="${linkClass("writing")}" d="M581 199 C574 233 571 267 572 301" />
+            <path class="${linkClass("news")}" d="M660 158 C690 139 718 123 739 111" />
+            <g class="map-forest">
+                <path d="M194 154 l18 -34 l18 34 h-12 l14 24 h-40 l14 -24 Z" />
+                <path d="M232 144 l16 -30 l16 30 h-11 l13 22 h-36 l13 -22 Z" />
+                <path d="M625 125 l17 -31 l17 31 h-11 l13 23 h-38 l13 -23 Z" />
+                <path d="M651 146 l14 -26 l14 26 h-9 l11 19 h-32 l11 -19 Z" />
+            </g>
+            <g class="map-hills">
+                <path d="M397 100 l38 -54 l43 54 Z" />
+                <path d="M445 107 l30 -42 l34 42 Z" />
+                <path d="M514 314 l35 -47 l38 47 Z" />
+            </g>
+            <g class="map-compass">
+                <circle cx="82" cy="72" r="23" />
+                <path d="M82 52 l7 20 l-7 20 l-7 -20 Z" />
+                <text x="82" y="80" text-anchor="middle">N</text>
+            </g>
+            <g class="map-dots">
+                <circle cx="280" cy="338" r="4" />
+                <circle cx="703" cy="305" r="5" />
+                <circle cx="130" cy="120" r="4" />
+            </g>
+        </svg>
+        ${steps.map((step) => `
+            <button class="map-landmark node-${step.tone} ${step.done ? "is-complete" : ""} ${recommendedIds.has(step.id) ? "is-current" : ""}"
+                    type="button"
+                    style="--map-x: ${step.mapX}%; --map-y: ${step.mapY}%"
+                    data-route-section="${step.section}"
+                    aria-label="${escapeAttribute(step.title)}，${step.done ? "已完成" : recommendedIds.has(step.id) ? "推荐优先" : "待完成"}">
+                <span class="landmark-pin">
+                    <span class="landmark-symbol">${step.done ? "✓" : step.symbol}</span>
+                </span>
+                <span class="landmark-copy">
+                    <strong>${escapeHtml(step.title)}</strong>
+                    <small>${escapeHtml(step.landmark)}</small>
+                    <em>${escapeHtml(step.detail)}</em>
+                </span>
+                <span class="landmark-status">${step.done ? "已点亮" : recommendedIds.has(step.id) ? "建议前往" : "可探索"}</span>
+            </button>`).join("")}`;
+    $("#routeProgressSummary").innerHTML = `
+        <div class="route-status-card is-progress">
+            <strong>${doneCount}/${steps.length}</strong>
+            <span>已点亮据点</span>
+            <small>${steps.length - doneCount} 处待探索</small>
+        </div>
+        <div class="route-status-card is-energy">
+            <strong>${energy}%</strong>
+            <span>路线能量</span>
+            <small>${focus ? focus.title : "继续学习"}</small>
+        </div>`;
+    $("#routeFocus").textContent = doneCount === steps.length
+        ? "今日学习岛已经全部点亮，可以继续扩展阅读或再来一轮单词。"
+        : `建议前往：${recommended.map((step) => `${step.landmark}（${step.title}）`).join("、")}。地图上的据点都可直接进入，没有固定顺序。`;
+    const focusAction = $("#routeFocusAction");
+    if (focusAction && focus) {
+        focusAction.dataset.section = focus.section;
+        focusAction.textContent = doneCount === steps.length ? "继续学习" : `前往${focus.title}`;
+    }
+}
+
 function renderReport(report, level) {
+    state.home.report = report;
+    state.home.level = level;
     $("#learnedWords").textContent = report.learnedWords;
     $("#reviewWords").textContent = report.reviewWords;
     $("#favoriteWords").textContent = report.favoriteWords;
     $("#essayCount").textContent = report.essayCount;
     $("#readingCount").textContent = report.readingCount;
-    $("#nextActions").innerHTML = report.nextActions.map((item) => `<li>${item}</li>`).join("");
+    $("#nextActions").innerHTML = report.nextActions.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
     if (level) {
         const pct = Math.min(100, (level.experience / level.nextLevelXp) * 100);
         $("#levelDisplay").textContent = `Lv.${level.level}`;
         $("#xpFill").style.width = pct + "%";
         $("#xpDisplay").textContent = `${level.experience} / ${level.nextLevelXp}`;
     }
+    renderJourneyMap();
 }
 
 function setAiStatus(message) {
@@ -402,17 +644,25 @@ async function loadWords({ updateToday = true } = {}) {
         aiDetails: {}
     };
     renderWordQuiz();
+    renderJourneyMap();
 }
 
 async function loadReviews() {
     const reviewUrls = {
-        today: "/api/reviews/today?limit=6",
+        today: "/api/reviews/today?limit=8",
         favorites: "/api/reviews/favorites?limit=20",
         mastered: "/api/reviews/mastered?limit=20"
     };
     const url = reviewUrls[state.review.mode] || reviewUrls.today;
     state.review.words = await api(url);
+    if (state.review.mode === "today") {
+        state.review.queue = [...state.review.words];
+        state.review.completed = false;
+        state.review.lastResult = null;
+        state.review.pendingReview = false;
+    }
     renderReviewWords();
+    renderJourneyMap();
 }
 
 function renderReviewWords() {
@@ -425,14 +675,206 @@ function renderReviewWords() {
         mastered: "还没有已掌握单词，答对几轮后会出现在这里。"
     };
     const emptyText = emptyTextMap[state.review.mode] || emptyTextMap.today;
+    if (state.review.mode === "today") {
+        $("#reviewCards").innerHTML = renderReviewChallenge(emptyText);
+        bindReviewChallengeActions();
+        return;
+    }
     $("#reviewCards").innerHTML = state.review.words.length
         ? state.review.words.map((word) => wordCard(word, true)).join("")
         : `<div class="empty-state review-empty">${emptyText}</div>`;
 }
 
+function renderReviewChallenge(emptyText) {
+    if (state.review.completed) {
+        return `
+            <div class="review-challenge-card is-complete">
+                <div class="quiz-badge">完成</div>
+                <h3>本组错词已全部过关</h3>
+                <p>本轮 8 个错词已经清空，可以继续拉取下一组。</p>
+                <button class="quiz-primary" type="button" data-review-action="restart">再来一组</button>
+            </div>`;
+    }
+    if (!state.review.queue.length) {
+        return `
+            <div class="empty-state review-empty">
+                <p>${emptyText}</p>
+                <button class="quiz-secondary" type="button" data-review-action="restart">刷新错词</button>
+            </div>`;
+    }
+    const word = state.review.queue[0];
+    const total = Math.max(1, state.review.words.length);
+    const remaining = state.review.queue.length;
+    const passed = Math.max(0, total - remaining);
+    const progress = Math.round((passed / total) * 100);
+    const result = state.review.lastResult;
+    const waitingForNext = state.review.pendingReview && result;
+    const resultHtml = result ? renderStrictReviewResult(result) : "";
+    return `
+        <article class="review-challenge-card ${result?.correct ? "is-correct" : result ? "is-wrong" : ""}">
+            <div class="quiz-progress">
+                <span>本组剩余 ${remaining} / ${total}</span>
+                <div class="quiz-progress-track"><i style="width: ${progress}%"></i></div>
+            </div>
+            <div class="review-prompt">
+                <div class="review-prompt-meta">
+                    ${formatPhonetic(word.phoneticUs) ? `<span class="phonetic">${escapeHtml(formatPhonetic(word.phoneticUs))}</span>` : ""}
+                    ${word.partOfSpeech ? `<span>${escapeHtml(word.partOfSpeech)}</span>` : ""}
+                    ${word.levelTag ? `<span>${escapeHtml(word.levelTag)}</span>` : ""}
+                    <span>错 ${Number(word.wrongCount || 0)} 次</span>
+                </div>
+                <div class="review-cloze">${waitingForNext ? renderReviewFilledSentence(word, result) : renderReviewCloze(word)}</div>
+            </div>
+            ${resultHtml}
+            <form class="review-challenge-form" data-review-word-id="${word.id}" ${waitingForNext ? "hidden" : ""}>
+                <div class="review-input-grid">
+                    <label>
+                        <span>英文拼写</span>
+                        <input name="spellingAnswer" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="输入完整英文单词" ${state.review.submitting ? "disabled" : ""}>
+                    </label>
+                    <label>
+                        <span>中文释义</span>
+                        <input name="meaningAnswer" autocomplete="off" placeholder="输入中文关键词" ${state.review.submitting ? "disabled" : ""}>
+                    </label>
+                </div>
+                <div class="review-card-actions">
+                    <button class="quiz-primary" type="submit" ${state.review.submitting ? "disabled" : ""}>
+                        ${state.review.submitting ? "提交中..." : "提交"}
+                    </button>
+                </div>
+            </form>
+            ${waitingForNext ? `
+                <div class="review-card-actions review-next-actions">
+                    <button class="quiz-primary" type="button" data-review-action="next">下一题</button>
+                </div>
+            ` : ""}
+        </article>`;
+}
+
+function renderReviewCloze(word) {
+    const example = word.exampleEn || "Use this word in a complete sentence.";
+    if (!word.word) {
+        return escapeHtml(example);
+    }
+    const pieces = String(example).split(new RegExp(`(${escapeRegExp(word.word)})`, "gi"));
+    return pieces.map((piece) => (
+        piece.toLowerCase() === String(word.word).toLowerCase()
+            ? `<mark class="review-blank">_____</mark>`
+            : escapeHtml(piece)
+    )).join("");
+}
+
+function renderReviewFilledSentence(word, result) {
+    const expectedWord = result.expectedWord || word.word;
+    const example = result.exampleEn || word.exampleEn || `Try to use ${expectedWord} in a complete sentence.`;
+    const chinese = result.exampleCn || word.exampleCn || "";
+    return `
+        <div class="review-filled-example">
+            <p>${highlightTerm(example, expectedWord)}</p>
+            ${chinese ? `<span>${escapeHtml(chinese)}</span>` : ""}
+        </div>`;
+}
+
+function renderReviewResult(result) {
+    const parts = [
+        result.spellingCorrect ? "拼写正确" : "拼写需重来",
+        result.meaningCorrect ? "中文正确" : "中文需重来"
+    ];
+    return `
+        <div class="review-result ${result.correct ? "is-correct" : "is-wrong"}">
+            <strong>${result.correct ? "已过关" : "还没过关，已排到本组最后"}</strong>
+            <span>${parts.join(" · ")}</span>
+            ${result.correct ? "" : `
+                <small>正确答案：${escapeHtml(result.expectedWord || "")} · ${escapeHtml(result.expectedMeaning || "")}</small>
+            `}
+        </div>`;
+}
+
+function renderStrictReviewResult(result) {
+    const parts = [
+        result.spellingCorrect ? "拼写正确" : "拼写需重来",
+        result.meaningCorrect ? "中文正确" : "中文需重来"
+    ];
+    return `
+        <div class="review-result ${result.correct ? "is-correct" : "is-wrong"}">
+            <strong>${result.correct ? "已过关，点击下一题继续" : "还没过关，先看正确答案"}</strong>
+            <span>${parts.join(" · ")}</span>
+            <small>正确答案：${escapeHtml(result.expectedWord || "")} · ${escapeHtml(result.expectedMeaning || "")}</small>
+        </div>`;
+}
+
+function bindReviewChallengeActions() {
+    $("#reviewCards [data-review-action='restart']")?.addEventListener("click", () => {
+        loadReviews().catch((error) => console.error(error));
+    });
+    $("#reviewCards [data-review-action='next']")?.addEventListener("click", advanceReviewChallenge);
+    $("#reviewCards .review-challenge-form")?.addEventListener("submit", submitReviewChallenge);
+}
+
+function advanceReviewChallenge() {
+    if (!state.review.pendingReview || !state.review.queue.length) return;
+    const result = state.review.lastResult;
+    const current = state.review.queue.shift();
+    if (current && result && !result.correct) {
+        state.review.queue.push(current);
+    }
+    state.review.pendingReview = false;
+    state.review.lastResult = null;
+    if (state.review.queue.length === 0) {
+        state.review.completed = true;
+    }
+    renderReviewWords();
+    renderJourneyMap();
+}
+
+async function submitReviewChallenge(event) {
+    event.preventDefault();
+    if (state.review.submitting || state.review.pendingReview || !state.review.queue.length) return;
+    const form = event.currentTarget;
+    const wordId = Number(form.dataset.reviewWordId);
+    const spellingAnswer = form.elements.spellingAnswer.value.trim();
+    const meaningAnswer = form.elements.meaningAnswer.value.trim();
+    if (!spellingAnswer || !meaningAnswer) return;
+    state.review.submitting = true;
+    renderReviewWords();
+    try {
+        const result = await api(`/api/reviews/${wordId}`, {
+            method: "POST",
+            body: JSON.stringify({ spellingAnswer, meaningAnswer })
+        });
+        applyQuizResultToWord(wordId, result);
+        const current = state.review.queue[0];
+        const updatedWord = {
+            ...(current || findWordById(wordId) || {}),
+            familiarity: result.familiarity,
+            wrongCount: result.wrongCount,
+            exampleEn: result.exampleEn || current?.exampleEn,
+            exampleCn: result.exampleCn || current?.exampleCn
+        };
+        state.review.queue[0] = updatedWord;
+        state.review.pendingReview = true;
+        state.review.lastResult = result;
+        await loadReport();
+    } catch (error) {
+        console.error(error);
+        state.review.pendingReview = false;
+        state.review.lastResult = {
+            correct: false,
+            spellingCorrect: false,
+            meaningCorrect: false,
+            expectedWord: "",
+            expectedMeaning: error.message || "提交失败，请稍后重试"
+        };
+    } finally {
+        state.review.submitting = false;
+        renderReviewWords();
+        renderJourneyMap();
+    }
+}
+
 function findWordById(wordId) {
     const numericId = Number(wordId);
-    return [...state.words, ...state.quiz.words, ...state.review.words, ...state.wordBank.words]
+    return [...state.words, ...state.quiz.words, ...state.review.words, ...state.review.queue, ...state.wordBank.words]
         .find((item) => item.id === numericId);
 }
 
@@ -642,11 +1084,12 @@ function renderWordAiDetail(word, aiState, variant = "") {
     const variants = Array.isArray(detail.variants) ? detail.variants : [];
     const usageNotes = Array.isArray(detail.usageNotes) ? detail.usageNotes : [];
     const collocations = Array.isArray(detail.collocations) ? detail.collocations : [];
+    const modelLabel = detail.modelName === "local-rules" ? "本地词库兜底" : (detail.modelName || "");
     return `
         <section class="quiz-ai-detail ${variant}">
             <div class="quiz-ai-head">
                 <strong>深度解析 · ${escapeHtml(detail.word || word.word)}</strong>
-                <span>${escapeHtml(detail.modelName || "")}${detail.cached ? " · 已缓存" : ""}</span>
+                <span>${escapeHtml(modelLabel)}${detail.cached ? " · 已缓存" : ""}</span>
             </div>
             <div class="quiz-ai-grid">
                 ${renderAiSection("更多例句", examples.map((item) => `
@@ -715,6 +1158,7 @@ function bindWordQuizActions() {
             if (action === "finish") {
                 state.quiz.completed = true;
                 renderWordQuiz();
+                renderJourneyMap();
             }
             if (action === "restart") {
                 loadWords({ updateToday: false }).catch((error) => console.error(error));
@@ -756,7 +1200,9 @@ function applyQuizResultToWord(wordId, result) {
     const patch = (word) => word.id === wordId ? {
         ...word,
         exampleEn: result.exampleEn || word.exampleEn,
-        exampleCn: result.exampleCn || word.exampleCn
+        exampleCn: result.exampleCn || word.exampleCn,
+        familiarity: result.familiarity ?? word.familiarity,
+        wrongCount: result.wrongCount ?? word.wrongCount
     } : word;
     state.words = state.words.map(patch);
     state.quiz.words = state.quiz.words.map(patch);
@@ -809,13 +1255,24 @@ async function requireCurrentUser() {
 
 function renderCurrentUser(user) {
     const name = user.nickname || user.username;
+    const isAdmin = user.role === "ADMIN";
     const nameEl = $("#currentUserName");
     const roleEl = $("#currentUserRole");
+    const avatarEl = $("#currentUserAvatar");
+    const roleBadge = $("#currentRoleBadge");
+    const levelPanel = $("#levelPanel");
+    const studentBlock = $("#studentLevelBlock");
+    const adminBlock = $("#adminLevelBlock");
     const adminLink = $("#adminEntry");
     if (nameEl) nameEl.textContent = name;
-    if (roleEl) roleEl.textContent = user.role === "ADMIN" ? "管理员" : "学习者";
-    if (adminLink) adminLink.hidden = user.role !== "ADMIN";
-    document.body.classList.toggle("is-admin", user.role === "ADMIN");
+    if (roleEl) roleEl.textContent = isAdmin ? "管理员账号" : "学习者";
+    if (avatarEl) avatarEl.textContent = Array.from(String(name || (isAdmin ? "管" : "学")).trim())[0] || (isAdmin ? "管" : "学");
+    if (roleBadge) roleBadge.textContent = isAdmin ? "管理端" : "学习中";
+    if (studentBlock) studentBlock.hidden = isAdmin;
+    if (adminBlock) adminBlock.hidden = !isAdmin;
+    if (adminLink) adminLink.hidden = !isAdmin;
+    if (levelPanel) levelPanel.classList.toggle("is-admin-card", isAdmin);
+    document.body.classList.toggle("is-admin", isAdmin);
 }
 
 async function logout() {
@@ -935,12 +1392,14 @@ function sceneLabel(scene) {
 
 async function loadConversations() {
     const list = await api("/api/conversations");
+    state.home.conversations = list;
     $("#convList").innerHTML = list.map(c => `
         <div class="conv-item${c.id === state.conversationId ? " is-active" : ""}"
              data-conv-id="${c.id}">
             <span class="conv-title">${escapeHtml(c.title || "新对话")}</span>
             <span class="conv-meta">${sceneLabel(c.scene)} · ${formatConvTime(c.updatedAt)}</span>
         </div>`).join("");
+    renderJourneyMap();
     return list;
 }
 
@@ -983,10 +1442,14 @@ async function sendChat(event) {
         })
     });
     state.conversationId = result.conversationId;
+    state.home.chatCompleted = true;
     const messages = $$("#chatMessages .message");
     messages[messages.length - 1].textContent = result.reply;
     renderTrace(result.trace);
-    loadConversations();
+    await Promise.all([
+        loadConversations(),
+        loadReport()
+    ]);
 }
 
 async function reviewEssay(event) {
@@ -1026,14 +1489,28 @@ async function reviewEssay(event) {
     await loadReport();
 }
 
+async function loadNewsTopics() {
+    const select = $("#newsTopic");
+    if (!select) return;
+    state.news.topics = await api("/api/news/topics");
+    select.innerHTML = `<option value="">全部主题</option>` + state.news.topics
+        .map((topic) => `<option value="${escapeAttribute(topic)}">${escapeHtml(topic)}</option>`)
+        .join("");
+}
+
 async function loadNews() {
+    const params = new URLSearchParams();
     const difficulty = $("#newsDifficulty").value;
-    const list = await api(`/api/news/recommendations?difficulty=${encodeURIComponent(difficulty)}`);
+    const topic = $("#newsTopic")?.value || "";
+    if (difficulty) params.set("difficulty", difficulty);
+    if (topic) params.set("topic", topic);
+    const query = params.toString();
+    const list = await api(`/api/news/recommendations${query ? `?${query}` : ""}`);
     $("#newsList").innerHTML = list.map((item) => `
         <button class="news-item" data-news-id="${item.id}">
-            <strong>${item.title}</strong>
-            <span>${item.difficulty} · ${item.topicTags}</span>
-            <p>${item.summary}</p>
+            <strong>${escapeHtml(item.title)}</strong>
+            <span>${escapeHtml(item.difficulty || "")} · ${escapeHtml(item.topicTags || "")}</span>
+            <p>${escapeHtml(item.summary || "")}</p>
         </button>`).join("");
     $$(".news-item").forEach((item) => {
         item.addEventListener("click", () => loadArticle(item.dataset.newsId));
@@ -1043,52 +1520,36 @@ async function loadNews() {
     } else {
         state.currentArticle = null;
         clearTranslation();
+        updateReaderProgress(0, false);
         $("#readerTitle").textContent = "暂无文章";
-        $("#readerSummary").textContent = "换一个难度后再试试。";
+        $("#readerSummary").textContent = "换一个筛选条件后再试试。";
         $("#readerContent").innerHTML = "";
     }
 }
 
 async function loadArticle(id) {
     const article = await api(`/api/news/${id}`);
-    state.currentArticle = { title: article.title, content: article.content };
+    state.currentArticle = {
+        id: article.id,
+        title: article.title,
+        content: article.content,
+        readProgress: Number(article.readProgress || 0),
+        finished: Boolean(article.finished)
+    };
     clearTranslation();
+    hideTooltip();
     $$(".news-item").forEach((item) => {
         item.classList.toggle("is-active", String(item.dataset.newsId) === String(id));
     });
     $("#readerTitle").textContent = article.title;
     $("#readerSummary").textContent = article.summary;
-    $("#readerContent").innerHTML = article.content
-        .split(/(\s+)/)
-        .map((token) => {
-            if (/^[A-Za-z][A-Za-z'-]*[.,;:!?]?$/.test(token)) {
-                const clean = token.replace(/[^A-Za-z'-]/g, "");
-                const normalized = clean.toLowerCase();
-                if (clean.length < 3 || lookupStopWords.has(normalized)) {
-                    return token;
-                }
-                return `<span class="reader-word" data-word="${clean}">${token}</span>`;
-            }
-            return token;
-        })
-        .join("");
-}
-
-async function showTooltip(event) {
-    const word = event.target.dataset.word;
-    if (!word || state.tooltipWord === word) return;
-    state.tooltipWord = word;
-    const result = await api(`/api/dictionary/lookup?word=${encodeURIComponent(word)}`);
-    const tooltip = $("#wordTooltip");
-    tooltip.innerHTML = `<strong>${escapeHtml(result.word)}</strong> <span class="phonetic">${escapeHtml(formatPhonetic(result.phoneticUs))}</span><br>${escapeHtml(result.meaningCn)}<br>${result.partOfSpeech ? `<span>${escapeHtml(result.partOfSpeech)}</span>` : ""}`;
-    tooltip.style.left = `${Math.min(window.innerWidth - 300, event.clientX + 14)}px`;
-    tooltip.style.top = `${event.clientY + 18}px`;
-    tooltip.classList.add("visible");
-}
-
-function hideTooltip() {
-    state.tooltipWord = null;
-    $("#wordTooltip").classList.remove("visible");
+    const reader = $("#readerContent");
+    reader.innerHTML = makeReaderHtml(article.content);
+    state.news.skipProgressEvent = true;
+    reader.scrollTop = 0;
+    window.setTimeout(() => { state.news.skipProgressEvent = false; }, 0);
+    updateReaderProgress(state.currentArticle.readProgress, state.currentArticle.finished);
+    await loadReport();
 }
 
 function makeReaderHtml(text) {
@@ -1099,13 +1560,144 @@ function makeReaderHtml(text) {
                 const clean = token.replace(/[^A-Za-z'-]/g, "");
                 const normalized = clean.toLowerCase();
                 if (clean.length < 3 || lookupStopWords.has(normalized)) {
-                    return token;
+                    return escapeHtml(token);
                 }
-                return `<span class="reader-word" data-word="${clean}">${token}</span>`;
+                return `<span class="reader-word" data-word="${escapeAttribute(clean)}">${escapeHtml(token)}</span>`;
             }
-            return token;
+            return escapeHtml(token);
         })
         .join("");
+}
+
+function calculateReaderProgress() {
+    const reader = $("#readerContent");
+    if (!reader || !state.currentArticle) return 0;
+    const total = reader.scrollHeight;
+    if (total <= reader.clientHeight) {
+        return Math.max(Number(state.currentArticle.readProgress || 0), 0);
+    }
+    return Math.min(100, Math.max(0, Math.round(((reader.scrollTop + reader.clientHeight) / total) * 100)));
+}
+
+function updateReaderProgress(progress, finished) {
+    const safeProgress = Math.min(100, Math.max(0, Number(progress || 0)));
+    const fill = $("#readerProgressFill");
+    const text = $("#readerProgressText");
+    const button = $("#finishReadingBtn");
+    if (fill) fill.style.width = `${safeProgress}%`;
+    if (text) text.textContent = finished ? `已完成 · ${safeProgress}%` : `${safeProgress}%`;
+    if (button) {
+        button.disabled = Boolean(finished) || !state.currentArticle;
+        button.textContent = finished ? "已完成" : "完成阅读";
+    }
+}
+
+function scheduleReadingProgress(progress, finished = false) {
+    if (!state.currentArticle) return;
+    const articleId = state.currentArticle.id;
+    const current = Number(state.currentArticle.readProgress || 0);
+    const nextProgress = finished ? 100 : Math.max(current, progress);
+    if (!finished && nextProgress <= current) return;
+    state.currentArticle.readProgress = nextProgress;
+    state.currentArticle.finished = state.currentArticle.finished || finished || nextProgress >= 90;
+    updateReaderProgress(state.currentArticle.readProgress, state.currentArticle.finished);
+    window.clearTimeout(state.news.progressTimer);
+    state.news.progressTimer = window.setTimeout(() => {
+        submitReadingProgress(articleId, nextProgress, finished).catch(console.error);
+    }, finished ? 0 : 600);
+}
+
+async function submitReadingProgress(articleId, progress, finished = false) {
+    if (!articleId) return;
+    const result = await api(`/api/news/${encodeURIComponent(articleId)}/progress`, {
+        method: "POST",
+        body: JSON.stringify({ readProgress: progress, finished })
+    });
+    if (!state.currentArticle || String(state.currentArticle.id) !== String(result.articleId)) return;
+    state.currentArticle.readProgress = Number(result.readProgress || 0);
+    state.currentArticle.finished = Boolean(result.finished);
+    updateReaderProgress(state.currentArticle.readProgress, state.currentArticle.finished);
+    await loadReport();
+}
+
+function lookupCacheKey(word) {
+    const articleId = state.currentArticle?.id || "global";
+    return `${articleId}:${String(word || "").toLowerCase()}`;
+}
+
+async function showTooltip(event) {
+    const word = event.target.dataset.word;
+    if (!word) return;
+    cancelTooltipHide();
+    const tooltip = $("#wordTooltip");
+    if (state.tooltipWord === word && tooltip.classList.contains("visible")) return;
+    state.tooltipWord = word;
+    const key = lookupCacheKey(word);
+    let result = state.news.lookupCache[key];
+    if (!result) {
+        const lookupUrl = state.currentArticle?.id
+            ? `/api/news/${encodeURIComponent(state.currentArticle.id)}/lookup?word=${encodeURIComponent(word)}`
+            : `/api/dictionary/lookup?word=${encodeURIComponent(word)}`;
+        result = await api(lookupUrl);
+        state.news.lookupCache[key] = result;
+    }
+    if (state.tooltipWord !== word) return;
+    renderTooltip(result, event.clientX, event.clientY);
+}
+
+function renderTooltip(result, x, y) {
+    const tooltip = $("#wordTooltip");
+    const saved = Boolean(result.savedInReviewBook);
+    tooltip.innerHTML = `
+        <strong>${escapeHtml(result.word)}</strong>
+        <span class="phonetic">${escapeHtml(formatPhonetic(result.phoneticUs))}</span><br>
+        ${escapeHtml(result.meaningCn || "词库暂未收录")}<br>
+        ${result.partOfSpeech ? `<span class="tooltip-pos">${escapeHtml(result.partOfSpeech)}</span>` : ""}
+        <button class="tooltip-save-word" type="button" data-save-reader-word="${escapeAttribute(result.word)}" ${saved ? "disabled" : ""}>
+            ${saved ? "已加入" : "加入生词本"}
+        </button>`;
+    tooltip.style.left = `${Math.max(12, Math.min(window.innerWidth - 310, x + 14))}px`;
+    tooltip.style.top = `${Math.max(12, y + 18)}px`;
+    tooltip.classList.add("visible");
+}
+
+function cancelTooltipHide() {
+    window.clearTimeout(state.tooltipHideTimer);
+    state.tooltipHideTimer = null;
+}
+
+function scheduleHideTooltip() {
+    cancelTooltipHide();
+    state.tooltipHideTimer = window.setTimeout(hideTooltip, 180);
+}
+
+function hideTooltip() {
+    cancelTooltipHide();
+    state.tooltipWord = null;
+    $("#wordTooltip").classList.remove("visible");
+}
+
+async function saveReaderWord(word, button) {
+    if (!word || button?.disabled) return;
+    if (button) {
+        button.disabled = true;
+        button.textContent = "保存中...";
+    }
+    const result = await api(`/api/dictionary/save?word=${encodeURIComponent(word)}`, { method: "POST" });
+    Object.keys(state.news.lookupCache).forEach((key) => {
+        const cached = state.news.lookupCache[key];
+        if (cached && String(cached.word).toLowerCase() === String(result.word).toLowerCase()) {
+            state.news.lookupCache[key] = { ...cached, savedInReviewBook: true };
+        }
+    });
+    const currentKey = lookupCacheKey(state.tooltipWord || word);
+    if (state.news.lookupCache[currentKey]) {
+        state.news.lookupCache[currentKey] = { ...state.news.lookupCache[currentKey], savedInReviewBook: true };
+    }
+    if (button) {
+        button.textContent = "已加入";
+    }
+    await loadReport();
 }
 
 function clearTranslation() {
@@ -1132,6 +1724,9 @@ async function translateArticle() {
         }
         if (result.contentCn) {
             html.push(`<div class="translation-body">${escapeHtml(result.contentCn)}</div>`);
+        }
+        if (!html.length) {
+            html.push(`<p class="translation-empty">未配置 AI 或翻译服务暂不可用，请稍后再试。</p>`);
         }
         $("#translationOutput").innerHTML = html.join("");
         const btn = $("#translateBtn");
@@ -1718,6 +2313,22 @@ async function boot() {
     }));
     $$(".lesson-node, .soft-action").forEach((item) => item.addEventListener("click", () => showSection(item.dataset.section)));
     document.addEventListener("click", (event) => {
+        const saveReaderWordButton = event.target.closest("[data-save-reader-word]");
+        if (saveReaderWordButton) {
+            event.stopPropagation();
+            saveReaderWord(saveReaderWordButton.dataset.saveReaderWord, saveReaderWordButton)
+                .catch((error) => {
+                    console.error(error);
+                    saveReaderWordButton.disabled = false;
+                    saveReaderWordButton.textContent = "加入生词本";
+                });
+            return;
+        }
+        const routeNode = event.target.closest("[data-route-section]");
+        if (routeNode) {
+            showSection(routeNode.dataset.routeSection);
+            return;
+        }
         const favorite = event.target.closest("[data-favorite-id]");
         if (favorite) {
             event.stopPropagation();
@@ -1763,11 +2374,17 @@ async function boot() {
     $("#chatForm").addEventListener("submit", sendChat);
     $("#writingForm").addEventListener("submit", reviewEssay);
     $("#newsDifficulty").addEventListener("change", loadNews);
+    $("#newsTopic")?.addEventListener("change", loadNews);
     $("#quizCategorySelect")?.addEventListener("change", (event) => {
         state.quiz.category = event.target.value;
         loadWords({ updateToday: false }).catch((error) => console.error(error));
     });
     $("#translateBtn").addEventListener("click", translateArticle);
+    $("#finishReadingBtn")?.addEventListener("click", () => scheduleReadingProgress(100, true));
+    $("#readerContent").addEventListener("scroll", () => {
+        if (state.news.skipProgressEvent) return;
+        scheduleReadingProgress(calculateReaderProgress(), false);
+    }, { passive: true });
     $("#readerContent").addEventListener("mouseover", (event) => {
         if (event.target.classList.contains("reader-word")) {
             showTooltip(event).catch(() => hideTooltip());
@@ -1775,9 +2392,11 @@ async function boot() {
     });
     $("#readerContent").addEventListener("mouseout", (event) => {
         if (event.target.classList.contains("reader-word")) {
-            hideTooltip();
+            scheduleHideTooltip();
         }
     });
+    $("#wordTooltip")?.addEventListener("mouseenter", cancelTooltipHide);
+    $("#wordTooltip")?.addEventListener("mouseleave", scheduleHideTooltip);
     const initialSection = initialSectionFromPath();
     showSection(initialSection);
     if (initialSection === "wordbank") {
@@ -1787,7 +2406,7 @@ async function boot() {
         loadReport(),
         loadQuizCategories().then(() => loadWords()),
         loadReviews(),
-        loadNews()
+        loadNewsTopics().then(() => loadNews())
     ]);
     const conversations = await loadConversations();
     if (!conversations.length) {
