@@ -213,7 +213,7 @@ class JavaBigWorkApplicationTests {
     void wordBankSearchMatchesEnglishPrefixOnly() throws Exception {
         mockMvc.perform(get("/api/word-bank/words")
                         .session(studentSession())
-                        .param("search", "ap")
+                        .param("search", "AP")
                         .param("size", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -257,7 +257,9 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.data.page").value(0))
                 .andExpect(jsonPath("$.data.size").value(10))
                 .andExpect(jsonPath("$.data.words[*].levelTag").value(
-                        org.hamcrest.Matchers.everyItem(equalTo("local-fast"))));
+                        org.hamcrest.Matchers.everyItem(equalTo("local-fast"))))
+                .andExpect(jsonPath("$.data.words[*].word").value(
+                        org.hamcrest.Matchers.everyItem(matchesPattern("(?i)^a.*"))));
     }
 
     @Test
@@ -381,7 +383,9 @@ class JavaBigWorkApplicationTests {
 
     @Test
     void newsDetailLookupAndTranslateRemainAvailable() throws Exception {
-        MockHttpSession session = studentSession();
+        String username = "newsreader" + System.nanoTime();
+        registerUser(username, "News Reader");
+        MockHttpSession session = login(username, "userpass123");
         MvcResult recommendations = mockMvc.perform(get("/api/news/recommendations").session(session))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -588,7 +592,11 @@ class JavaBigWorkApplicationTests {
 
     @Test
     void wordAiDetailFallsBackToLocalRulesWhenModelUnavailable() throws Exception {
-        mockMvc.perform(get("/api/words/1/ai-detail").session(studentSession()))
+        String username = "aidetail" + System.nanoTime();
+        registerUser(username, "AI Detail User");
+        MockHttpSession session = login(username, "userpass123");
+
+        mockMvc.perform(get("/api/words/1/ai-detail").session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.modelName").value("local-rules"))

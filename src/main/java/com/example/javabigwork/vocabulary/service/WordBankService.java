@@ -54,9 +54,9 @@ public class WordBankService {
         }
 
         if (search != null && !search.isBlank()) {
-            String trimmed = search.trim();
+            String trimmed = search.trim().toLowerCase(Locale.ROOT);
             wrapper.and(w -> w
-                    .likeRight("word", trimmed)
+                    .apply("LOWER(word) LIKE {0}", trimmed + "%")
                     .or()
                     .likeRight("meaning_cn", trimmed));
         }

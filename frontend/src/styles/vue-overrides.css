@@ -1,0 +1,60 @@
+.app-loading,
+.admin-loading {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    min-height: 100vh;
+    place-items: center;
+    color: var(--muted);
+    font-weight: 900;
+}
+
+.vue-clickable {
+    cursor: pointer;
+}
+
+.vue-empty {
+    padding: 18px;
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.vue-inline-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.vue-stack {
+    display: grid;
+    gap: 14px;
+}
+
+.vue-status {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.vue-error {
+    color: #9d352f;
+}
+
+.vue-success {
+    color: var(--green-dark);
+}
+
+.reader-word {
+    cursor: help;
+}
+
+.reader-word:hover {
+    color: var(--blue);
+    text-decoration: underline;
+}
+
+.el-message-box__message p {
+    margin: 0;
+}

@@ -16,8 +16,11 @@ stdout.log
 
 ### Local tooling caches ###
 .codegraph/
+.playwright-cli/
 .playwright-mcp/
 .claude/
+frontend/node_modules/
+frontend/dist/
 
 ### Screenshots and manual verification captures ###
 *.png

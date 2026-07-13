@@ -42,6 +42,12 @@ public class LocalWordBankLoader {
 
     @EventListener(ApplicationStartedEvent.class)
     public void loadWordBank() {
+        if (allLocalBanksLoaded()) {
+            enrichExistingExamples();
+            log.info("Word bank already initialized; skipping local JSON import");
+            return;
+        }
+
         int total = 0;
         int skipped = 0;
         int enriched = 0;
@@ -95,6 +101,74 @@ public class LocalWordBankLoader {
                 total, enriched, skipped);
     }
 
+    private void enrichExistingExamples() {
+        int enriched = 0;
+        for (String[] bankFile : BANK_FILES) {
+            String path = bankFile[0];
+            String tag = bankFile[1];
+            try {
+                ClassPathResource resource = new ClassPathResource(path);
+                if (!resource.exists()) {
+                    continue;
+                }
+                try (InputStream in = resource.getInputStream()) {
+                    List<Map<String, Object>> entries = json.readValue(in,
+                            new TypeReference<List<Map<String, Object>>>() {});
+                    for (Map<String, Object> entry : entries) {
+                        Word source = parseEntry(entry, tag);
+                        if (source == null) continue;
+                        Word existing = findExisting(source.word);
+                        if (existing != null && fillMissingExamples(existing, source)) {
+                            wordMapper.updateById(existing);
+                            enriched++;
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to enrich word examples from {}", path, e);
+            }
+        }
+        int fallbackEnriched = fillFallbackExamples();
+        if (enriched > 0 || fallbackEnriched > 0) {
+            log.info("Word bank examples enriched: {} from local JSON, {} fallback generated",
+                    enriched, fallbackEnriched);
+        }
+    }
+
+    private int fillFallbackExamples() {
+        int enriched = 0;
+        List<Word> missing = wordMapper.selectList(Wrappers.<Word>query()
+                .and(w -> w.isNull("example_en").or().eq("example_en", "")
+                        .or().isNull("example_cn").or().eq("example_cn", "")));
+        for (Word word : missing) {
+            boolean changed = false;
+            if (word.exampleEn == null || word.exampleEn.isBlank()) {
+                word.exampleEn = WordExampleFallback.englishFor(word.word);
+                changed = true;
+            }
+            if (word.exampleCn == null || word.exampleCn.isBlank()) {
+                word.exampleCn = WordExampleFallback.chineseFor(word.word);
+                changed = true;
+            }
+            if (changed) {
+                wordMapper.updateById(word);
+                enriched++;
+            }
+        }
+        return enriched;
+    }
+
+    private boolean allLocalBanksLoaded() {
+        for (String[] bankFile : BANK_FILES) {
+            String tag = bankFile[1];
+            Long count = wordMapper.selectCount(Wrappers.<Word>query().eq("level_tag", tag));
+            if (count == null || count == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @SuppressWarnings("unchecked")
     private Word parseEntry(Map<String, Object> entry, String tag) {
         try {
@@ -135,8 +209,12 @@ public class LocalWordBankLoader {
             word.meaningCn = meaningCn;
             word.partOfSpeech = pos;
             ExampleSentence example = firstExample(wordContent);
-            word.exampleEn = example.en();
-            word.exampleCn = example.cn();
+            word.exampleEn = example.hasEnglish()
+                    ? example.en()
+                    : WordExampleFallback.englishFor(word.word);
+            word.exampleCn = example.hasChinese()
+                    ? example.cn()
+                    : WordExampleFallback.chineseFor(word.word);
             word.levelTag = tag;
             return word;
         } catch (Exception e) {
@@ -218,6 +296,10 @@ public class LocalWordBankLoader {
 
         boolean hasEnglish() {
             return en != null && !en.isBlank();
+        }
+
+        boolean hasChinese() {
+            return cn != null && !cn.isBlank();
         }
     }
 }
