@@ -17,7 +17,7 @@ The daily route contains five ordered activities. An activity is complete only w
 
 1. Conversation: at least one user/assistant exchange is completed.
 2. Vocabulary: at least six vocabulary quiz submissions are completed.
-3. Review: the due review queue is empty.
+3. Review: the existing today-review queue is empty.
 4. Writing: at least one essay is submitted and reviewed.
 5. Reading: at least one article is marked finished.
 
@@ -118,7 +118,7 @@ Daily completion is derived from existing records:
 
 - Conversation: assistant and user messages in a user-owned conversation during the day; the current request counts only after its assistant message has been saved.
 - Vocabulary: `word_review_log` rows with `review_type = 'QUIZ'` during the day.
-- Review: no current progress row with an outstanding wrong count that is due now. This follows the existing review-planner semantics.
+- Review: no current progress row has an outstanding wrong count. This matches the existing `ReviewPlannerTool.planToday` queue, which currently includes all wrong words regardless of `next_review_at`.
 - Writing: `essay_submission.created_at` during the day. A submission exists only after the review operation completes and persists it.
 - Reading: a current-user `reading_record` with `finished = true` and `updated_at` during the day.
 
