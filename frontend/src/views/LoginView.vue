@@ -13,33 +13,18 @@
         </div></RouterLink
       >
       <div class="auth-story-copy">
-        <span class="small-label">A SPACE FOR YOUR NEXT CHAPTER</span>
         <h1>A little.<br /><em>Every day.</em></h1>
         <p>每一次开口，每一个新词。<br />慢慢来，也能走很远。</p>
       </div>
       <div class="auth-bloom-wrap">
-        <LearningBloom /><span class="auth-orbit-label"
-          >SPEAK · DISCOVER · GROW</span
-        >
+        <LearningBloom />
       </div>
-      <footer class="auth-story-footer">
-        <span>你的英语学习空间</span><span>EST. 2026</span>
-      </footer>
+      <WordAtmosphere />
     </section>
     <section class="auth-form-side">
       <div class="auth-card">
         <div class="auth-card-head">
-          <span class="eyebrow">{{
-            isLogin ? "GOOD TO SEE YOU AGAIN" : "YOUR NEXT CHAPTER"
-          }}</span>
           <h2>{{ isLogin ? "欢迎回来。" : "从这里开始。" }}</h2>
-          <p>
-            {{
-              isLogin
-                ? "今天，也给英语留一点时间。"
-                : "创建账号，记录每一次进步。"
-            }}
-          </p>
         </div>
         <div class="auth-mode-switch" aria-label="账号入口">
           <RouterLink
@@ -146,21 +131,14 @@
         >
           {{ status }}
         </p>
-        <div class="auth-footnote">
-          <AppIcon name="vocabulary" /><span
-            >对话 · 词汇 · 写作 · 阅读<br /><small
-              >你的学习记录，会在这里好好保存。</small
-            ></span
-          >
-        </div>
       </div>
-      <span class="auth-bottom-wordmark">SMALL STEPS. REAL PROGRESS.</span>
     </section>
   </main>
 </template>
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
 import LearningBloom from "@/components/LearningBloom.vue";
+import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import {
   computed,
   onBeforeUnmount,

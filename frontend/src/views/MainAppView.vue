@@ -33,7 +33,6 @@
           ><span>让英语成为日常</span>
         </div>
       </RouterLink>
-      <p class="nav-caption">YOUR LEARNING SPACE</p>
       <nav>
         <span
           class="nav-active-indicator"
@@ -64,7 +63,7 @@
       <div class="sidebar-bottom">
         <div class="sidebar-progress">
           <div>
-            <span>一点一滴，都算数</span
+            <span>学习等级</span
             ><strong>Lv.{{ state.level.level || 1 }}</strong>
           </div>
           <div class="level-xp-bar">
@@ -92,8 +91,7 @@
         >
           <span class="level-avatar">{{ userName.slice(0, 1) }}</span
           ><span
-            ><strong>{{ userName }}</strong
-            ><small>我的学习账号</small></span
+            ><strong>{{ userName }}</strong></span
           ><AppIcon name="settings" />
         </button>
         <button class="nav-logout-button" type="button" @click="logout">
@@ -124,7 +122,6 @@
       </header>
       <header class="topbar">
         <div class="hero-copy">
-          <p class="eyebrow">{{ sectionEnglish[activeSection] }}</p>
           <h1>
             {{
               activeSection === "dashboard"
@@ -132,19 +129,15 @@
                 : sectionTitle
             }}
           </h1>
-          <p class="subtitle">{{ sectionSubtitle }}</p>
         </div>
-        <div class="header-progress">
+        <div v-if="activeSection === 'dashboard'" class="header-progress">
           <span
             class="progress-ring"
             :style="{ '--progress': routeProgressPercent }"
             ><strong>{{ routeDoneCount }}<small>/5</small></strong></span
           >
           <div>
-            <strong>今日学习</strong
-            ><span>{{
-              routeDoneCount === 5 ? "今天也有新的进步" : "每一步，都离目标更近"
-            }}</span>
+            <strong>今日学习</strong>
           </div>
         </div>
       </header>
@@ -156,10 +149,9 @@
         <section class="focus-session">
           <div class="focus-copy">
             <span class="session-label"
-              ><span class="status-dot"></span>TODAY’S FOCUS</span
+              ><span class="status-dot"></span>今日练习</span
             >
             <h2>从一个小进步<br />开始今天。</h2>
-            <p>{{ focusStep?.title || "继续学习" }}，然后试着再多走一步。</p>
             <button
               class="primary-button"
               type="button"
@@ -169,24 +161,17 @@
                 routeDoneCount === journeySteps.length
                   ? "再练习一次"
                   : "开始" + (focusStep?.title || "学习")
-              }}<AppIcon name="arrow" /></button
-            ><span class="focus-note"
-              >{{ routeDoneCount }}/{{ journeySteps.length }} 项已完成 ·
-              按自己的节奏来</span
-            >
+              }}<AppIcon name="arrow" />
+            </button>
           </div>
           <div class="focus-art">
-            <LearningBloom /><span class="art-caption"
-              >GROW AT YOUR OWN PACE</span
-            >
+            <LearningBloom />
           </div>
-          <span class="session-edition">DAILY PRACTICE / 01</span>
         </section>
         <div class="home-grid">
           <section class="duo-route-shell">
             <div class="duo-route-heading">
               <div>
-                <p class="eyebrow compact">THE DAILY PRACTICE</p>
                 <h2>今天的学习路线</h2>
               </div>
               <div
@@ -252,7 +237,6 @@
                 <h2>学习足迹</h2>
                 <AppIcon name="spark" />
               </div>
-              <p class="insight-lead">把积累，变成看得见的成长。</p>
               <div class="learning-stats">
                 <div>
                   <strong
@@ -280,8 +264,7 @@
               </div>
             </section>
             <section class="duo-tips-panel">
-              <span class="small-label">A LITTLE GUIDANCE</span>
-              <h2>给今天的你</h2>
+              <h2>今日建议</h2>
               <ul v-if="state.report.nextActions?.length" class="clean-list">
                 <li
                   v-for="item in state.report.nextActions.slice(0, 2)"
@@ -316,8 +299,7 @@
         <section id="dashboard-words" class="today-words">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow compact">WORDS TO KEEP</p>
-              <h2>今天，认识这几个词</h2>
+              <h2>今日单词</h2>
             </div>
             <button
               class="text-button"
@@ -329,14 +311,13 @@
           </div>
           <div class="word-strip">
             <button
-              v-for="(word, index) in state.words.slice(0, 4)"
+              v-for="word in state.words.slice(0, 4)"
               :key="word.id"
               class="word-card daily-word"
               type="button"
               @click="state.selectedWord = word"
             >
-              <span class="daily-word-index">0{{ index + 1 }}</span
-              ><strong>{{ word.word }}</strong
+              <strong>{{ word.word }}</strong
               ><span class="word-meta"
                 >{{ word.partOfSpeech }} · {{ word.levelTag }}</span
               >
@@ -444,8 +425,7 @@
             :aria-busy="state.chatBusy"
           >
             <div v-if="!state.messages.length" class="chat-welcome">
-              <span class="chat-welcome-mark"><AppIcon name="chat" /></span
-              ><span class="small-label">A CONVERSATION STARTS HERE</span>
+              <span class="chat-welcome-mark"><AppIcon name="chat" /></span>
               <h3>想聊点什么？</h3>
               <p>练习日常表达，或让助手安排今天的学习。</p>
               <div class="conversation-prompts">
@@ -567,7 +547,8 @@
             <input
               v-model.trim="state.chatInput"
               autocomplete="off"
-              placeholder="输入英文句子，或问：查询单词 essential"
+              aria-label="对话内容"
+              placeholder="说点什么，或问我问题"
             />
             <button type="submit" :disabled="state.chatBusy">
               {{ state.chatBusy ? "思考中..." : "发送" }}
@@ -584,8 +565,7 @@
         <section class="panel">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow compact">Word Quest</p>
-              <h2>单词闯关</h2>
+              <h2>选择正确释义</h2>
             </div>
             <select
               v-model="state.quizCategory"
@@ -1079,7 +1059,7 @@
         <div class="writing-layout">
           <section class="panel">
             <div class="panel-heading">
-              <h2>作文批改</h2>
+              <h2>写作内容</h2>
               <select v-model="state.writing.examType" aria-label="作文类型">
                 <option value="general">通用写作</option>
                 <option value="cet4">四级作文</option>
@@ -1153,7 +1133,7 @@
             <div v-else class="empty-state writing-empty">
               <AppIcon name="writing" />
               <h3>让每一次表达，更进一步。</h3>
-              <p>提交作文后，在这里查看评分、逐句建议与润色版本。</p>
+              <p>提交后查看评分与修改建议。</p>
             </div>
           </section>
         </div>
@@ -1279,12 +1259,7 @@
                 </button>
               </div>
             </div>
-            <p class="reader-summary">
-              {{
-                state.currentArticle?.summary ||
-                "鼠标停在英文单词上，可查看音标、词性和中文释义。"
-              }}
-            </p>
+            <p class="reader-hint">点按或悬停单词查词</p>
             <div class="reader-progress">
               <div class="reader-progress-track">
                 <span :style="{ width: readerProgress + '%' }"></span>
@@ -1340,8 +1315,7 @@
         <section class="panel wordbank-layout">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow compact">Word Bank</p>
-              <h2>词库浏览</h2>
+              <h2>单词列表</h2>
             </div>
             <span class="energy-pill">{{ state.wordBank.total }} 个单词</span>
           </div>
@@ -1879,15 +1853,6 @@ const todayLabel = new Intl.DateTimeFormat("zh-CN", {
   weekday: "long",
   timeZone: "Asia/Shanghai",
 }).format(new Date());
-const sectionEnglish = {
-  dashboard: "A LITTLE EVERY DAY",
-  chat: "LET’S TALK",
-  vocabulary: "ONE WORD AT A TIME",
-  review: "MAKE IT STICK",
-  writing: "FIND YOUR VOICE",
-  news: "READ THE WORLD",
-  wordbank: "YOUR WORD COLLECTION",
-};
 
 const navItems = [
   { id: "dashboard", label: "学习概览", path: "/" },
@@ -1993,13 +1958,13 @@ const newsTopicLabelMap = {
 };
 
 const sectionMeta = {
-  dashboard: ["学习概览", "留一点时间给英语，今天也会有所收获。"],
-  chat: ["对话练习", "从一句简单的问候开始，练习自然地表达。"],
-  vocabulary: ["单词闯关", "用选择题、例句和 AI 释义逐步加深记忆。"],
-  review: ["复习挑战", "同时检查拼写和释义，错词会进入后续计划。"],
-  writing: ["作文批改", "提交英文作文，获得评分、句子反馈和润色版本。"],
-  news: ["新闻阅读", "在文章中悬停查词，记录阅读进度。"],
-  wordbank: ["词库浏览", "按考试词库搜索、分页浏览和查看详情。"],
+  dashboard: "学习概览",
+  chat: "对话练习",
+  vocabulary: "单词练习",
+  review: "温故知新",
+  writing: "写作工坊",
+  news: "阅读空间",
+  wordbank: "我的词库",
 };
 
 const state = reactive({
@@ -2072,10 +2037,7 @@ const state = reactive({
 
 const activeSection = computed(() => route.meta.section || "dashboard");
 const sectionTitle = computed(
-  () => sectionMeta[activeSection.value]?.[0] || sectionMeta.dashboard[0],
-);
-const sectionSubtitle = computed(
-  () => sectionMeta[activeSection.value]?.[1] || sectionMeta.dashboard[1],
+  () => sectionMeta[activeSection.value] || sectionMeta.dashboard,
 );
 const userName = computed(
   () => state.currentUser?.nickname || state.currentUser?.username || "学习者",

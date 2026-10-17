@@ -10,5 +10,6 @@ import "./styles/surfaces.css";
 import "./styles/brand.css";
 import "./styles/responsive.css";
 import "./styles/layout.css";
+import "./styles/typography.css";
 
 createApp(App).use(router).use(ElementPlus).mount("#app");

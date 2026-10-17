@@ -13,7 +13,6 @@
           <span>管理工作台</span>
         </div>
       </RouterLink>
-      <p class="nav-caption">THE MANAGEMENT STUDIO</p>
       <nav>
         <span
           class="nav-active-indicator"
@@ -64,9 +63,7 @@
       </header>
       <header class="topbar admin-topbar">
         <div>
-          <p class="eyebrow">THE MANAGEMENT STUDIO</p>
           <h1>{{ adminSectionTitles[state.section] }}</h1>
-          <p class="subtitle">{{ adminSectionDescriptions[state.section] }}</p>
         </div>
         <span class="admin-role-badge"
           ><span class="status-dot"></span>管理员</span
@@ -579,8 +576,8 @@
         <section class="panel admin-ai-panel">
           <div class="settings-panel-head">
             <div>
-              <p class="eyebrow compact">AI 设置</p>
               <h2>模型连接</h2>
+              <p class="settings-description">仅应用于当前管理员账号</p>
             </div>
             <span class="settings-status">{{ state.ai.status }}</span>
           </div>
@@ -664,20 +661,12 @@ const sections = [
 ];
 
 const adminSectionTitles = {
-  overview: "学习正在发生。",
+  overview: "学习概览",
   users: "用户管理",
   words: "词库维护",
   knowledge: "知识库管理",
   news: "阅读内容",
   ai: "模型连接",
-};
-const adminSectionDescriptions = {
-  overview: "了解学习趋势，照顾每一位学习者的进步。",
-  users: "查看账号状态与学习记录，管理用户资料。",
-  words: "维护单词、释义与例句，让词汇学习更准确。",
-  knowledge: "整理学习资料，为助手提供可靠的参考内容。",
-  news: "编辑文章、难度与主题，丰富阅读空间。",
-  ai: "配置当前管理员账号的模型服务。",
 };
 const emptyWord = () => ({
   id: "",
