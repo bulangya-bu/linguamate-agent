@@ -1,0 +1,1481 @@
+/* Size the workspace to the viewport; let long content own its scroll area. */
+.dashboard-details-toggle,
+.reading-library-toggle,
+.reading-library-close {
+  display: none;
+}
+.reader-toolbar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+.reader-scroll-area {
+  max-height: 62dvh;
+  min-height: 220px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.reader-content {
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+}
+.auth-form-side {
+  padding-top: 28px;
+  padding-bottom: 48px;
+}
+.auth-card-head h2 {
+  margin-top: 12px;
+  margin-bottom: 10px;
+}
+.auth-mode-switch {
+  margin-top: 24px;
+  margin-bottom: 22px;
+}
+.auth-form {
+  gap: 18px;
+}
+.auth-status {
+  min-height: 18px;
+  margin-top: 8px;
+}
+.auth-footnote {
+  margin-top: 14px;
+  padding-top: 16px;
+}
+
+@media (max-width: 760px) {
+  .side-nav {
+    padding-top: 10px;
+  }
+  .side-nav .brand {
+    margin-bottom: 10px;
+  }
+  .nav-item {
+    height: 44px;
+    padding: 5px 5px 6px;
+  }
+  .page-dashboard .workspace-bar {
+    min-height: 42px;
+  }
+  .page-dashboard .topbar {
+    padding: 12px 0;
+  }
+  .page-dashboard .topbar .eyebrow {
+    display: none;
+  }
+  .page-dashboard .topbar h1 {
+    font-size: 26px;
+    margin-bottom: 8px;
+  }
+  .page-dashboard .focus-session {
+    min-height: 0;
+  }
+  .page-dashboard .focus-copy {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 14px;
+    width: 100%;
+    padding: 18px 20px;
+  }
+  .page-dashboard .focus-copy .session-label {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .page-dashboard .focus-copy h2 {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 8px 0 0;
+    font-size: 24px;
+    line-height: 1.2;
+  }
+  .page-dashboard .focus-copy > p {
+    display: none;
+  }
+  .page-dashboard .focus-copy .primary-button {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    min-width: 0;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .page-dashboard .focus-copy .focus-note {
+    grid-column: 1/-1;
+    grid-row: 3;
+    margin-top: 8px;
+  }
+  .page-dashboard .focus-art {
+    top: 15px;
+    right: 10px;
+    width: 100px;
+    height: 100px;
+    opacity: 0.15;
+  }
+  .page-dashboard .session-edition {
+    display: none;
+  }
+  .page-dashboard .home-grid {
+    margin-top: 18px;
+  }
+  .page-dashboard .duo-route-heading {
+    padding-bottom: 10px;
+  }
+  .page-dashboard .duo-route-heading .eyebrow {
+    display: none;
+  }
+  .page-dashboard .duo-route-heading h2 {
+    font-size: 16px;
+  }
+  .page-dashboard .duo-route-track {
+    padding: 4px 0;
+  }
+  .page-dashboard .duo-step {
+    min-height: 44px;
+    padding: 4px 0;
+  }
+  .page-dashboard .duo-step-button {
+    width: 32px;
+    height: 32px;
+    border-radius: 11px;
+  }
+  .page-dashboard .duo-step-button svg {
+    width: 16px;
+    height: 16px;
+  }
+  .page-dashboard .duo-step-connector {
+    left: 16px;
+    top: 36px;
+  }
+  .page-dashboard .route-step-copy {
+    padding: 2px 0;
+  }
+  .page-dashboard .route-step-copy strong {
+    font-size: 12px;
+  }
+  .page-dashboard .route-step-copy small {
+    margin-top: 3px;
+    font-size: 9px;
+  }
+  .page-dashboard:not(.dashboard-expanded) .daily-panel,
+  .page-dashboard:not(.dashboard-expanded) .today-words {
+    display: none;
+  }
+  .dashboard-details-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 14px 0;
+    margin-top: 12px;
+    border-top: 1px solid var(--line);
+    color: var(--blue-ink);
+    font-size: 11px;
+    text-align: left;
+  }
+  .page-dashboard.dashboard-expanded .daily-panel {
+    margin-top: 14px;
+  }
+  .page-dashboard.dashboard-expanded .today-words {
+    margin-top: 16px;
+  }
+}
+
+@media (max-width: 980px) and (min-height: 620px) {
+  .page-news .topbar {
+    display: none;
+  }
+  #news.active {
+    display: flex;
+    min-height: 0;
+    overflow: visible;
+  }
+  .news-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .news-layout > .news-library {
+    display: none;
+  }
+  #news.is-browsing .news-library {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+  }
+  #news.is-browsing .reader-panel {
+    display: none;
+  }
+  .reading-library-toggle,
+  .reading-library-close {
+    display: inline-flex;
+  }
+  .news-library .news-heading,
+  .news-library .news-filter-stack {
+    flex-shrink: 0;
+  }
+  .news-library .news-list {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+  .reader-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 18px;
+  }
+  .reader-panel .panel-heading {
+    flex-shrink: 0;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .reader-panel .panel-heading h2 {
+    font-size: 23px;
+  }
+  .reader-summary {
+    display: -webkit-box;
+    flex-shrink: 0;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 10px;
+    font-size: 11px;
+  }
+  .reader-progress {
+    flex-shrink: 0;
+    padding: 10px 0 14px;
+  }
+  .reader-scroll-area {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+  .reader-content {
+    padding-top: 16px;
+    font-size: 17px;
+    line-height: 1.9;
+  }
+  .page-writing:not(.has-writing-result) #writing.active {
+    display: flex;
+    min-height: 0;
+  }
+  .page-writing:not(.has-writing-result) .writing-layout {
+    flex: 1;
+    min-height: 0;
+  }
+  .page-writing:not(.has-writing-result) .writing-layout > .panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .page-writing:not(.has-writing-result)
+    .writing-layout
+    > .writing-feedback-panel.is-empty {
+    display: none;
+  }
+  .page-writing:not(.has-writing-result) .writing-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 10px;
+  }
+  .page-writing:not(.has-writing-result) .writing-form > input:first-child {
+    flex-shrink: 0;
+    padding: 10px 0;
+    font-size: 18px;
+  }
+  .page-writing:not(.has-writing-result) .writing-form > textarea {
+    flex: 1;
+    min-height: 100px;
+    padding: 10px 0;
+    resize: none;
+  }
+  .page-writing:not(.has-writing-result) .writing-form .settings-row {
+    flex-shrink: 0;
+    padding-top: 12px;
+  }
+}
+
+@media (max-width: 760px) and (min-height: 620px) and (max-height: 740px) {
+  .page-dashboard .topbar .subtitle {
+    display: none;
+  }
+  .page-dashboard .topbar {
+    padding: 6px 0;
+  }
+  .page-dashboard .topbar h1 {
+    margin-bottom: 0;
+    line-height: 1.25;
+  }
+  .page-dashboard .focus-copy h2 {
+    font-size: 22px;
+  }
+  .page-dashboard .home-grid {
+    margin-top: 8px;
+  }
+  .page-dashboard .dashboard-details-toggle {
+    margin-top: 8px;
+  }
+  .page-dashboard .duo-route-heading {
+    padding-bottom: 6px;
+  }
+  .page-dashboard .focus-copy {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .page-dashboard .workspace {
+    padding-bottom: 12px;
+  }
+}
+
+@media (min-width: 761px) and (min-height: 620px) {
+  .app-shell {
+    height: 100dvh;
+    min-height: 0;
+  }
+  .side-nav {
+    min-height: 0;
+    padding: 22px 18px 14px;
+    overflow-y: auto;
+  }
+  .brand {
+    margin-bottom: 24px;
+  }
+  .nav-caption {
+    margin-bottom: 12px;
+  }
+  .nav-item {
+    height: 40px;
+  }
+  .nav-active-indicator {
+    height: 40px;
+    transform: translateY(calc(var(--nav-index) * 44px));
+  }
+  .sidebar-bottom {
+    padding-top: 14px;
+  }
+  .sidebar-progress {
+    margin: 8px 8px 14px;
+  }
+  .sidebar-progress > div:first-child {
+    margin-bottom: 8px;
+  }
+  .sidebar-user {
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+  .nav-account {
+    padding-top: 18px;
+  }
+  .workspace {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
+    padding: 0 30px 16px;
+    overflow: hidden;
+  }
+  .workspace-bar {
+    flex: 0 0 52px;
+    min-height: 52px;
+  }
+  .topbar {
+    flex: 0 0 auto;
+    padding: 12px 0;
+    gap: 18px;
+  }
+  .topbar .eyebrow {
+    font-size: 8px;
+    margin-bottom: 6px;
+  }
+  .topbar h1 {
+    font-size: 28px;
+    line-height: 1.2;
+    margin-bottom: 8px;
+  }
+  .topbar .subtitle {
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .section.active {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .panel {
+    padding: 20px;
+  }
+  .panel-heading {
+    flex-shrink: 0;
+    margin-bottom: 14px;
+  }
+  .panel-heading h2 {
+    font-size: 16px;
+  }
+  .header-progress {
+    gap: 10px;
+  }
+  .progress-ring {
+    width: 43px;
+    height: 43px;
+  }
+
+  /* Dialogue and practice keep controls visible while content grows. */
+  .chat-workspace.active {
+    display: flex;
+    overflow: visible;
+  }
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+  }
+  .chat-panel-heading {
+    flex-shrink: 0;
+    padding: 16px 20px;
+    gap: 12px;
+  }
+  .chat-messages {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+    padding: 22px;
+  }
+  .chat-welcome {
+    min-height: min(280px, 100%);
+  }
+  .input-row {
+    flex-shrink: 0;
+    padding: 12px 18px;
+  }
+  #vocabulary.active,
+  #review.active {
+    display: flex;
+    overflow: visible;
+  }
+  #vocabulary > .panel,
+  #review > .panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 18px 24px;
+  }
+  .word-quiz-shell {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+  }
+  .word-quiz-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .quiz-progress {
+    flex-shrink: 0;
+    margin-bottom: 12px;
+  }
+  .quiz-study-stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    min-height: 0;
+  }
+  .quiz-word-shell {
+    min-height: 72px;
+    flex-shrink: 0;
+  }
+  .quiz-word {
+    max-width: 100%;
+    min-width: 0;
+    font-size: clamp(36px, 4.1vw, 60px);
+  }
+  .quiz-example-slot {
+    flex-shrink: 0;
+    height: 96px;
+    min-height: 96px;
+    padding: 6px 16px 12px;
+    overflow-y: auto;
+  }
+  .quiz-detail-actions {
+    flex-shrink: 0;
+    min-height: 30px;
+    margin: 0 0 10px;
+  }
+  .quiz-options {
+    flex-shrink: 0;
+    gap: 10px;
+  }
+  .quiz-option {
+    min-height: 54px;
+    padding: 11px 15px;
+  }
+  .quiz-nav {
+    flex-shrink: 0;
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  .quiz-ai-detail {
+    flex-shrink: 0;
+    max-height: 160px;
+    overflow: auto;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .quiz-complete,
+  .quiz-empty {
+    min-height: 0;
+    flex: 1;
+    padding: 20px;
+  }
+  #review > .panel > div:not(.panel-heading) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .review-challenge-card {
+    padding: 0;
+    width: 100%;
+  }
+  .review-prompt {
+    min-height: 136px;
+    padding: 16px 20px;
+  }
+  .review-prompt-meta {
+    margin-bottom: 18px;
+  }
+  .review-card-actions {
+    margin-top: 16px;
+  }
+  .review-challenge-card.is-complete {
+    text-align: center;
+    padding-top: 24px;
+  }
+
+  /* Browse the collection without losing search or pagination. */
+  #wordbank.active {
+    display: flex;
+    overflow: visible;
+  }
+  .wordbank-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .wordbank-filters {
+    flex-shrink: 0;
+    padding: 10px 0 16px;
+  }
+  .word-bank-grid {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: start;
+    padding: 5px 7px 8px 1px;
+    overscroll-behavior: contain;
+  }
+  .wordbank-pagination {
+    flex-shrink: 0;
+    margin: 12px 0 0;
+  }
+}
+
+@media (min-width: 981px) and (min-height: 620px) {
+  /* Three compact rows keep the complete daily overview on one screen. */
+  #dashboard.active {
+    display: grid;
+    grid-template-rows: clamp(130px, 21dvh, 180px) minmax(210px, 1fr) auto;
+    gap: 12px;
+    overflow: visible;
+  }
+  .focus-session {
+    min-height: 0;
+  }
+  .focus-copy {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 20px;
+    width: 74%;
+    padding: 16px 24px;
+  }
+  .focus-copy .session-label {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .focus-copy h2 {
+    grid-column: 1;
+    grid-row: 2;
+    margin: 6px 0 0;
+    font-size: 26px;
+    line-height: 1.2;
+    letter-spacing: -1px;
+  }
+  .focus-copy > p {
+    grid-column: 1;
+    grid-row: 3;
+    margin: 0;
+    font-size: 11px;
+    align-self: end;
+  }
+  .focus-copy .primary-button {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    min-height: 42px;
+  }
+  .focus-copy .focus-note {
+    grid-column: 2;
+    grid-row: 3;
+    margin: 0;
+    font-size: 8px;
+    align-self: end;
+  }
+  .focus-art {
+    top: -8%;
+    right: 1%;
+    width: 25%;
+    height: 118%;
+  }
+  .art-caption {
+    bottom: 20px;
+    font-size: 6px;
+  }
+  .session-edition {
+    top: 15px;
+    font-size: 6px;
+  }
+  .home-grid {
+    min-height: 0;
+    margin: 0;
+    gap: 22px;
+    grid-template-columns: 1fr 1.2fr;
+  }
+  .duo-route-shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .duo-route-heading {
+    flex-shrink: 0;
+    padding-bottom: 8px;
+  }
+  .duo-route-heading .eyebrow {
+    display: none;
+  }
+  .duo-route-heading h2 {
+    font-size: 16px;
+  }
+  .duo-route-track {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    padding: 5px 0 0;
+  }
+  .duo-step {
+    min-height: 0;
+    gap: 12px;
+    padding: 3px 0;
+  }
+  .duo-step-button {
+    width: 30px;
+    height: 30px;
+    border-radius: 11px;
+  }
+  .duo-step-button svg {
+    width: 16px;
+    height: 16px;
+  }
+  .duo-step-connector {
+    left: 15px;
+    top: calc(50% + 15px);
+    bottom: auto;
+    height: calc(100% - 30px);
+  }
+  .route-step-copy {
+    gap: 10px;
+    padding: 0;
+  }
+  .route-step-copy strong {
+    font-size: 12px;
+  }
+  .route-step-copy small {
+    margin-top: 3px;
+    font-size: 9px;
+  }
+  .daily-panel {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 0;
+    gap: 12px;
+  }
+  .duo-quest-panel,
+  .duo-tips-panel {
+    padding: 16px;
+    min-width: 0;
+  }
+  .duo-quest-panel .panel-heading {
+    margin-bottom: 8px;
+  }
+  .duo-quest-panel .panel-heading h2 {
+    font-size: 14px;
+  }
+  .insight-lead {
+    font-size: 9px;
+  }
+  .learning-stats {
+    margin-top: 16px;
+    gap: 16px 12px;
+  }
+  .learning-stats strong {
+    font-size: 24px;
+  }
+  .learning-stats div > span {
+    font-size: 9px;
+    margin-top: 7px;
+  }
+  .duo-tips-panel p,
+  .duo-tips-panel .clean-list {
+    font-size: 10px;
+  }
+  .duo-tips-panel .text-button {
+    font-size: 10px;
+  }
+  .today-words {
+    margin: 0;
+    padding-top: 10px;
+  }
+  .today-words .panel-heading {
+    margin-bottom: 8px;
+  }
+  .today-words .panel-heading .eyebrow {
+    display: none;
+  }
+  .today-words .panel-heading h2 {
+    font-size: 15px;
+  }
+  .today-words .text-button {
+    padding: 4px 0;
+  }
+  .today-words .word-strip {
+    gap: 12px;
+  }
+  .daily-word {
+    padding: 10px 12px;
+  }
+  .daily-word-index {
+    position: absolute;
+    top: 9px;
+    right: 10px;
+    margin: 0;
+    font-size: 8px;
+  }
+  .daily-word > strong {
+    font-size: 20px;
+    padding-right: 22px;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .daily-word .word-meta,
+  .daily-word > svg {
+    display: none;
+  }
+  .daily-word > p {
+    margin-top: 5px;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #writing.active {
+    display: flex;
+    overflow: visible;
+  }
+  .writing-layout {
+    flex: 1;
+    min-height: 0;
+  }
+  .writing-layout > .panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .writing-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 12px;
+  }
+  .writing-form > input:first-child {
+    flex-shrink: 0;
+    padding: 9px 0;
+    font-size: 18px;
+  }
+  .writing-form > textarea {
+    flex: 1;
+    min-height: 100px;
+    padding: 10px 0;
+    resize: none;
+  }
+  .writing-form .settings-row {
+    flex-shrink: 0;
+    padding-top: 12px;
+  }
+  .writing-result {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+  .writing-empty {
+    flex: 1;
+    min-height: 0;
+    padding: 20px;
+  }
+  .score-grid {
+    padding: 12px 0;
+    margin-bottom: 12px;
+  }
+  #news.active {
+    display: flex;
+    overflow: visible;
+  }
+  .news-layout {
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+  }
+  .news-layout > .panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .news-heading,
+  .news-filter-stack {
+    flex-shrink: 0;
+  }
+  .reading-filter-block {
+    margin-bottom: 12px;
+  }
+  .news-topic-grid {
+    max-height: 100px;
+  }
+  .news-list {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+  .reader-panel {
+    padding: 22px 26px;
+  }
+  .reader-panel .panel-heading {
+    margin-bottom: 12px;
+  }
+  .reader-panel .panel-heading h2 {
+    font-size: 24px;
+  }
+  .reader-summary {
+    flex-shrink: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 11px;
+    margin-bottom: 10px;
+  }
+  .reader-progress {
+    flex-shrink: 0;
+    padding: 10px 0 14px;
+  }
+  .reader-scroll-area {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+  }
+  .reader-content {
+    padding-top: 18px;
+    font-size: 18px;
+    line-height: 1.9;
+  }
+
+  .admin-summary-grid {
+    height: 100%;
+  }
+  .admin-overview {
+    display: grid;
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 18px;
+  }
+  .admin-kpi-band {
+    padding: 22px 26px;
+    gap: 12px;
+  }
+  .admin-kpi-primary > strong {
+    font-size: 48px;
+    margin: 8px 0 5px;
+  }
+  .admin-kpi-mini > strong {
+    font-size: 28px;
+    margin-top: 12px;
+  }
+  .admin-kpi-progress {
+    margin-top: 0;
+    padding-top: 12px;
+  }
+  .admin-kpi-progress > i {
+    margin-top: 10px;
+  }
+  .admin-overview-grid {
+    min-height: 0;
+    margin: 0;
+    gap: 20px;
+  }
+  .admin-chart-block {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 20px;
+  }
+  .admin-chart-heading {
+    flex-shrink: 0;
+    margin-bottom: 16px;
+  }
+  .admin-column-chart {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+  .admin-column-item {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+  .admin-column-track {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+  }
+  .admin-pie-layout {
+    flex: 1;
+    min-height: 0;
+  }
+  .admin-two-column {
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: 1.3fr 1fr;
+    align-items: stretch;
+  }
+  .admin-two-column > .panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 20px;
+  }
+  .admin-table {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+  }
+  .admin-form {
+    min-height: 0;
+    overflow: auto;
+    margin-top: 12px;
+    padding-right: 5px;
+  }
+  .admin-profile-panel {
+    min-height: 0;
+  }
+  .admin-profile {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .admin-ai-panel {
+    max-height: 100%;
+    overflow: auto;
+  }
+}
+
+@media (min-width: 981px) and (min-height: 620px) and (max-height: 740px) {
+  .workspace-bar {
+    flex-basis: 44px;
+    min-height: 44px;
+  }
+  .topbar {
+    padding: 10px 0;
+  }
+  #dashboard.active {
+    grid-template-rows: 120px minmax(210px, 1fr) auto;
+    gap: 9px;
+  }
+  .focus-copy {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .focus-copy h2 {
+    font-size: 23px;
+  }
+  .duo-quest-panel,
+  .duo-tips-panel {
+    padding: 12px;
+  }
+  .learning-stats {
+    margin-top: 10px;
+    gap: 10px;
+  }
+  .learning-stats strong {
+    font-size: 22px;
+  }
+  .daily-word {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .today-words {
+    padding-top: 8px;
+  }
+  .quiz-example-slot {
+    height: 80px;
+    min-height: 80px;
+  }
+  .quiz-word-shell {
+    min-height: 64px;
+  }
+  .quiz-option {
+    min-height: 48px;
+    padding: 9px 12px;
+  }
+  .quiz-nav {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  .quiz-nav .quiz-primary {
+    min-height: 40px;
+  }
+  .admin-kpi-band {
+    padding: 16px 22px;
+  }
+  .admin-kpi-primary > strong {
+    font-size: 40px;
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-page {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .auth-story {
+    min-height: 0;
+    padding: 20px 26px;
+  }
+  .auth-story .brand {
+    margin: 0;
+  }
+  .auth-story-copy {
+    display: none;
+  }
+  .auth-bloom-wrap {
+    width: 150px;
+    height: 150px;
+    top: -48px;
+    bottom: auto;
+    right: -15px;
+    opacity: 0.4;
+  }
+  .auth-form-side {
+    align-content: center;
+    padding: 22px 28px 40px;
+  }
+  .auth-mode-switch {
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+  .auth-form {
+    gap: 16px;
+  }
+  .auth-card-head h2 {
+    font-size: 27px;
+  }
+  .auth-field {
+    gap: 8px;
+  }
+  .auth-field input {
+    height: 46px;
+  }
+  .auth-primary {
+    min-height: 46px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  .auth-footnote {
+    margin-top: 10px;
+    padding-top: 12px;
+  }
+  .auth-bottom-wordmark {
+    bottom: 14px;
+  }
+  .focus-session {
+    min-height: 220px;
+  }
+  .focus-copy {
+    padding: 20px 22px;
+  }
+  .focus-copy h2 {
+    margin-top: 14px;
+    font-size: 27px;
+  }
+  .focus-copy > p {
+    margin-bottom: 16px;
+  }
+  .home-grid {
+    margin-top: 24px;
+    gap: 22px;
+  }
+  .duo-step {
+    min-height: 58px;
+  }
+  .duo-step-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 13px;
+  }
+  .duo-step-connector {
+    left: 18px;
+    top: 43px;
+  }
+  .learning-stats {
+    gap: 16px 10px;
+    margin-top: 15px;
+  }
+  .today-words .daily-word {
+    padding: 14px;
+  }
+  .today-words .daily-word-index {
+    margin-bottom: 8px;
+  }
+  .page-writing .writing-feedback-panel.is-empty {
+    display: none;
+  }
+  .page-writing .writing-form > textarea {
+    min-height: 230px;
+  }
+  .reader-scroll-area {
+    max-height: 55dvh;
+    min-height: 220px;
+  }
+}
+@media (max-height: 740px) {
+  .auth-footnote {
+    display: none;
+  }
+  .auth-form-side {
+    padding-top: 20px;
+    padding-bottom: 36px;
+  }
+}
+
+@media (max-width: 760px) and (min-height: 620px) {
+  .page-chat,
+  .page-vocabulary,
+  .page-review,
+  .page-wordbank,
+  .page-news,
+  .page-writing:not(.has-writing-result) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100dvh;
+    min-height: 0;
+  }
+  :is(
+      .page-chat,
+      .page-vocabulary,
+      .page-review,
+      .page-wordbank,
+      .page-news,
+      .page-writing:not(.has-writing-result)
+    )
+    .workspace {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0 16px 12px;
+    overflow: hidden;
+  }
+  :is(
+      .page-chat,
+      .page-vocabulary,
+      .page-review,
+      .page-wordbank,
+      .page-news,
+      .page-writing:not(.has-writing-result)
+    )
+    .workspace-bar {
+    flex-shrink: 0;
+    min-height: 44px;
+  }
+  :is(
+      .page-chat,
+      .page-vocabulary,
+      .page-review,
+      .page-wordbank,
+      .page-news,
+      .page-writing:not(.has-writing-result)
+    )
+    .topbar {
+    display: none;
+  }
+  :is(
+      .page-chat,
+      .page-vocabulary,
+      .page-review,
+      .page-wordbank,
+      .page-news,
+      .page-writing:not(.has-writing-result)
+    )
+    .section.active {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    margin-top: 12px;
+  }
+  .chat-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+  }
+  .chat-panel-heading {
+    flex-shrink: 0;
+    gap: 10px;
+    padding: 15px;
+  }
+  .chat-controls {
+    gap: 6px;
+  }
+  .chat-messages {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    padding: 18px 15px;
+  }
+  .chat-welcome {
+    min-height: 0;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+  .chat-welcome-mark {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 15px;
+  }
+  .chat-welcome h3 {
+    font-size: 23px;
+  }
+  .conversation-prompts {
+    flex-direction: column;
+  }
+  .input-row {
+    flex-shrink: 0;
+    gap: 6px;
+    padding: 12px;
+  }
+  .input-row input {
+    font-size: 11px;
+    padding: 10px 5px;
+  }
+  .input-row > button {
+    min-width: 64px;
+    padding: 10px 12px;
+  }
+  #vocabulary > .panel,
+  #review > .panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 16px;
+  }
+  #vocabulary .panel-heading {
+    flex-shrink: 0;
+    margin-bottom: 12px;
+  }
+  .word-quiz-shell {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+  }
+  .word-quiz-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .quiz-progress {
+    flex-shrink: 0;
+    margin-bottom: 10px;
+  }
+  .quiz-study-stage {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    min-height: 0;
+  }
+  .quiz-word-shell {
+    flex-shrink: 0;
+    min-height: 80px;
+  }
+  .quiz-word {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 40px;
+  }
+  .quiz-example-slot {
+    flex-shrink: 0;
+    height: 90px;
+    min-height: 90px;
+    padding: 5px 0;
+    overflow-y: auto;
+  }
+  .quiz-detail-actions {
+    flex-shrink: 0;
+    min-height: 28px;
+    margin: 0 0 8px;
+  }
+  .quiz-options {
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .quiz-option {
+    min-height: 58px;
+    padding: 10px;
+  }
+  .quiz-nav {
+    flex-shrink: 0;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  .quiz-ai-detail {
+    flex-shrink: 0;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  .quiz-complete,
+  .quiz-empty {
+    min-height: 0;
+    flex: 1;
+    padding: 20px 0;
+  }
+  #review .panel-heading {
+    flex-shrink: 0;
+    margin-bottom: 12px;
+  }
+  #review > .panel > div:not(.panel-heading) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .review-prompt {
+    min-height: 100px;
+    padding: 14px 0;
+  }
+  .review-prompt-meta {
+    margin-bottom: 16px;
+  }
+  .review-input-grid {
+    gap: 10px;
+  }
+  .review-input-grid input {
+    padding: 12px;
+  }
+  .review-card-actions {
+    margin-top: 16px;
+  }
+  .wordbank-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .wordbank-layout .panel-heading {
+    flex-shrink: 0;
+    margin-bottom: 12px;
+  }
+  .wordbank-filters {
+    flex-shrink: 0;
+    padding-bottom: 12px;
+  }
+  .wordbank-categories {
+    max-height: 76px;
+    overflow-y: auto;
+  }
+  .word-bank-grid {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: start;
+    padding: 4px 5px 8px 0;
+  }
+  .wordbank-pagination {
+    flex-shrink: 0;
+    margin: 10px 0 0;
+    font-size: 9px;
+    gap: 8px;
+  }
+}
+@media (max-width: 760px) and (min-height: 620px) and (max-height: 740px) {
+  .quiz-word-shell {
+    min-height: 64px;
+  }
+  .quiz-word {
+    font-size: 34px;
+  }
+  .quiz-example-slot {
+    height: 68px;
+    min-height: 68px;
+  }
+  .quiz-option {
+    min-height: 50px;
+    padding: 8px 10px;
+    font-size: 10px;
+  }
+  .quiz-nav {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  .quiz-nav .quiz-primary {
+    min-height: 36px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}

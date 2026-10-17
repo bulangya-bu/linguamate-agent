@@ -5,7 +5,18 @@
       >正在准备你的学习空间</span
     >
   </div>
-  <div v-else class="app-shell" @keydown.esc="closeOverlays">
+  <div
+    v-else
+    class="app-shell"
+    :class="[
+      'page-' + activeSection,
+      {
+        'dashboard-expanded': dashboardExpanded,
+        'has-writing-result': Boolean(state.writingResult),
+      },
+    ]"
+    @keydown.esc="closeOverlays"
+  >
     <aside
       class="side-nav"
       aria-label="学习导航"
@@ -235,7 +246,7 @@
               </div>
             </div>
           </section>
-          <aside class="daily-panel">
+          <aside id="dashboard-footprints" class="daily-panel">
             <section class="duo-quest-panel">
               <div class="panel-heading">
                 <h2>学习足迹</h2>
@@ -290,7 +301,19 @@
             </section>
           </aside>
         </div>
-        <section class="today-words">
+        <button
+          class="dashboard-details-toggle"
+          type="button"
+          :aria-expanded="dashboardExpanded"
+          aria-controls="dashboard-footprints dashboard-words"
+          @click="dashboardExpanded = !dashboardExpanded"
+        >
+          <span>{{
+            dashboardExpanded ? "收起学习概况" : "查看学习足迹与今日单词"
+          }}</span
+          ><span aria-hidden="true">{{ dashboardExpanded ? "−" : "+" }}</span>
+        </button>
+        <section id="dashboard-words" class="today-words">
           <div class="panel-heading">
             <div>
               <p class="eyebrow compact">WORDS TO KEEP</p>
@@ -1089,7 +1112,10 @@
               </div>
             </form>
           </section>
-          <section class="panel">
+          <section
+            class="panel writing-feedback-panel"
+            :class="{ 'is-empty': !state.writingResult }"
+          >
             <h2>批改结果</h2>
             <div v-if="state.writingResult" class="writing-result">
               <div class="score-grid">
@@ -1136,12 +1162,23 @@
       <section
         id="news"
         class="section"
-        :class="{ active: activeSection === 'news' }"
+        :class="{
+          active: activeSection === 'news',
+          'is-browsing': newsLibraryOpen,
+        }"
       >
         <div class="news-layout">
-          <section class="panel">
+          <section id="news-library" class="panel news-library">
             <div class="panel-heading news-heading">
               <h2>阅读推荐</h2>
+              <button
+                ref="newsLibraryCloseRef"
+                class="reading-library-close text-button"
+                type="button"
+                @click="newsLibraryOpen = false"
+              >
+                返回阅读<AppIcon name="arrow" />
+              </button>
             </div>
             <div class="news-filter-stack">
               <div class="reading-filter-block">
@@ -1221,14 +1258,26 @@
                 </p>
                 <h2>{{ state.currentArticle?.title || "选择一篇文章" }}</h2>
               </div>
-              <button
-                class="translate-btn"
-                type="button"
-                :disabled="!state.currentArticle || state.translateBusy"
-                @click="translateArticle"
-              >
-                {{ state.translateBusy ? "翻译中..." : "全文翻译" }}
-              </button>
+              <div class="reader-toolbar">
+                <button
+                  ref="newsLibraryButtonRef"
+                  class="reading-library-toggle settings-secondary"
+                  type="button"
+                  aria-controls="news-library"
+                  :aria-expanded="newsLibraryOpen"
+                  @click="newsLibraryOpen = true"
+                >
+                  更换文章
+                </button>
+                <button
+                  class="translate-btn"
+                  type="button"
+                  :disabled="!state.currentArticle || state.translateBusy"
+                  @click="translateArticle"
+                >
+                  {{ state.translateBusy ? "翻译中..." : "全文翻译" }}
+                </button>
+              </div>
             </div>
             <p class="reader-summary">
               {{
@@ -1250,32 +1299,34 @@
                 完成阅读
               </button>
             </div>
-            <article
+            <div
               ref="readerRef"
-              class="reader-content"
+              class="reader-scroll-area"
               @scroll="handleReaderScroll"
             >
-              <template v-for="token in articleTokens" :key="token.key">
-                <span
-                  v-if="token.word"
-                  class="reader-word"
-                  tabindex="0"
-                  @focus="showTooltip(token.text, $event)"
-                  @blur="scheduleHideTooltip"
-                  @click="showTooltip(token.text, $event)"
-                  @mouseenter="showTooltip(token.text, $event)"
-                  @mouseleave="scheduleHideTooltip"
-                  >{{ token.text }}</span
-                >
-                <span v-else>{{ token.text }}</span>
-              </template>
-            </article>
-            <div
-              v-if="state.translation.titleCn || state.translation.contentCn"
-              class="translation-area"
-            >
-              <h3>{{ state.translation.titleCn }}</h3>
-              <p>{{ state.translation.contentCn }}</p>
+              <article class="reader-content">
+                <template v-for="token in articleTokens" :key="token.key">
+                  <span
+                    v-if="token.word"
+                    class="reader-word"
+                    tabindex="0"
+                    @focus="showTooltip(token.text, $event)"
+                    @blur="scheduleHideTooltip"
+                    @click="showTooltip(token.text, $event)"
+                    @mouseenter="showTooltip(token.text, $event)"
+                    @mouseleave="scheduleHideTooltip"
+                    >{{ token.text }}</span
+                  >
+                  <span v-else>{{ token.text }}</span>
+                </template>
+              </article>
+              <div
+                v-if="state.translation.titleCn || state.translation.contentCn"
+                class="translation-area"
+              >
+                <h3>{{ state.translation.titleCn }}</h3>
+                <p>{{ state.translation.contentCn }}</p>
+              </div>
             </div>
           </section>
         </div>
@@ -1768,6 +1819,10 @@ import {
 const route = useRoute();
 const router = useRouter();
 const readerRef = ref(null);
+const dashboardExpanded = ref(false);
+const newsLibraryOpen = ref(false);
+const newsLibraryButtonRef = ref(null);
+const newsLibraryCloseRef = ref(null);
 const showAllNewsTopics = ref(false);
 const settingsPanelRef = ref(null);
 const wordDialogRef = ref(null);
@@ -1776,6 +1831,7 @@ function closeOverlays() {
   state.settingsOpen = false;
   state.selectedWord = null;
   state.tooltip.visible = false;
+  newsLibraryOpen.value = false;
 }
 function trapDialogFocus(event) {
   if (
@@ -2781,6 +2837,7 @@ async function loadNews() {
 
 async function loadArticle(id) {
   state.currentArticle = await learningApi.article(id);
+  newsLibraryOpen.value = false;
   state.translation = {};
   state.readerProgress = state.currentArticle.readProgress || 0;
   await nextTick();
@@ -3063,6 +3120,11 @@ async function boot() {
   }
   state.loading = false;
 }
+
+watch(newsLibraryOpen, async (open) => {
+  await nextTick();
+  (open ? newsLibraryCloseRef.value : newsLibraryButtonRef.value)?.focus();
+});
 
 watch(
   () => state.settingsOpen || wordDialogVisible.value,

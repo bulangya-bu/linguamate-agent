@@ -9,5 +9,6 @@ import "./styles/learning.css";
 import "./styles/surfaces.css";
 import "./styles/brand.css";
 import "./styles/responsive.css";
+import "./styles/layout.css";
 
 createApp(App).use(router).use(ElementPlus).mount("#app");
