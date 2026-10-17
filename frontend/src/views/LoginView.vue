@@ -22,6 +22,7 @@
       <WordAtmosphere />
     </section>
     <section class="auth-form-side">
+      <ThemeToggle class="auth-theme-toggle" />
       <div class="auth-card">
         <div class="auth-card-head">
           <h2>{{ isLogin ? "欢迎回来。" : "从这里开始。" }}</h2>
@@ -137,6 +138,7 @@
 </template>
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
+import ThemeToggle from "@/components/ThemeToggle.vue";
 import LearningBloom from "@/components/LearningBloom.vue";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import {

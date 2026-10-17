@@ -4,10 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#58cc02" />
+    <script>
+      // Apply the saved appearance before the first paint.
+      try {
+        const theme = localStorage.getItem("linguamate-theme") === "dark" ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      } catch { document.documentElement.dataset.theme = "light"; }
+    </script>
     <link rel="icon" href="/assets/linguamate-icon.svg?v=bright" />
     <title>LinguaMate Agent</title>
-    <script type="module" crossorigin src="/assets/index-FV-DdtBn.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BEXxJ8gH.css">
+    <script type="module" crossorigin src="/assets/index-D0oBjiP_.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Dut_5D4I.css">
   </head>
   <body>
     <div id="app"></div>

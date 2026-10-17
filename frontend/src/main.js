@@ -3,6 +3,7 @@ import ElementPlus from "element-plus";
 import "element-plus/dist/index.css";
 import App from "./App.vue";
 import router from "./router";
+import { initializeTheme } from "./composables/useTheme";
 import "./styles/app.css";
 import "./styles/vue-overrides.css";
 import "./styles/learning.css";
@@ -14,5 +15,7 @@ import "./styles/typography.css";
 import "./styles/quiz-workspace.css";
 import "./styles/review-library.css";
 import "./styles/reading-workspace.css";
+import "./styles/theme.css";
 
+initializeTheme();
 createApp(App).use(router).use(ElementPlus).mount("#app");

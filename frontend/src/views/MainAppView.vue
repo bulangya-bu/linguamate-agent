@@ -128,6 +128,7 @@
           >
             <span class="status-dot"></span>模型设置<AppIcon name="settings" />
           </button>
+          <ThemeToggle />
           <UserAccountMenu
             :user="state.currentUser || {}"
             :busy="state.logoutBusy"
@@ -1768,6 +1769,7 @@ import AppIcon from "@/components/AppIcon.vue";
 import LearningBloom from "@/components/LearningBloom.vue";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import UserAccountMenu from "@/components/UserAccountMenu.vue";
+import ThemeToggle from "@/components/ThemeToggle.vue";
 import QuizInsight from "@/components/QuizInsight.vue";
 import { wordDefinitionGroups } from "@/word-definitions";
 import { ElMessage } from "element-plus";

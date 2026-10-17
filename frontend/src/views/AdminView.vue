@@ -61,6 +61,7 @@
           >前往学习空间<AppIcon name="arrow"
         /></RouterLink>
         <div class="workspace-tools">
+          <ThemeToggle />
           <UserAccountMenu
             :user="state.user || {}"
             :busy="state.logoutBusy"
@@ -653,6 +654,7 @@
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
 import UserAccountMenu from "@/components/UserAccountMenu.vue";
+import ThemeToggle from "@/components/ThemeToggle.vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, reactive } from "vue";
 import { useRouter } from "vue-router";
