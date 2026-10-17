@@ -47,7 +47,8 @@ public class ChatService {
         traceRecorder.flush(result.trace(), String.valueOf(conversation.id));
         conversationService.touch(conversation.id);
         experienceService.addXp(5);
-        return new ChatResponse(conversation.id, result.reply(), result.trace(), result.suggestions());
+        return new ChatResponse(conversation.id, result.reply(), result.trace(), result.suggestions(),
+                result.learningCard(), result.actions());
     }
 
     public List<Message> messages(Long conversationId) {

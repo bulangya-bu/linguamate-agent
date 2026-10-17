@@ -31,7 +31,8 @@ import org.springframework.test.web.servlet.MvcResult;
 @SpringBootTest(properties = {
         "linguamate.ai.base-url=http://127.0.0.1:9/v1",
         "linguamate.ai.api-key=test-key",
-        "linguamate.ai.chat-model=test-model"
+        "linguamate.ai.chat-model=test-model",
+        "linguamate.cache.redis.enabled=false"
 })
 @AutoConfigureMockMvc
 class JavaBigWorkApplicationTests {
@@ -329,6 +330,68 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(content().string(containsString("RetrievalService")))
                 .andExpect(content().string(containsString("LinguaMate RAG Knowledge Base")));
+    }
+
+    @Test
+    void chatRecommendsTodaysIncompleteLearningRouteWithActions() throws Exception {
+        String username = "route" + System.nanoTime();
+        registerUser(username, "Route User");
+        MockHttpSession session = login(username, "userpass123");
+
+        mockMvc.perform(post("/api/chat")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "scene": "daily",
+                                  "message": "今天还有什么没学的？"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.learningCard.type").value("daily-route"))
+                .andExpect(jsonPath("$.data.learningCard.items", hasSize(5)))
+                .andExpect(jsonPath("$.data.actions.length()", greaterThan(0)))
+                .andExpect(jsonPath("$.data.actions[*].route",
+                        org.hamcrest.Matchers.everyItem(matchesPattern("^/(chat|vocabulary|review|writing|news)$"))));
+    }
+
+    @Test
+    void chatAndEndpointSummarizeUnfamiliarVocabulary() throws Exception {
+        String username = "vocab" + System.nanoTime();
+        registerUser(username, "Vocab User");
+        MockHttpSession session = login(username, "userpass123");
+        MvcResult words = mockMvc.perform(get("/api/words/today").param("limit", "1").session(session))
+                .andExpect(status().isOk())
+                .andReturn();
+        long wordId = objectMapper.readTree(words.getResponse().getContentAsString())
+                .path("data").path(0).path("id").asLong();
+        mockMvc.perform(post("/api/words/" + wordId + "/quiz")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"answer\":\"wrong-answer\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/chat")
+                        .session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "scene": "daily",
+                                  "message": "归纳一下我所有不熟悉的单词"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.learningCard.type").value("vocabulary-summary"))
+                .andExpect(jsonPath("$.data.learningCard.group").value("unfamiliar"))
+                .andExpect(jsonPath("$.data.learningCard.totalElements", greaterThan(0)));
+
+        mockMvc.perform(get("/api/learning-advisor/vocabulary")
+                        .session(session)
+                        .param("group", "unfamiliar")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.learningCard.group").value("unfamiliar"));
     }
 
     @Test

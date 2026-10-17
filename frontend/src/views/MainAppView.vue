@@ -72,105 +72,66 @@
 
       <section id="dashboard" class="section" :class="{ active: activeSection === 'dashboard' }">
         <div class="home-grid">
-          <section class="learning-path">
-            <div class="path-heading">
+          <section class="duo-route-shell">
+            <div class="duo-route-heading">
               <div>
                 <p class="eyebrow compact">今日路线</p>
-                <h2>{{ routeDoneCount === journeySteps.length ? "今日学习岛已点亮" : "探索今日学习岛" }}</h2>
+                <h2>{{ routeDoneCount === journeySteps.length ? "今天的课程全部完成！" : "继续你的学习连胜" }}</h2>
+                <p>完成每一关，稳稳积累今天的学习能量。</p>
               </div>
-              <span class="energy-pill">能量 {{ journeyEnergy }}%</span>
+              <div class="duo-route-progress" :aria-label="`今日路线完成 ${routeDoneCount}/${journeySteps.length}`">
+                <div class="duo-route-progress-copy">
+                  <span>今日进度</span>
+                  <strong>{{ routeDoneCount }}/{{ journeySteps.length }}</strong>
+                </div>
+                <div class="duo-route-progress-bar"><i :style="{ width: routeProgressPercent + '%' }"></i></div>
+              </div>
             </div>
-            <div class="lesson-map">
-              <svg class="adventure-map-bg" viewBox="0 0 840 430" aria-hidden="true" focusable="false">
-                <defs>
-                  <linearGradient id="mapWater" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stop-color="#eaf8ff" />
-                    <stop offset="100%" stop-color="#d8f2ff" />
-                  </linearGradient>
-                  <linearGradient id="mapLand" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stop-color="#f6ffe9" />
-                    <stop offset="58%" stop-color="#e7f9d5" />
-                    <stop offset="100%" stop-color="#d6f0c4" />
-                  </linearGradient>
-                  <filter id="mapSoftShadow" x="-12%" y="-12%" width="124%" height="124%">
-                    <feDropShadow dx="0" dy="10" stdDeviation="9" flood-color="#7fb3c9" flood-opacity="0.16" />
-                  </filter>
-                </defs>
-                <rect class="map-paper" x="18" y="18" width="804" height="394" rx="30" />
-                <path class="map-water" d="M45 84 C130 34 233 76 310 52 C410 22 493 78 586 58 C690 35 755 78 795 130 L795 384 L45 384 Z" />
-                <path class="map-island-shadow" d="M94 264 C87 173 151 95 246 82 C325 71 362 116 429 100 C517 78 610 100 669 165 C727 227 723 324 648 359 C559 400 492 354 405 370 C289 391 116 372 94 264 Z" />
-                <path class="map-island" d="M95 251 C90 166 154 94 247 82 C326 72 363 119 428 102 C516 79 604 100 664 160 C727 223 719 315 650 351 C563 397 492 349 405 366 C291 388 116 362 95 251 Z" />
-                <path class="map-river" d="M310 92 C324 132 301 153 332 184 C356 207 416 205 435 238 C455 273 419 306 450 350" />
-                <path class="trail-main" d="M139 271 C204 204 259 158 336 134 C421 108 509 147 581 199 C646 246 704 195 739 111" />
-                <path class="trail-link is-lit" d="M200 230 C178 236 157 250 139 271" />
-                <path class="trail-link is-guide" d="M336 134 C326 117 306 104 285 97" />
-                <path class="trail-link" d="M459 173 C456 197 454 222 451 244" />
-                <path class="trail-link" d="M581 199 C574 233 571 267 572 301" />
-                <path class="trail-link" d="M660 158 C690 139 718 123 739 111" />
-                <g class="map-forest">
-                  <path d="M194 154 l18 -34 l18 34 h-12 l14 24 h-40 l14 -24 Z" />
-                  <path d="M232 144 l16 -30 l16 30 h-11 l13 22 h-36 l13 -22 Z" />
-                  <path d="M625 125 l17 -31 l17 31 h-11 l13 23 h-38 l13 -23 Z" />
-                  <path d="M651 146 l14 -26 l14 26 h-9 l11 19 h-32 l11 -19 Z" />
-                </g>
-                <g class="map-hills">
-                  <path d="M397 100 l38 -54 l43 54 Z" />
-                  <path d="M445 107 l30 -42 l34 42 Z" />
-                  <path d="M514 314 l35 -47 l38 47 Z" />
-                </g>
-                <g class="map-compass">
-                  <circle cx="82" cy="72" r="23" />
-                  <path d="M82 52 l7 20 l-7 20 l-7 -20 Z" />
-                  <text x="82" y="80" text-anchor="middle">N</text>
-                </g>
-                <g class="map-dots">
-                  <circle cx="280" cy="338" r="4" />
-                  <circle cx="703" cy="305" r="5" />
-                  <circle cx="130" cy="120" r="4" />
-                </g>
-              </svg>
-              <button
-                v-for="step in journeySteps"
+
+            <div class="duo-route-track" role="list" aria-label="今日学习关卡">
+              <div
+                v-for="(step, index) in journeySteps"
                 :key="step.id"
-                class="map-landmark"
-                :class="[`node-${step.tone}`, { 'is-complete': step.done, 'is-current': step.recommended }]"
-                type="button"
-                :style="{ '--map-x': step.mapX + '%', '--map-y': step.mapY + '%' }"
-                @click="goSection(step.section)"
+                class="duo-step"
+                :class="{ 'is-complete': step.done, 'is-current': step.recommended }"
+                role="listitem"
               >
-                <span class="landmark-pin"><span class="landmark-symbol">{{ step.done ? "✓" : step.symbol }}</span></span>
-                <span class="landmark-copy">
-                  <strong>{{ step.title }}</strong>
-                  <small>{{ step.landmark }}</small>
-                  <em>{{ step.detail }}</em>
-                </span>
-                <span class="landmark-status">{{ step.done ? "已点亮" : step.recommended ? "建议前往" : "可探索" }}</span>
+                <span v-if="index < journeySteps.length - 1" class="duo-step-connector" :class="{ 'is-complete': step.done }" aria-hidden="true"></span>
+                <span v-if="step.recommended" class="duo-current-flag">下一关</span>
+                <button
+                  class="duo-step-button"
+                  :class="[`node-${step.tone}`, { 'is-complete': step.done, 'is-current': step.recommended }]"
+                  type="button"
+                  :aria-label="routeStepAriaLabel(step)"
+                  @click="goSection(step.section)"
+                >
+                  <span>{{ step.done ? "✓" : step.symbol }}</span>
+                </button>
+                <strong>{{ step.title }}</strong>
+                <small>{{ step.detail }}</small>
+              </div>
+            </div>
+
+            <div class="duo-route-footer">
+              <span><strong>{{ journeyEnergy }}%</strong> 今日能量</span>
+              <span><strong>{{ journeySteps.length - routeDoneCount }}</strong> 关待完成</span>
+              <button type="button" @click="goSection(focusStep?.section || 'vocabulary')">
+                {{ routeDoneCount === journeySteps.length ? "再练一组" : `开始${focusStep?.title || "学习"}` }}
               </button>
             </div>
           </section>
           <aside class="daily-panel">
-            <section class="panel streak-panel">
-              <h2>探索状态</h2>
-              <div class="route-status">
-                <div class="route-status-card is-progress">
-                  <strong>{{ routeDoneCount }}/{{ journeySteps.length }}</strong>
-                  <span>已完成节点</span>
-                  <small>{{ journeySteps.length - routeDoneCount }} 处待探索</small>
-                </div>
-                <div class="route-status-card is-energy">
-                  <strong>{{ journeyEnergy }}%</strong>
-                  <span>路线能量</span>
-                  <small>{{ focusStep?.title || "继续学习" }}</small>
-                </div>
+            <section class="duo-quest-panel">
+              <span class="duo-quest-kicker">推荐任务</span>
+              <div class="duo-quest-icon" :class="`node-${focusStep?.tone || 'green'}`">{{ focusStep?.symbol || "学" }}</div>
+              <div class="duo-quest-copy">
+                <h2>{{ focusStep?.title || "继续学习" }}</h2>
+                <p>{{ focusStep?.landmark || "今日课程" }} · {{ focusStep?.detail || "完成一个学习任务" }}</p>
               </div>
+              <button type="button" @click="goSection(focusStep?.section || 'vocabulary')">开始学习</button>
             </section>
-            <section class="panel">
-              <div class="panel-heading">
-                <h2>建议前往</h2>
-                <button class="soft-action" type="button" @click="goSection(focusStep?.section || 'vocabulary')">
-                  {{ focusStep ? `前往${focusStep.title}` : "继续学习" }}
-                </button>
-              </div>
+            <section class="panel duo-tips-panel">
+              <div class="panel-heading"><h2>今日建议</h2><span>{{ (state.report.nextActions || []).length }} 项</span></div>
               <ul class="clean-list">
                 <li v-for="item in state.report.nextActions || []" :key="item">{{ item }}</li>
               </ul>
@@ -266,6 +227,35 @@
             <article v-for="(message, index) in state.messages" :key="`${message.role}-${index}-${message.createdAt || ''}`" class="chat-message" :class="message.role">
               <strong>{{ message.role === "user" ? "你" : "LinguaMate" }}</strong>
               <p>{{ message.content }}</p>
+              <section v-if="message.learningCard" class="learning-advisor-card" :class="`card-${message.learningCard.type}`">
+                <header>
+                  <div>
+                    <span>{{ message.learningCard.type === "daily-route" ? "LEARNING ROUTE" : "VOCABULARY PROFILE" }}</span>
+                    <h3>{{ message.learningCard.title }}</h3>
+                  </div>
+                  <b v-if="message.learningCard.type === 'daily-route'">
+                    {{ message.learningCard.items.filter((item) => item.status === "complete").length }}/{{ message.learningCard.items.length }}
+                  </b>
+                  <b v-else>{{ message.learningCard.totalElements }}</b>
+                </header>
+                <div class="learning-card-items">
+                  <article v-for="item in message.learningCard.items" :key="item.key" :class="{ 'is-complete': item.status === 'complete' }">
+                    <i>{{ item.status === "complete" ? "✓" : message.learningCard.type === "daily-route" ? "○" : "Aa" }}</i>
+                    <div><strong>{{ item.label }}</strong><small>{{ item.detail }}</small></div>
+                  </article>
+                  <p v-if="!message.learningCard.items.length" class="learning-card-empty">这个分组暂时没有单词。</p>
+                </div>
+                <footer v-if="message.learningCard.type === 'vocabulary-summary' && message.learningCard.totalPages > 1" class="learning-card-pages">
+                  <button type="button" :disabled="message.learningCard.page <= 0" @click="loadLearningCardPage(message, index, -1)">上一页</button>
+                  <span>{{ message.learningCard.page + 1 }} / {{ message.learningCard.totalPages }}</span>
+                  <button type="button" :disabled="message.learningCard.page >= message.learningCard.totalPages - 1" @click="loadLearningCardPage(message, index, 1)">下一页</button>
+                </footer>
+              </section>
+              <div v-if="message.actions?.length" class="learning-card-actions">
+                <button v-for="action in message.actions" :key="action.id" type="button" @click="handleLearningAction(action)">
+                  {{ action.label }}<span>→</span>
+                </button>
+              </div>
             </article>
           </div>
           <form class="input-row" @submit.prevent="sendChat">
@@ -829,6 +819,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useRoute, useRouter } from "vue-router";
 import { aiApi, authApi, learningApi } from "@/api/modules";
 import { formatDate, normalizeModelList } from "@/api/client";
+import { learningMessageFromResponse, nextVocabularyPage } from "@/learning-advisor";
 
 const route = useRoute();
 const router = useRouter();
@@ -1017,6 +1008,7 @@ const levelPercent = computed(() => {
   return Math.min(100, Math.round((Number(state.level.experience || 0) / next) * 100));
 });
 const routeDoneCount = computed(() => journeySteps.value.filter((step) => step.done).length);
+const routeProgressPercent = computed(() => Math.round((routeDoneCount.value / Math.max(1, journeySteps.value.length)) * 100));
 const journeyEnergy = computed(() => Math.max(levelPercent.value, Math.round((routeDoneCount.value / journeySteps.value.length) * 100)));
 const focusStep = computed(() => journeySteps.value.find((step) => !step.done) || journeySteps.value[0]);
 const currentQuizWord = computed(() => state.words[state.quizIndex]);
@@ -1090,6 +1082,11 @@ const journeySteps = computed(() => {
   }));
 });
 
+function routeStepAriaLabel(step) {
+  const status = step.done ? "已完成" : step.recommended ? "推荐下一关" : "未完成";
+  return `${step.title}，${step.landmark}，${step.detail}，${status}`;
+}
+
 const articleTokens = computed(() => {
   const text = state.currentArticle?.content || "";
   const parts = text.match(/[A-Za-z][A-Za-z'-]*|[^A-Za-z]+/g) || [];
@@ -1142,9 +1139,29 @@ async function setNewsTopic(value) {
   await loadNews();
 }
 
-function goSection(section) {
+function goSection(section, query = {}) {
   const target = navItems.find((item) => item.id === section) || navItems[0];
-  router.push(target.path);
+  router.push({ path: target.path, query });
+}
+
+async function handleLearningAction(action) {
+  if (action.section === "review" && reviewModes.some((mode) => mode.id === action.query?.mode)) {
+    state.reviewMode = action.query.mode;
+    await loadReviews();
+  }
+  await goSection(action.section, action.query || {});
+}
+
+async function loadLearningCardPage(message, index, direction) {
+  const card = message.learningCard;
+  const page = nextVocabularyPage(card, direction);
+  if (page === card.page) return;
+  try {
+    const result = await learningApi.advisorVocabulary({ group: card.group, page, size: card.size });
+    state.messages[index] = learningMessageFromResponse(result);
+  } catch (error) {
+    ElMessage.error(error.message || "词库分页加载失败");
+  }
 }
 
 async function logout() {
@@ -1818,7 +1835,7 @@ async function sendChat() {
       message
     });
     state.conversationId = result.conversationId;
-    state.messages.push({ role: "assistant", content: result.reply });
+    state.messages.push(learningMessageFromResponse(result));
     state.trace = result.trace || [];
     await Promise.all([loadConversations(), loadReport()]);
   } finally {

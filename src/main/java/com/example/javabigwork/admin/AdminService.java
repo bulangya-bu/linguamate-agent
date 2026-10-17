@@ -9,6 +9,7 @@ import com.example.javabigwork.auth.AuthService;
 import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.auth.entity.UserAccount;
 import com.example.javabigwork.auth.mapper.UserAccountMapper;
+import com.example.javabigwork.cache.RedisCacheService;
 import com.example.javabigwork.chat.entity.Conversation;
 import com.example.javabigwork.chat.mapper.ConversationMapper;
 import com.example.javabigwork.knowledge.mapper.KnowledgeDocumentMapper;
@@ -50,6 +51,7 @@ public class AdminService {
     private final ConversationMapper conversationMapper;
     private final AuthService authService;
     private final UserContext userContext;
+    private final RedisCacheService redisCache;
 
     public AdminService(
             UserAccountMapper userMapper,
@@ -64,7 +66,8 @@ public class AdminService {
             AiSettingMapper aiSettingMapper,
             ConversationMapper conversationMapper,
             AuthService authService,
-            UserContext userContext
+            UserContext userContext,
+            RedisCacheService redisCache
     ) {
         this.userMapper = userMapper;
         this.wordMapper = wordMapper;
@@ -79,6 +82,7 @@ public class AdminService {
         this.conversationMapper = conversationMapper;
         this.authService = authService;
         this.userContext = userContext;
+        this.redisCache = redisCache;
     }
 
     public AdminSummary summary() {
@@ -293,6 +297,7 @@ public class AdminService {
         Word word = new Word();
         applyWord(word, request);
         wordMapper.insert(word);
+        invalidateWordLookupCache();
         return word;
     }
 
@@ -304,11 +309,13 @@ public class AdminService {
         }
         applyWord(word, request);
         wordMapper.updateById(word);
+        invalidateWordLookupCache();
         return word;
     }
 
     public void deleteWord(Long id) {
         wordMapper.deleteById(id);
+        invalidateWordLookupCache();
     }
 
     public AdminNewsPage news(String search, int page, int size) {
@@ -330,6 +337,7 @@ public class AdminService {
         applyNews(article, request);
         article.createdAt = LocalDateTime.now();
         newsArticleMapper.insert(article);
+        invalidateNewsRecommendationCache();
         return article;
     }
 
@@ -341,11 +349,21 @@ public class AdminService {
         }
         applyNews(article, request);
         newsArticleMapper.updateById(article);
+        invalidateNewsRecommendationCache();
         return article;
     }
 
     public void deleteNews(Long id) {
         newsArticleMapper.deleteById(id);
+        invalidateNewsRecommendationCache();
+    }
+
+    private void invalidateWordLookupCache() {
+        redisCache.evictIndexed(redisCache.key("word:lookup:index"));
+    }
+
+    private void invalidateNewsRecommendationCache() {
+        redisCache.evictIndexed(redisCache.key("news:recommendations:index"));
     }
 
     private void applyWord(Word word, WordUpsertRequest request) {

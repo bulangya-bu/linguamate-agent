@@ -2,6 +2,7 @@ package com.example.javabigwork.news.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.example.javabigwork.auth.UserContext;
+import com.example.javabigwork.cache.RedisCacheService;
 import com.example.javabigwork.news.dto.NewsArticleView;
 import com.example.javabigwork.news.dto.ReadingProgressRequest;
 import com.example.javabigwork.news.dto.ReadingProgressView;
@@ -10,6 +11,7 @@ import com.example.javabigwork.news.entity.ReadingRecord;
 import com.example.javabigwork.news.mapper.NewsArticleMapper;
 import com.example.javabigwork.news.mapper.ReadingRecordMapper;
 import com.example.javabigwork.tool.NewsRecommendTool;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,34 +28,47 @@ import org.springframework.util.StringUtils;
 @Service
 public class NewsService {
     private static final int FINISHED_THRESHOLD = 90;
+    private static final Duration RECOMMENDATION_TTL = Duration.ofMinutes(10);
 
     private final NewsRecommendTool recommendTool;
     private final NewsArticleMapper articleMapper;
     private final ReadingRecordMapper readingRecordMapper;
     private final UserContext userContext;
+    private final RedisCacheService redisCache;
 
     public NewsService(
             NewsRecommendTool recommendTool,
             NewsArticleMapper articleMapper,
             ReadingRecordMapper readingRecordMapper,
-            UserContext userContext
+            UserContext userContext,
+            RedisCacheService redisCache
     ) {
         this.recommendTool = recommendTool;
         this.articleMapper = articleMapper;
         this.readingRecordMapper = readingRecordMapper;
         this.userContext = userContext;
+        this.redisCache = redisCache;
     }
 
     public List<NewsArticleView> recommendations(String difficulty, String topic) {
+        String safeDifficulty = difficulty == null ? "" : difficulty.trim();
         String safeTopic = topic == null ? "" : topic.trim();
         Long userId = userContext.userId();
+        String cacheKey = recommendationKey(userId, safeDifficulty, safeTopic);
+        List<NewsArticleView> cached = redisCache.getList(cacheKey, NewsArticleView.class).orElse(null);
+        if (cached != null) {
+            return cached;
+        }
         Map<Long, ReadingRecord> records = readingRecordMap(userId);
         Map<String, Integer> topicWeights = StringUtils.hasText(safeTopic) ? Map.of() : topicWeights(userId);
-        return recommendTool.recommend(difficulty, safeTopic, 100).stream()
+        List<NewsArticleView> recommendations = recommendTool.recommend(safeDifficulty, safeTopic, 100).stream()
                 .sorted((left, right) -> compareRecommendations(left, right, records, topicWeights))
                 .limit(10)
                 .map(article -> toView(article, records.get(article.id)))
                 .toList();
+        redisCache.putIndexed(recommendationIndexKey(), cacheKey, recommendations, RECOMMENDATION_TTL);
+        redisCache.index(userRecommendationIndexKey(userId), cacheKey, RECOMMENDATION_TTL);
+        return recommendations;
     }
 
     public List<String> topics() {
@@ -73,6 +88,7 @@ public class NewsService {
             throw new IllegalArgumentException("News article does not exist.");
         }
         ReadingRecord record = ensureReadingRecord(article.id);
+        evictUserRecommendationCache(record.userId);
         return toView(article, record);
     }
 
@@ -102,6 +118,7 @@ public class NewsService {
                 || record.readProgress >= FINISHED_THRESHOLD;
         record.updatedAt = LocalDateTime.now();
         readingRecordMapper.updateById(record);
+        evictUserRecommendationCache(record.userId);
         return toProgressView(record);
     }
 
@@ -115,6 +132,25 @@ public class NewsService {
         record.lookedUpWords = value(record.lookedUpWords) + 1;
         record.updatedAt = LocalDateTime.now();
         readingRecordMapper.updateById(record);
+        evictUserRecommendationCache(record.userId);
+    }
+
+    private String recommendationKey(Long userId, String difficulty, String topic) {
+        return redisCache.key("news:recommendations", userId, difficulty, topic);
+    }
+
+    private String recommendationIndexKey() {
+        return redisCache.key("news:recommendations:index");
+    }
+
+    private String userRecommendationIndexKey(Long userId) {
+        return redisCache.key("news:recommendations:user", userId, "index");
+    }
+
+    private void evictUserRecommendationCache(Long userId) {
+        if (userId != null) {
+            redisCache.evictIndexed(userRecommendationIndexKey(userId));
+        }
     }
 
     private ReadingRecord ensureReadingRecord(Long articleId) {

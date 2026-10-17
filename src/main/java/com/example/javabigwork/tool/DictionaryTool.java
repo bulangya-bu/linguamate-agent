@@ -1,6 +1,7 @@
 package com.example.javabigwork.tool;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.example.javabigwork.cache.RedisCacheService;
 import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.dictionary.service.OnlineWordService;
 import com.example.javabigwork.news.dto.HoverWordResponse;
@@ -8,6 +9,7 @@ import com.example.javabigwork.vocabulary.entity.UserWordProgress;
 import com.example.javabigwork.vocabulary.entity.Word;
 import com.example.javabigwork.vocabulary.mapper.UserWordProgressMapper;
 import com.example.javabigwork.vocabulary.mapper.WordMapper;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -22,21 +24,26 @@ import org.springframework.util.StringUtils;
 @Component
 public class DictionaryTool {
     private static final Logger log = LoggerFactory.getLogger(DictionaryTool.class);
+    private static final Duration WORD_LOOKUP_TTL = Duration.ofHours(6);
+
     private final WordMapper wordMapper;
     private final UserWordProgressMapper progressMapper;
     private final OnlineWordService onlineWordService;
     private final UserContext userContext;
+    private final RedisCacheService redisCache;
 
     public DictionaryTool(
             WordMapper wordMapper,
             UserWordProgressMapper progressMapper,
             OnlineWordService onlineWordService,
-            UserContext userContext
+            UserContext userContext,
+            RedisCacheService redisCache
     ) {
         this.wordMapper = wordMapper;
         this.progressMapper = progressMapper;
         this.onlineWordService = onlineWordService;
         this.userContext = userContext;
+        this.redisCache = redisCache;
     }
 
     public HoverWordResponse lookup(String rawWord) {
@@ -67,6 +74,7 @@ public class DictionaryTool {
         if (word.id == null) {
             wordMapper.insert(word);
         }
+        cacheWordLookup(normalized, word);
         long existing = progressMapper.selectCount(Wrappers.<UserWordProgress>query()
                 .eq("user_id", userContext.userId())
                 .eq("word_id", word.id));
@@ -86,6 +94,11 @@ public class DictionaryTool {
     }
 
     private Word findFastWord(String normalized) {
+        String cacheKey = wordLookupKey(normalized);
+        Word cached = redisCache.get(cacheKey, Word.class).orElse(null);
+        if (cached != null) {
+            return cached;
+        }
         for (String candidate : lookupCandidates(normalized)) {
             Word word = wordMapper.selectList(Wrappers.<Word>query()
                             .eq("word", candidate)
@@ -94,10 +107,26 @@ public class DictionaryTool {
                     .findFirst()
                     .orElse(null);
             if (word != null) {
+                cacheWordLookup(normalized, word);
                 return word;
             }
         }
         return null;
+    }
+
+    private void cacheWordLookup(String normalized, Word word) {
+        if (word == null || word.id == null) {
+            return;
+        }
+        redisCache.putIndexed(wordLookupIndexKey(), wordLookupKey(normalized), word, WORD_LOOKUP_TTL);
+    }
+
+    private String wordLookupKey(String normalized) {
+        return redisCache.key("word:lookup", normalized);
+    }
+
+    private String wordLookupIndexKey() {
+        return redisCache.key("word:lookup:index");
     }
 
     private HoverWordResponse toHoverResponse(Word word) {

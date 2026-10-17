@@ -1,6 +1,10 @@
 package com.example.javabigwork.agent;
 
 import com.example.javabigwork.ai.service.WebAnswerService;
+import com.example.javabigwork.agent.dto.ChatAction;
+import com.example.javabigwork.agent.dto.LearningAdvisorView;
+import com.example.javabigwork.agent.dto.LearningCard;
+import com.example.javabigwork.agent.service.LearningAdvisorService;
 import com.example.javabigwork.chat.entity.Message;
 import com.example.javabigwork.config.RagConfig.RagRuntimeOptions;
 import com.example.javabigwork.knowledge.dto.KnowledgeSearchResult;
@@ -23,6 +27,7 @@ public class AgentOrchestrator {
     private final WebAnswerService webAnswerService;
     private final RetrievalService retrievalService;
     private final RagRuntimeOptions ragOptions;
+    private final LearningAdvisorService learningAdvisorService;
 
     public AgentOrchestrator(
             AgentTraceRecorder traceRecorder,
@@ -31,7 +36,8 @@ public class AgentOrchestrator {
             NewsRecommendTool newsRecommendTool,
             WebAnswerService webAnswerService,
             RetrievalService retrievalService,
-            RagRuntimeOptions ragOptions
+            RagRuntimeOptions ragOptions,
+            LearningAdvisorService learningAdvisorService
     ) {
         this.traceRecorder = traceRecorder;
         this.memoryService = memoryService;
@@ -40,6 +46,7 @@ public class AgentOrchestrator {
         this.webAnswerService = webAnswerService;
         this.retrievalService = retrievalService;
         this.ragOptions = ragOptions;
+        this.learningAdvisorService = learningAdvisorService;
     }
 
     public AgentResult handle(String scene, String message, List<Message> history) {
@@ -53,7 +60,14 @@ public class AgentOrchestrator {
         List<KnowledgeSearchResult> snippets = retrieveKnowledge(intent, message, normalized, trace);
 
         String reply;
-        if (intent == Intent.WORD) {
+        LearningCard learningCard = null;
+        List<ChatAction> actions = List.of();
+        if (intent == Intent.DAILY_ROUTE || intent == Intent.VOCAB_UNFAMILIAR || intent == Intent.VOCAB_MASTERED) {
+            LearningAdvisorView view = advisorView(intent, trace);
+            reply = view.reply();
+            learningCard = view.learningCard();
+            actions = view.actions();
+        } else if (intent == Intent.WORD) {
             String word = extractLastWord(message);
             log.info("Agent tool: DictionaryTool.lookup word={}", word);
             var result = dictionaryTool.lookup(word);
@@ -91,7 +105,24 @@ public class AgentOrchestrator {
 
         traceRecorder.add(trace, "Answer", "生成回复", reply);
         log.debug("Agent result: replyLen={}, traceSteps={}", reply.length(), trace.size());
-        return new AgentResult(reply, trace, memoryService.defaultSuggestions());
+        return new AgentResult(reply, trace, memoryService.defaultSuggestions(), learningCard, actions);
+    }
+
+    private LearningAdvisorView advisorView(Intent intent, List<AgentTraceStep> trace) {
+        try {
+            LearningAdvisorView view = switch (intent) {
+                case DAILY_ROUTE -> learningAdvisorService.dailyRoute(true);
+                case VOCAB_UNFAMILIAR -> learningAdvisorService.vocabularySummary("unfamiliar", 0, 10);
+                case VOCAB_MASTERED -> learningAdvisorService.vocabularySummary("mastered", 0, 10);
+                default -> throw new IllegalStateException("Unsupported advisor intent: " + intent);
+            };
+            traceRecorder.add(trace, "Act", "读取学习档案", "根据当前用户的真实学习记录生成结构化建议");
+            return view;
+        } catch (RuntimeException exception) {
+            log.warn("Learning advisor failed: intent={}, error={}", intent, exception.getMessage());
+            traceRecorder.add(trace, "Act", "读取学习档案", "学习记录暂时不可用，返回本地说明");
+            return new LearningAdvisorView("暂时无法读取你的学习记录，请稍后再试。", null, List.of());
+        }
     }
 
     private List<KnowledgeSearchResult> retrieveKnowledge(
@@ -123,7 +154,7 @@ public class AgentOrchestrator {
     private String retrievalQuery(Intent intent, String message, String normalized) {
         return switch (intent) {
             case ESSAY -> "grammar";
-            case NEWS, WORD -> "";
+            case NEWS, WORD, DAILY_ROUTE, VOCAB_UNFAMILIAR, VOCAB_MASTERED -> "";
             case CHAT -> {
                 if (containsAny(normalized, "rag", "retrieval", "retrievalservice", "knowledge", "知识库", "检索", "召回")) {
                     yield "retrieval";
@@ -173,6 +204,17 @@ public class AgentOrchestrator {
     }
 
     private Intent decideIntent(String normalized) {
+        if (containsAny(normalized, "今天还有什么没学", "今天没学", "今日任务", "今日进度", "学习路径",
+                "what should i learn today", "what is left today")) {
+            return Intent.DAILY_ROUTE;
+        }
+        if (containsAny(normalized, "不熟悉的单词", "不认识的单词", "薄弱单词", "生词", "unfamiliar words",
+                "unknown words")) {
+            return Intent.VOCAB_UNFAMILIAR;
+        }
+        if (containsAny(normalized, "已掌握的单词", "掌握了哪些单词", "熟悉的单词", "mastered words")) {
+            return Intent.VOCAB_MASTERED;
+        }
         if (normalized.contains("word") || normalized.contains("单词") || normalized.contains("释义")) {
             return Intent.WORD;
         }
@@ -197,6 +239,9 @@ public class AgentOrchestrator {
     }
 
     private enum Intent {
+        DAILY_ROUTE("今日学习路径"),
+        VOCAB_UNFAMILIAR("不熟悉词汇归纳"),
+        VOCAB_MASTERED("已掌握词汇归纳"),
         WORD("单词查询或背诵"),
         NEWS("英语新闻阅读"),
         ESSAY("作文批改与润色"),
