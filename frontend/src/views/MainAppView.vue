@@ -1,7 +1,7 @@
 <template>
   <a class="skip-link" href="#main-content">跳转到学习内容</a>
   <div v-if="state.loading" class="app-loading">
-    <img src="/assets/linguamate-icon.svg" alt="" /><span
+    <img src="/assets/linguamate-icon.svg?v=bright" alt="" /><span
       >正在准备你的学习空间</span
     >
   </div>
@@ -12,7 +12,11 @@
       :inert="state.settingsOpen || wordDialogVisible"
     >
       <RouterLink class="brand" to="/">
-        <img class="brand-mark" src="/assets/linguamate-icon.svg" alt="" />
+        <img
+          class="brand-mark"
+          src="/assets/linguamate-icon.svg?v=bright"
+          alt=""
+        />
         <div>
           <strong>LinguaMate<span class="brand-period">.</span></strong
           ><span>让英语成为日常</span>

@@ -7,6 +7,7 @@ import "./styles/app.css";
 import "./styles/vue-overrides.css";
 import "./styles/learning.css";
 import "./styles/surfaces.css";
+import "./styles/brand.css";
 import "./styles/responsive.css";
 
 createApp(App).use(router).use(ElementPlus).mount("#app");

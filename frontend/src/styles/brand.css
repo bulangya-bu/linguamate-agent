@@ -1,0 +1,360 @@
+/* Original brand colors, with a small amount of light and depth. */
+:root {
+  --el-color-primary-light-3: #86db50;
+  --el-color-primary-light-5: #b5e88d;
+  --el-color-primary-light-7: #d1f1b8;
+  --el-color-primary-light-9: #f0fbe7;
+  --el-color-primary-dark-2: #44a700;
+}
+body {
+  background: linear-gradient(180deg, #fbfdff, var(--page) 700px);
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px #1cb0f614;
+}
+.brand-mark {
+  filter: drop-shadow(0 3px 0 #44a70016);
+}
+.brand-period {
+  color: var(--green-ink);
+}
+.nav-active-indicator {
+  background: #eefadf;
+  border-color: #d6ecc5;
+  box-shadow: 0 3px 12px #58cc0208;
+}
+.nav-count,
+.level-avatar {
+  color: var(--green-ink);
+  background: #ecf9df;
+}
+.status-dot {
+  background: var(--green);
+  box-shadow: 0 0 0 3px #58cc0210;
+}
+.sidebar-progress strong {
+  color: var(--green-ink);
+}
+.level-xp-fill,
+.quiz-progress-track i,
+.duo-route-progress-bar i,
+.reader-progress-track > span {
+  background: linear-gradient(90deg, var(--green), #7edb32 65%, var(--blue));
+}
+.progress-ring {
+  background: conic-gradient(
+    var(--green) calc(var(--progress) * 1%),
+    #e3edf5 0
+  );
+}
+.primary-button,
+.quiz-primary,
+.settings-primary,
+.auth-primary,
+.input-row > button {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #173600;
+  font-weight: 700;
+  border-color: #55c701;
+  box-shadow: 0 3px 0 #44a700;
+}
+.primary-button:hover,
+.quiz-primary:hover,
+.settings-primary:hover,
+.auth-primary:hover,
+.input-row > button:hover {
+  background: #63d50b;
+  box-shadow:
+    0 5px 0 #44a700,
+    0 10px 22px #58cc0215;
+}
+.primary-button:active:not(:disabled),
+.quiz-primary:active:not(:disabled),
+.settings-primary:active:not(:disabled),
+.auth-primary:active:not(:disabled),
+.input-row > button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #44a700;
+}
+.primary-button:disabled,
+.quiz-primary:disabled,
+.settings-primary:disabled,
+.auth-primary:disabled,
+.input-row > button:disabled {
+  box-shadow: none;
+}
+.primary-button::after,
+.auth-primary::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 25%,
+    #ffffff70 50%,
+    transparent 75%
+  );
+  transform: translateX(-160%) skewX(-15deg);
+  transition: transform 0.7s var(--ease);
+}
+@media (hover: hover) {
+  .primary-button:hover:not(:disabled)::after,
+  .auth-primary:hover:not(:disabled)::after {
+    transform: translateX(160%) skewX(-15deg);
+  }
+}
+.focus-session {
+  border-color: #d4eafa;
+  background:
+    radial-gradient(ellipse at 88% 25%, #dff4ff 0, transparent 55%),
+    repeating-linear-gradient(90deg, #1cb0f607 0 1px, transparent 1px 40px),
+    #f0faff;
+}
+.focus-copy h2 {
+  color: var(--ink);
+}
+.session-label {
+  color: #5686a3;
+}
+.focus-art,
+.auth-bloom-wrap {
+  color: var(--green);
+}
+.bloom-petals path {
+  fill-opacity: 0.18;
+  stroke-opacity: 0.32;
+}
+.bloom-petals path:nth-child(2n) {
+  fill: var(--blue);
+  stroke: var(--blue);
+  fill-opacity: 0.16;
+}
+.bloom-core {
+  fill: var(--green);
+  filter: drop-shadow(0 5px 0 #44a70080);
+}
+.bloom-satellite {
+  fill: var(--amber);
+}
+.bloom-orbit {
+  color: var(--blue);
+  stroke-opacity: 0.45;
+  stroke-dasharray: 3 10;
+  transform-origin: 200px 200px;
+  animation: orbit-drift 35s linear infinite;
+}
+@keyframes orbit-drift {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.learning-bloom > circle:first-child {
+  stroke: var(--blue);
+  stroke-opacity: 0.18;
+}
+.learning-bloom > path:last-child {
+  color: var(--blue);
+}
+.art-caption,
+.session-edition {
+  color: #6b9ab8;
+}
+.duo-step-button.is-current {
+  color: #214500;
+  border-color: #58cc02;
+  background: var(--green);
+  box-shadow:
+    0 3px 0 #44a700,
+    0 0 0 5px #edfadb;
+}
+.duo-step-button.is-complete {
+  color: #4c940d;
+  background: #eefade;
+  border-color: #d8ebc2;
+}
+.duo-step:nth-child(2) .duo-step-button:not(.is-complete):not(.is-current) {
+  color: #169ad8;
+  background: #e9f8ff;
+  border-color: #cdeaf8;
+}
+.duo-step:nth-child(3) .duo-step-button:not(.is-complete):not(.is-current) {
+  color: #a87d00;
+  background: #fff8d9;
+  border-color: #f4e8b2;
+}
+.duo-step:nth-child(4) .duo-step-button:not(.is-complete):not(.is-current) {
+  color: #de7064;
+  background: #fff0ec;
+  border-color: #f4dad2;
+}
+.duo-step:nth-child(5) .duo-step-button:not(.is-complete):not(.is-current) {
+  color: #8870d1;
+  background: #f3efff;
+  border-color: #e4dcfa;
+}
+.duo-step-connector.is-complete {
+  background: #a6db72;
+}
+.duo-current-flag {
+  color: var(--green-ink);
+  background: #edfadf;
+}
+.duo-tips-panel {
+  background: #fff8df;
+}
+.duo-tips-panel .small-label {
+  color: #9e851f;
+}
+.learning-stats strong {
+  color: var(--ink);
+}
+.learning-stats > div:nth-child(2) strong {
+  color: #0875a5;
+}
+.word-card:hover {
+  border-color: #c9e6f6;
+}
+.daily-word:nth-child(2) > svg {
+  color: #1cb0f6;
+}
+.daily-word:nth-child(3) > svg {
+  color: #c39a00;
+}
+.daily-word:nth-child(4) > svg {
+  color: #8b74ff;
+}
+.chat-welcome-mark {
+  color: #159cd9;
+  background: #e9f8ff;
+}
+.chat-message.user {
+  background: #eaf8ff;
+  border-color: #d4edf9;
+}
+.chat-message.assistant {
+  background: #f8fcff;
+}
+.learning-advisor-card {
+  border-color: #cfe9b5;
+}
+.learning-card-actions button {
+  color: #397800;
+  background: #f5fceb;
+  border-color: #d1e8b7;
+}
+.quiz-word,
+.wordbank-dialog-head h2,
+.reader-panel .panel-heading h2 {
+  color: var(--ink);
+}
+.quiz-option.is-correct {
+  background: #effade;
+  border-color: #9bd85a;
+  color: #366a09;
+}
+.quiz-option.is-correct .option-letter {
+  background: var(--green);
+  border-color: #50bd00;
+  color: #204500;
+}
+mark,
+.term-highlight {
+  color: #386c0c;
+  background: #e7f8ce;
+}
+.quiz-ai-detail,
+.review-result,
+.review-list .word-card {
+  background: #f4faff;
+  border-color: #dceef9;
+}
+.quiz-badge {
+  background: #edfadb;
+  color: var(--green-ink);
+}
+.review-tab.is-active,
+.energy-pill {
+  color: var(--green-ink);
+  background: #effadf;
+}
+.news-topic-chip.is-active {
+  color: #07567e;
+  background: #dff4ff;
+}
+.news-item.is-active,
+.news-item:hover {
+  background: #eaf7ff;
+}
+.reader-word:hover,
+.reader-word:focus {
+  color: #0875a5;
+  background: #e2f4ff;
+}
+.auth-story {
+  background:
+    radial-gradient(ellipse at 15% 18%, #ffffff80, transparent 60%), #eaf8ff;
+}
+.auth-story-copy h1 {
+  color: var(--ink);
+}
+.auth-story-copy h1 em {
+  color: #337c0b;
+}
+.auth-bloom-wrap {
+  opacity: 0.95;
+}
+.auth-mode-pill.is-active {
+  color: var(--green-ink);
+}
+.auth-mode-pill::after {
+  background: var(--green);
+  height: 3px;
+  border-radius: 3px;
+}
+.auth-form-side {
+  background: #ffffff;
+}
+.auth-field input {
+  background: #f8fcff;
+  border-color: #ddeaf3;
+}
+.admin-kpi-band {
+  background: #ecf8ff;
+  border-color: #d4eaf7;
+}
+.admin-kpi-primary > strong {
+  color: #1d91c6;
+}
+.admin-kpi-mini > strong {
+  color: var(--ink);
+}
+.admin-column-track i {
+  background: linear-gradient(0deg, #1cb0f6, #7bd5ff);
+}
+.admin-pie {
+  background: conic-gradient(var(--green) calc(var(--value) * 1%), #edf5e7 0);
+}
+.admin-pie-legend i {
+  background: var(--green);
+}
+.admin-pie-legend .tone-blue {
+  background: var(--blue);
+}
+.el-button--primary {
+  --el-button-text-color: #173600;
+  --el-button-hover-text-color: #173600;
+  --el-button-active-text-color: #173600;
+}
+.el-message--success {
+  --el-message-text-color: var(--green-ink);
+}
+.el-select-dropdown__item.is-selected {
+  color: var(--green-ink);
+}

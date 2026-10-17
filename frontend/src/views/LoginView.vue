@@ -2,7 +2,11 @@
   <main class="auth-page">
     <section class="auth-story">
       <RouterLink class="brand" to="/login"
-        ><img class="brand-mark" src="/assets/linguamate-icon.svg" alt="" />
+        ><img
+          class="brand-mark"
+          src="/assets/linguamate-icon.svg?v=bright"
+          alt=""
+        />
         <div>
           <strong>LinguaMate<span class="brand-period">.</span></strong
           ><span>让英语成为日常</span>

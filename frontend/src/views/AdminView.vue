@@ -5,7 +5,7 @@
       <RouterLink class="brand" to="/admin">
         <img
           class="brand-mark"
-          src="/assets/linguamate-icon.svg"
+          src="/assets/linguamate-icon.svg?v=bright"
           alt="LinguaMate 图标"
         />
         <div>

@@ -13,6 +13,7 @@
       stroke-opacity=".13"
     />
     <circle
+      class="bloom-orbit"
       cx="200"
       cy="200"
       r="122"
@@ -32,15 +33,21 @@
         stroke-opacity=".25"
       />
     </g>
-    <circle cx="200" cy="200" r="39" fill="currentColor" />
+    <circle class="bloom-core" cx="200" cy="200" r="39" fill="currentColor" />
     <path
       d="m185 199 10 11 20-23"
-      stroke="#f4f2e9"
+      stroke="#ffffff"
       stroke-width="4"
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-    <circle cx="338" cy="112" r="8" fill="currentColor" />
+    <circle
+      class="bloom-satellite"
+      cx="338"
+      cy="112"
+      r="8"
+      fill="currentColor"
+    />
     <path
       d="M63 270v16m-8-8h16M294 323v12m-6-6h12"
       stroke="currentColor"

@@ -1,21 +1,23 @@
-/* LinguaMate — an unhurried learning space. */
+/* LinguaMate — the original bright learning palette. */
 :root {
-  --ink: #242b26;
-  --muted: #7b8077;
-  --line: #e4e5dc;
-  --surface: #fffefa;
-  --page: #f7f8f2;
-  --green: #345b43;
-  --green-dark: #244431;
-  --blue: #345b43;
-  --amber: #a58348;
-  --coral: #b26754;
-  --violet: #6d7766;
-  --sage: #e8eddb;
+  --ink: #233143;
+  --muted: #6f7f8f;
+  --line: #dfe8ef;
+  --surface: #ffffff;
+  --page: #f2f9ff;
+  --green: #58cc02;
+  --green-dark: #44a700;
+  --green-ink: #327800;
+  --blue-ink: #0875a5;
+  --blue: #1cb0f6;
+  --amber: #ffc800;
+  --coral: #ff6b6b;
+  --violet: #8b74ff;
+  --sage: #ecf9e2;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --radius: 18px;
-  --el-color-primary: #345b43;
-  --el-color-success: #345b43;
+  --el-color-primary: #58cc02;
+  --el-color-success: #58cc02;
   --el-border-radius-base: 10px;
   --el-font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
 }
@@ -118,7 +120,7 @@ select {
   border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--ink);
-  background: #fffefa;
+  background: #ffffff;
   transition:
     border 0.2s,
     box-shadow 0.2s;
@@ -126,13 +128,13 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: #7d987c;
+  border-color: #6f7f8f;
   outline: none;
-  box-shadow: 0 0 0 3px #345b4310;
+  box-shadow: 0 0 0 3px #1cb0f61a;
 }
 input::placeholder,
 textarea::placeholder {
-  color: #999d93;
+  color: #6f7f8f;
 }
 textarea {
   resize: vertical;
@@ -142,8 +144,8 @@ textarea {
   display: none !important;
 }
 ::selection {
-  background: #dce7c5;
-  color: #244431;
+  background: #cddce9;
+  color: #44a700;
 }
 .skip-link {
   position: fixed;
@@ -171,7 +173,7 @@ textarea {
   flex-direction: column;
   height: 100dvh;
   padding: 35px 23px 20px;
-  background: #f0f2e9;
+  background: #ffffff;
   border-right: 1px solid var(--line);
 }
 .brand {
@@ -194,17 +196,17 @@ textarea {
 .brand > div > span {
   display: block;
   margin-top: 4px;
-  color: #818778;
+  color: #6f7f8f;
   font-size: 10px;
   letter-spacing: 2.4px;
 }
 .brand-period {
   display: inline;
-  color: var(--green);
+  color: var(--green-ink);
 }
 .nav-caption {
   margin: 0 0 17px 13px;
-  color: #8b907f;
+  color: #6f7f8f;
   font-size: 9px;
   letter-spacing: 1.3px;
   font-weight: 600;
@@ -218,9 +220,9 @@ textarea {
   position: absolute;
   inset: 0 0 auto;
   height: 48px;
-  border: 1px solid #dde3d1;
+  border: 1px solid #d2e0ec;
   border-radius: 12px;
-  background: #e4e9d8;
+  background: #dbe6f0;
   transform: translateY(calc(var(--nav-index) * 52px));
   transition: transform 0.48s var(--ease);
   pointer-events: none;
@@ -235,7 +237,7 @@ textarea {
   text-align: left;
   font-size: 13px;
   font-weight: 500;
-  color: #727968;
+  color: #50667c;
   border-radius: 12px;
 }
 .nav-item svg {
@@ -244,11 +246,11 @@ textarea {
   stroke-width: 1.5;
 }
 .nav-item:hover {
-  color: var(--green);
-  background: #e5e9dc80;
+  color: var(--green-ink);
+  background: #eaf8ff80;
 }
 .nav-item.active {
-  color: var(--green-dark);
+  color: var(--green-ink);
   font-weight: 650;
 }
 .nav-count {
@@ -258,8 +260,8 @@ textarea {
   min-width: 21px;
   height: 21px;
   padding: 0 5px;
-  background: #e2e7d5;
-  color: var(--green);
+  background: #d8e4ee;
+  color: var(--green-ink);
   border-radius: 6px;
   font-size: 10px;
 }
@@ -276,29 +278,29 @@ textarea {
   align-items: center;
   margin-bottom: 12px;
   font-size: 11px;
-  color: #7a826f;
+  color: #50667c;
 }
 .sidebar-progress strong {
   font-size: 12px;
-  color: var(--green);
+  color: var(--green-ink);
 }
 .sidebar-progress > small {
   display: block;
   margin-top: 8px;
   font-size: 10px;
   text-align: right;
-  color: #929887;
+  color: #6f7f8f;
 }
 .level-xp-bar {
   height: 4px;
-  background: #dde3d2;
+  background: #d3e0ec;
   border-radius: 20px;
   overflow: hidden;
 }
 .level-xp-fill {
   height: 100%;
   border-radius: inherit;
-  background: #6d8b55;
+  background: #58cc02;
   transition: width 0.8s var(--ease);
 }
 .sidebar-user {
@@ -307,7 +309,7 @@ textarea {
   gap: 11px;
   width: 100%;
   padding: 15px 7px;
-  border-top: 1px solid #dfe4d5;
+  border-top: 1px solid #d6e2ed;
   text-align: left;
 }
 .level-avatar {
@@ -316,8 +318,8 @@ textarea {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #dce4cd;
-  color: var(--green);
+  background: #d0deeb;
+  color: var(--green-ink);
   font-size: 13px;
 }
 .sidebar-user > span:nth-child(2) {
@@ -335,12 +337,12 @@ textarea {
 .sidebar-user small {
   display: block;
   margin-top: 4px;
-  color: #939887;
+  color: #6f7f8f;
   font-size: 10px;
 }
 .sidebar-user > svg {
   width: 16px;
-  color: #87907c;
+  color: #6f7f8f;
 }
 .nav-logout-button {
   display: flex;
@@ -349,7 +351,7 @@ textarea {
   margin: 0 0 0 50px;
   padding: 7px 0;
   font-size: 10px;
-  color: #919785;
+  color: #6f7f8f;
 }
 .nav-logout-button svg {
   width: 13px;
@@ -376,14 +378,14 @@ textarea {
 .workspace-location {
   display: flex;
   gap: 14px;
-  color: #8b9083;
+  color: #6f7f8f;
 }
 .workspace-location strong {
   font-weight: 500;
-  color: #4c5549;
+  color: #233143;
 }
 .workspace-location > span {
-  color: #c3c8bb;
+  color: #8192a3;
 }
 .workspace-tools {
   display: flex;
@@ -391,7 +393,7 @@ textarea {
   gap: 25px;
 }
 .today-date {
-  color: #8b9083;
+  color: #6f7f8f;
   font-size: 10px;
 }
 .connection-button {
@@ -401,7 +403,7 @@ textarea {
   padding: 8px 0 8px 15px;
   border-left: 1px solid var(--line);
   font-size: 11px;
-  color: #646d5d;
+  color: #50667c;
 }
 .connection-button svg {
   width: 15px;
@@ -414,7 +416,7 @@ textarea {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #6d8b55;
+  background: #58cc02;
 }
 .topbar {
   display: flex;
@@ -426,7 +428,7 @@ textarea {
 .eyebrow,
 .small-label {
   margin: 0 0 11px;
-  color: #89917d;
+  color: #6f7f8f;
   font-size: 9px;
   letter-spacing: 1.9px;
   font-weight: 600;
@@ -445,7 +447,7 @@ h1 {
 }
 .subtitle {
   margin: 0;
-  color: #818878;
+  color: #6f7f8f;
   font-size: 12px;
 }
 .header-progress {
@@ -460,7 +462,7 @@ h1 {
   width: 51px;
   height: 51px;
   place-items: center;
-  background: conic-gradient(#6e8757 calc(var(--progress) * 1%), #e4e8db 0);
+  background: conic-gradient(#58cc02 calc(var(--progress) * 1%), #dde7f0 0);
   border-radius: 50%;
 }
 .progress-ring::before {
@@ -476,7 +478,7 @@ h1 {
   font-weight: 500;
 }
 .progress-ring small {
-  color: #969d8b;
+  color: #6f7f8f;
   font-size: 10px;
 }
 .header-progress > div > strong {
@@ -488,7 +490,7 @@ h1 {
   display: block;
   margin-top: 7px;
   font-size: 10px;
-  color: #8e9683;
+  color: #6f7f8f;
 }
 .section {
   display: none;
@@ -537,7 +539,7 @@ h1 {
 }
 .panel-heading > svg {
   width: 21px;
-  color: #899976;
+  color: #6f7f8f;
 }
 .primary-button,
 .quiz-primary,
@@ -552,7 +554,7 @@ h1 {
   padding: 12px 23px;
   border: 1px solid var(--green);
   border-radius: 9px;
-  color: #fffefa;
+  color: #ffffff;
   background: var(--green);
   font-size: 12px;
   font-weight: 500;
@@ -563,7 +565,7 @@ h1 {
 .auth-primary:hover,
 .input-row > button:hover {
   background: var(--green-dark);
-  box-shadow: 0 5px 15px #345b4318;
+  box-shadow: 0 5px 15px #58cc0220;
   transform: translateY(-2px);
 }
 .primary-button svg {
@@ -579,7 +581,7 @@ h1 {
   align-items: center;
   gap: 10px;
   padding: 7px 0;
-  color: var(--green);
+  color: var(--green-ink);
   font-size: 11px;
 }
 .text-button svg {
@@ -605,8 +607,8 @@ h1 {
   padding: 8px 13px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  color: #5d6e52;
-  background: #fbfcf7;
+  color: #50667c;
+  background: #fbfdff;
   font-size: 11px;
 }
 .quiz-secondary:hover,
@@ -616,8 +618,8 @@ h1 {
 .quiz-detail-button:hover,
 .admin-pagination button:hover,
 .admin-actions button:hover {
-  border-color: #b9c6aa;
-  background: #edf1e3;
+  border-color: #8192a3;
+  background: #e9f0f5;
 }
 .app-loading,
 .admin-loading {
@@ -627,7 +629,7 @@ h1 {
   align-items: center;
   justify-content: center;
   gap: 22px;
-  color: #8b9d77;
+  color: #6f7f8f;
   font-size: 12px;
   letter-spacing: 1px;
 }
@@ -662,7 +664,7 @@ h1 {
   font-size: 11px;
 }
 .el-popper {
-  --el-bg-color-overlay: #fffefa;
-  --el-border-color-light: #e4e9d9;
+  --el-bg-color-overlay: #ffffff;
+  --el-border-color-light: #dce7f0;
   border-radius: 10px !important;
 }
