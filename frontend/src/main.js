@@ -17,6 +17,7 @@ import "./styles/review-library.css";
 import "./styles/reading-workspace.css";
 import "./styles/theme.css";
 import "./styles/dashboard-studio.css";
+import "./styles/workspace-shell.css";
 
 initializeTheme();
 createApp(App).use(router).use(ElementPlus).mount("#app");

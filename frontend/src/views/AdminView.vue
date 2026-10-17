@@ -20,19 +20,20 @@
             '--nav-index': sections.findIndex(
               (item) => item.id === state.section,
             ),
+            '--nav-section-offset': sections.findIndex((item) => item.id === state.section) >= 3 ? 1 : 0,
           }"
           aria-hidden="true"
         ></span>
         <button
-          v-for="item in sections"
+          v-for="(item, index) in sections"
           :key="item.id"
           class="nav-item"
-          :class="{ active: state.section === item.id }"
+          :class="{ active: state.section === item.id, 'nav-group-start': index === 3 }"
           :aria-current="state.section === item.id ? 'page' : undefined"
           type="button"
           @click="showSection(item.id)"
         >
-          <AppIcon :name="item.id" /><span>{{ item.label }}</span>
+          <span class="nav-icon-wrap"><AppIcon :name="item.id" /></span><span>{{ item.label }}</span>
         </button>
       </nav>
       <div class="nav-account desktop-account-legacy">
@@ -52,10 +53,8 @@
     <main class="workspace">
       <header class="workspace-bar">
         <div class="workspace-location">
-          管理空间 <span>/</span
-          ><strong>{{
-            sections.find((item) => item.id === state.section)?.label
-          }}</strong>
+          <span class="workspace-location-icon" aria-hidden="true"><AppIcon :name="state.section" /></span>
+          <span class="workspace-context"><span>管理空间</span><strong>{{ sections.find((item) => item.id === state.section)?.label }}</strong></span>
         </div>
         <RouterLink class="text-button desktop-account-legacy" to="/"
           >前往学习空间<AppIcon name="arrow"

@@ -40,19 +40,20 @@
             '--nav-index': navItems.findIndex(
               (item) => item.id === activeSection,
             ),
+            '--nav-section-offset': navItems.findIndex((item) => item.id === activeSection) >= 4 ? 1 : 0,
           }"
           aria-hidden="true"
         ></span>
         <button
-          v-for="item in navItems"
+          v-for="(item, index) in navItems"
           :key="item.id"
           class="nav-item"
-          :class="{ active: activeSection === item.id }"
+          :class="{ active: activeSection === item.id, 'nav-group-start': index === 4 }"
           :aria-current="activeSection === item.id ? 'page' : undefined"
           type="button"
           @click="goSection(item.id)"
         >
-          <AppIcon :name="item.id" /><span>{{ item.label }}</span
+          <span class="nav-icon-wrap"><AppIcon :name="item.id" /></span><span>{{ item.label }}</span
           ><span
             v-if="item.id === 'review' && state.report.reviewWords"
             class="nav-count"
@@ -84,8 +85,8 @@
           @click="openSettings($event.currentTarget)"
         >
           <span class="sidebar-model-icon"><AppIcon name="settings" /></span>
-          <span>模型配置</span>
-          <small :class="{ 'is-ready': state.aiSummary.label === '已配置' }">{{ state.aiSummary.label }}</small>
+          <span class="sidebar-model-copy"><strong>模型配置</strong><small :class="{ 'is-ready': state.aiSummary.label === '已配置' }">{{ state.aiSummary.label }}</small></span>
+          <AppIcon class="sidebar-model-arrow" name="arrow" />
         </button>
         <RouterLink
           v-if="state.currentUser?.role === 'ADMIN'"
@@ -117,10 +118,11 @@
     >
       <header class="workspace-bar">
         <div class="workspace-location">
-          学习空间 <span>/</span> <strong>{{ sectionTitle }}</strong>
+          <span class="workspace-location-icon" aria-hidden="true"><AppIcon :name="activeSection" /></span>
+          <span class="workspace-context"><span>学习空间</span><strong>{{ sectionTitle }}</strong></span>
         </div>
         <div class="workspace-tools">
-          <span class="today-date">{{ todayLabel }}</span
+          <span class="today-date"><AppIcon name="calendar" />{{ todayLabel }}</span
           ><button
             type="button"
             class="connection-button desktop-account-legacy"
