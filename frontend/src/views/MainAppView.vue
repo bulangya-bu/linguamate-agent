@@ -770,31 +770,42 @@
       >
         <section class="panel">
           <div class="panel-heading">
-            <h2>复习挑战</h2>
-            <div class="review-switch">
-              <button
-                v-for="mode in reviewModes"
-                :key="mode.id"
-                class="review-tab"
-                :class="{ 'is-active': state.reviewMode === mode.id }"
-                type="button"
-                @click="changeReviewMode(mode.id)"
-              >
-                {{ mode.label }}
-              </button>
-            </div>
+            <h2>今日复习</h2>
+            <span class="review-priority"
+              ><AppIcon name="review" />错词优先</span
+            >
           </div>
-          <div v-if="state.reviewMode === 'today'">
+          <div class="review-workspace">
             <div
               v-if="state.reviewCompleted"
               class="review-challenge-card is-complete"
             >
               <div class="quiz-badge">通过</div>
-              <h3>今日复习已完成</h3>
-              <p>本组错词已经复习完，可以重新加载今日队列或去背新词。</p>
+              <h3>本组复习已完成</h3>
+              <dl class="review-summary">
+                <div>
+                  <dt>完成词数</dt>
+                  <dd>{{ state.reviewTotal }}</dd>
+                </div>
+                <div>
+                  <dt>答错次数</dt>
+                  <dd>{{ state.reviewMistakes }}</dd>
+                </div>
+              </dl>
               <div class="review-card-actions">
-                <button class="quiz-primary" type="button" @click="loadReviews">
-                  重新加载
+                <button
+                  class="settings-secondary"
+                  type="button"
+                  @click="loadReviews"
+                >
+                  再复习一组
+                </button>
+                <button
+                  class="quiz-primary"
+                  type="button"
+                  @click="goSection('vocabulary')"
+                >
+                  继续学新词<AppIcon name="arrow" />
                 </button>
               </div>
             </div>
@@ -923,49 +934,17 @@
                 </div>
               </article>
             </div>
-            <p v-else class="empty-state review-empty">
-              今日复习队列暂时为空。
-            </p>
-          </div>
-          <div v-else class="review-list">
-            <article
-              v-for="word in state.reviewWords"
-              :key="word.id"
-              class="word-card"
-            >
-              <div class="word-card-head">
-                <div>
-                  <strong>{{ word.word }}</strong>
-                  <span class="word-meta"
-                    >{{ phonetic(word) }} ·
-                    {{ word.partOfSpeech || word.levelTag }}</span
-                  >
-                </div>
-                <button
-                  class="favorite-button"
-                  :class="{ 'is-active': word.favorite }"
-                  type="button"
-                  :aria-label="
-                    (word.favorite ? '取消收藏 ' : '收藏 ') + word.word
-                  "
-                  :aria-pressed="String(Boolean(word.favorite))"
-                  @click="toggleFavorite(word)"
-                >
-                  <AppIcon name="star" />
-                </button>
-              </div>
-              <p>{{ word.meaningCn }}</p>
-              <div class="word-card-example">
-                <p>{{ wordCardExampleEn(word) }}</p>
-                <span>{{ wordCardExampleCn(word) }}</span>
-              </div>
-            </article>
-            <p
-              v-if="!state.reviewWords.length"
-              class="empty-state review-empty"
-            >
-              {{ reviewEmptyText }}
-            </p>
+            <div v-else class="review-empty-state">
+              <AppIcon name="check" />
+              <h3>当前没有待复习的错词</h3>
+              <button
+                class="quiz-primary"
+                type="button"
+                @click="goSection('vocabulary')"
+              >
+                去学新词<AppIcon name="arrow" />
+              </button>
+            </div>
           </div>
         </section>
       </section>
@@ -1233,13 +1212,27 @@
       >
         <section class="panel wordbank-layout">
           <div class="panel-heading">
-            <div>
-              <h2>单词列表</h2>
+            <div class="wordbank-scopes" role="group" aria-label="词库分组">
+              <button
+                v-for="scope in wordBankScopes"
+                :key="scope.id"
+                type="button"
+                :class="{ 'is-active': state.wordBank.scope === scope.id }"
+                :aria-pressed="state.wordBank.scope === scope.id"
+                aria-controls="wordbank-results"
+                @click="setWordBankScope(scope.id)"
+              >
+                {{ scope.label }}
+              </button>
             </div>
-            <span class="energy-pill">{{ state.wordBank.total }} 个单词</span>
+            <span class="energy-pill">{{
+              state.wordBank.loading
+                ? "正在加载"
+                : state.wordBank.total + " 个单词"
+            }}</span>
           </div>
           <div class="wordbank-filters">
-            <div class="wordbank-categories">
+            <div class="wordbank-categories" role="group" aria-label="词库分类">
               <button
                 class="review-tab"
                 :class="{ 'is-active': !state.wordBank.category }"
@@ -1265,6 +1258,7 @@
             <input
               v-model.trim="state.wordBank.search"
               class="wordbank-search"
+              aria-label="搜索单词"
               autocomplete="off"
               placeholder="搜索英文前缀或中文释义前缀"
               @input="scheduleWordBankSearch"
@@ -1278,7 +1272,14 @@
               搜索
             </button>
           </div>
-          <div class="word-strip word-bank-grid">
+          <div
+            id="wordbank-results"
+            ref="wordBankGrid"
+            class="word-strip word-bank-grid"
+            :class="{ 'is-loading': state.wordBank.loading }"
+            :aria-busy="state.wordBank.loading"
+            :inert="state.wordBank.loading"
+          >
             <article
               v-for="word in state.wordBank.words"
               :key="word.id"
@@ -1316,6 +1317,25 @@
                 <span>{{ wordCardExampleCn(word) }}</span>
               </div>
             </article>
+            <div
+              v-if="!state.wordBank.loading && !state.wordBank.words.length"
+              class="wordbank-empty-state"
+            >
+              <AppIcon name="wordbank" />
+              <h3>{{ wordBankEmptyText }}</h3>
+              <button
+                v-if="
+                  state.wordBank.scope !== 'all' ||
+                  state.wordBank.search ||
+                  state.wordBank.category
+                "
+                class="settings-secondary"
+                type="button"
+                @click="resetWordBankFilters"
+              >
+                查看全部单词
+              </button>
+            </div>
           </div>
           <div class="wordbank-pagination">
             <span class="wordbank-page-info"
@@ -1325,7 +1345,7 @@
             <button
               class="wordbank-page-btn"
               type="button"
-              :disabled="state.wordBank.page <= 0"
+              :disabled="state.wordBank.loading || state.wordBank.page <= 0"
               @click="loadWordBankWords(state.wordBank.page - 1)"
             >
               上一页
@@ -1333,7 +1353,10 @@
             <button
               class="wordbank-page-btn"
               type="button"
-              :disabled="state.wordBank.page >= wordBankTotalPages - 1"
+              :disabled="
+                state.wordBank.loading ||
+                state.wordBank.page >= wordBankTotalPages - 1
+              "
               @click="loadWordBankWords(state.wordBank.page + 1)"
             >
               下一页
@@ -1714,6 +1737,7 @@ import {
 const route = useRoute();
 const router = useRouter();
 const readerRef = ref(null);
+const wordBankGrid = ref(null);
 const quizPane = ref("practice");
 const quizInsightToggle = ref(null);
 const quizWorkbench = ref(null);
@@ -1791,8 +1815,8 @@ const navItems = [
   { id: "wordbank", label: "我的词库", path: "/wordbank" },
 ];
 
-const reviewModes = [
-  { id: "today", label: "今日复习" },
+const wordBankScopes = [
+  { id: "all", label: "全部单词" },
   { id: "favorites", label: "收藏词" },
   { id: "mastered", label: "已掌握" },
 ];
@@ -1915,10 +1939,10 @@ const state = reactive({
   quizCompleted: false,
   quizBusy: false,
   wordDetails: {},
-  reviewMode: "today",
   reviewWords: [],
   reviewIndex: 0,
   reviewTotal: 0,
+  reviewMistakes: 0,
   reviewForm: { spellingAnswer: "", meaningAnswer: "" },
   reviewBusy: false,
   lastReviewResult: null,
@@ -1947,6 +1971,8 @@ const state = reactive({
   translateBusy: false,
   translation: {},
   wordBank: {
+    scope: "all",
+    loading: false,
     categories: [],
     words: [],
     total: 0,
@@ -1954,7 +1980,6 @@ const state = reactive({
     size: 48,
     category: "",
     search: "",
-    loaded: false,
   },
   selectedWord: null,
   settingsOpen: false,
@@ -2045,12 +2070,12 @@ const reviewProgress = computed(() => {
   const passed = Math.max(0, total - reviewRemaining.value);
   return Math.round((passed / total) * 100);
 });
-const reviewEmptyText = computed(() => {
-  if (state.reviewMode === "favorites")
-    return "还没有收藏词，先在背词或词库里点亮收藏。";
-  if (state.reviewMode === "mastered")
-    return "还没有已掌握的单词，继续完成背词和复习后会出现在这里。";
-  return "这个复习队列暂时为空。";
+const wordBankEmptyText = computed(() => {
+  if (state.wordBank.search || state.wordBank.category)
+    return "没有符合筛选的单词";
+  if (state.wordBank.scope === "favorites") return "还没有收藏词";
+  if (state.wordBank.scope === "mastered") return "还没有已掌握的单词";
+  return "词库暂时为空";
 });
 const newsTopicOptions = computed(() => {
   const topics = new Map();
@@ -2256,13 +2281,7 @@ function goSection(section, query = {}) {
 }
 
 async function handleLearningAction(action) {
-  if (
-    action.section === "review" &&
-    reviewModes.some((mode) => mode.id === action.query?.mode)
-  ) {
-    state.reviewMode = action.query.mode;
-    await loadReviews();
-  }
+  if (action.section === "review") await loadReviews();
   await goSection(action.section, action.query || {});
 }
 
@@ -2566,11 +2585,15 @@ function patchWord(wordId, patcher) {
 
 function applyFavoriteUpdate(updated) {
   patchWord(updated.id, (word) => ({ ...word, favorite: updated.favorite }));
-  if (state.reviewMode === "favorites" && !updated.favorite) {
-    state.reviewWords = state.reviewWords.filter(
+  if (
+    state.wordBank.scope === "favorites" &&
+    !updated.favorite &&
+    state.wordBank.words.some((word) => word.id === updated.id)
+  ) {
+    state.wordBank.words = state.wordBank.words.filter(
       (word) => word.id !== updated.id,
     );
-    state.reviewTotal = state.reviewWords.length;
+    state.wordBank.total = Math.max(0, state.wordBank.total - 1);
   }
 }
 
@@ -2580,26 +2603,23 @@ async function toggleFavorite(word) {
     const updated = await learningApi.toggleFavorite(word.id);
     applyFavoriteUpdate(updated);
     await loadReport();
+    if (activeSection.value === "wordbank")
+      await loadWordBankWords(state.wordBank.page);
   } catch (error) {
     ElMessage.error(error.message || "收藏失败");
   }
 }
 
 async function loadReviews() {
-  const limit = state.reviewMode === "today" ? 8 : 20;
-  state.reviewWords = await learningApi.reviews(state.reviewMode, limit);
+  state.reviewWords = await learningApi.reviews("today", 8);
   state.reviewIndex = 0;
   state.reviewTotal = state.reviewWords.length;
+  state.reviewMistakes = 0;
   state.lastReviewResult = null;
   state.reviewPendingResult = false;
   state.reviewCompleted = false;
   state.reviewForm.spellingAnswer = "";
   state.reviewForm.meaningAnswer = "";
-}
-
-async function changeReviewMode(mode) {
-  state.reviewMode = mode;
-  await loadReviews();
 }
 
 async function submitReview() {
@@ -2616,6 +2636,7 @@ async function submitReview() {
       { ...state.reviewForm },
     );
     applyWordProgress(currentReviewWord.value.id, state.lastReviewResult);
+    if (!state.lastReviewResult.correct) state.reviewMistakes++;
     state.reviewPendingResult = true;
     await loadReport();
   } catch (error) {
@@ -3015,16 +3036,23 @@ async function saveReaderWord(word) {
 }
 
 let wordBankSearchTimer;
+let wordBankRequestId = 0;
 
 async function loadWordBank() {
+  const scope = wordBankScopes.some((item) => item.id === route.query.scope)
+    ? route.query.scope
+    : "all";
+  const page = state.wordBank.scope === scope ? state.wordBank.page : 0;
+  state.wordBank.scope = scope;
   if (!state.wordBank.categories.length) {
     state.wordBank.categories = await learningApi.wordBankCategories();
   }
-  await loadWordBankWords(state.wordBank.page);
-  state.wordBank.loaded = true;
+  await loadWordBankWords(page);
 }
 
 async function loadWordBankWords(page = 0) {
+  const requestId = ++wordBankRequestId;
+  state.wordBank.loading = true;
   state.wordBank.page = Math.max(0, page);
   try {
     const result = await learningApi.wordBankWords({
@@ -3032,19 +3060,52 @@ async function loadWordBankWords(page = 0) {
       size: state.wordBank.size,
       category: state.wordBank.category,
       search: state.wordBank.search,
+      scope: state.wordBank.scope,
     });
+    if (requestId !== wordBankRequestId) return;
+    const lastPage = Math.max(
+      0,
+      Math.ceil((result.total || 0) / (result.size || state.wordBank.size)) - 1,
+    );
+    if (state.wordBank.page > lastPage) {
+      await loadWordBankWords(lastPage);
+      return;
+    }
     state.wordBank.words = result.words || [];
     state.wordBank.total = result.total || 0;
     state.wordBank.page = result.page || 0;
     state.wordBank.size = result.size || state.wordBank.size;
+    await nextTick();
+    wordBankGrid.value?.scrollTo({ top: 0 });
   } catch (error) {
+    if (requestId !== wordBankRequestId) return;
     state.wordBank.words = [];
     state.wordBank.total = 0;
     ElMessage.error(error.message || "词库加载失败");
+  } finally {
+    if (requestId === wordBankRequestId) state.wordBank.loading = false;
   }
 }
 
+async function setWordBankScope(scope) {
+  if (state.wordBank.scope === scope) return;
+  clearTimeout(wordBankSearchTimer);
+  await router.push({
+    path: "/wordbank",
+    query: scope === "all" ? {} : { scope },
+  });
+}
+
+async function resetWordBankFilters() {
+  clearTimeout(wordBankSearchTimer);
+  state.wordBank.category = "";
+  state.wordBank.search = "";
+  if (state.wordBank.scope === "all") await loadWordBankWords(0);
+  else await setWordBankScope("all");
+}
+
 async function setWordBankCategory(category) {
+  clearTimeout(wordBankSearchTimer);
   state.wordBank.category = category;
   await loadWordBankWords(0);
 }
@@ -3160,9 +3221,9 @@ watch(
   { flush: "post" },
 );
 
-watch(activeSection, async (section) => {
+watch([activeSection, () => route.query.scope], async ([section]) => {
   document.title = sectionTitle.value + " · LinguaMate";
-  if (section === "wordbank" && !state.wordBank.loaded) await loadWordBank();
+  if (section === "wordbank" && !state.loading) await loadWordBank();
 });
 
 onMounted(() => {

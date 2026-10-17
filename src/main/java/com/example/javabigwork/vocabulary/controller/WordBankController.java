@@ -29,8 +29,9 @@ public class WordBankController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "all") String scope
     ) {
-        return ApiResponse.ok(wordBankService.words(category, search, page, size));
+        return ApiResponse.ok(wordBankService.words(category, search, page, size, scope));
     }
 }

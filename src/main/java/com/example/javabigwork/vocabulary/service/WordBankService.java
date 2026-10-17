@@ -7,6 +7,7 @@ import com.example.javabigwork.vocabulary.dto.WordBankPage;
 import com.example.javabigwork.vocabulary.dto.WordBankCategory;
 import com.example.javabigwork.vocabulary.entity.Word;
 import com.example.javabigwork.vocabulary.mapper.WordMapper;
+import com.example.javabigwork.auth.UserContext;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -16,10 +17,12 @@ import org.springframework.stereotype.Service;
 public class WordBankService {
     private final WordMapper wordMapper;
     private final VocabularyService vocabularyService;
+    private final UserContext userContext;
 
-    public WordBankService(WordMapper wordMapper, VocabularyService vocabularyService) {
+    public WordBankService(WordMapper wordMapper, VocabularyService vocabularyService, UserContext userContext) {
         this.wordMapper = wordMapper;
         this.vocabularyService = vocabularyService;
+        this.userContext = userContext;
     }
 
     /** All local word bank categories with counts. */
@@ -44,10 +47,24 @@ public class WordBankService {
 
     /** Paginated word list with optional category filter and search. */
     public WordBankPage words(String category, String search, int page, int size) {
+        return words(category, search, page, size, "all");
+    }
+
+    public WordBankPage words(String category, String search, int page, int size, String scope) {
         int safePage = Math.max(0, page);
         int safeSize = Math.min(100, Math.max(10, size));
 
         QueryWrapper<Word> wrapper = new QueryWrapper<>();
+        switch (scope == null ? "all" : scope) {
+            case "all" -> { }
+            case "favorites" -> wrapper.apply(
+                    "id IN (SELECT word_id FROM user_word_progress WHERE user_id = {0} AND favorite = TRUE)",
+                    userContext.userId());
+            case "mastered" -> wrapper.apply(
+                    "id IN (SELECT word_id FROM user_word_progress WHERE user_id = {0} AND familiarity >= 3 AND COALESCE(wrong_count, 0) = 0)",
+                    userContext.userId());
+            default -> throw new IllegalArgumentException("不支持的词库分组");
+        }
 
         if (category != null && !category.isBlank()) {
             wrapper.eq("level_tag", category.trim());

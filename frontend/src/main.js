@@ -12,5 +12,6 @@ import "./styles/responsive.css";
 import "./styles/layout.css";
 import "./styles/typography.css";
 import "./styles/quiz-workspace.css";
+import "./styles/review-library.css";
 
 createApp(App).use(router).use(ElementPlus).mount("#app");

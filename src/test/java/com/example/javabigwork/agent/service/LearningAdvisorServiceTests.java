@@ -136,6 +136,8 @@ class LearningAdvisorServiceTests {
         LearningAdvisorView unfamiliar = service.vocabularySummary("unfamiliar", 0, 10);
 
         assertEquals(1, mastered.learningCard().totalElements());
+        assertEquals("/wordbank", mastered.actions().get(0).route());
+        assertEquals("mastered", mastered.actions().get(0).query().get("scope"));
         assertTrue(mastered.learningCard().items().get(0).label().startsWith("steady-"));
         assertEquals(2, unfamiliar.learningCard().totalElements());
         assertTrue(unfamiliar.learningCard().items().stream()

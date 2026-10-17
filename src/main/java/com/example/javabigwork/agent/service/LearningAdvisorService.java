@@ -149,9 +149,9 @@ public class LearningAdvisorService {
         ChatAction action = new ChatAction(
                 "open-" + group,
                 mastered ? "查看已掌握" : "开始复习",
-                "review",
-                "/review",
-                Map.of("mode", mastered ? "mastered" : "today"));
+                mastered ? "wordbank" : "review",
+                mastered ? "/wordbank" : "/review",
+                mastered ? Map.of("scope", "mastered") : Map.of("mode", "today"));
         return new LearningAdvisorView(
                 summary,
                 new LearningCard("vocabulary-summary", title, summary, group, List.copyOf(items), page,

@@ -200,6 +200,9 @@ src/main/resources/static/js/admin.js
 Guidelines:
 
 - This is a real app UI, not a marketing page. Preserve task-first workflows.
+- Current UI iterations target desktop web only. Do not add mobile/tablet
+  adaptations or run cross-device checks unless the user explicitly asks.
+  Preserve existing responsive behavior when changing shared code.
 - Keep vanilla JavaScript patterns unless introducing a framework is explicitly
   requested.
 - Reuse existing API helpers, auth handling, section navigation, and rendering

@@ -239,6 +239,60 @@ class JavaBigWorkApplicationTests {
     }
 
     @Test
+    void personalWordBankScopesArePrivateSearchableAndPaginated() throws Exception {
+        ReviewWord word = seedWrongReviewWord();
+        mockMvc.perform(post("/api/words/" + word.wordId() + "/favorite").session(word.session()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.favorite").value(true));
+
+        mockMvc.perform(get("/api/word-bank/words").session(word.session())
+                        .param("scope", "favorites").param("search", word.word()).param("size", "10"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.words[0].id").value(word.wordId()));
+        mockMvc.perform(get("/api/word-bank/words").session(word.session())
+                        .param("scope", "favorites").param("category", "missing-bank"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(get("/api/word-bank/words").session(word.session())
+                        .param("scope", "favorites").param("page", "1").param("size", "10"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.words", hasSize(0)));
+
+        String otherUsername = "library" + System.nanoTime();
+        registerUser(otherUsername, "Other Library User");
+        MockHttpSession other = login(otherUsername, "userpass123");
+        mockMvc.perform(get("/api/word-bank/words").session(other).param("scope", "favorites"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
+
+        // Familiarity alone must not hide a still-active wrong word in the mastered group.
+        for (int i = 0; i < 4; i++) {
+            mockMvc.perform(post("/api/words/" + word.wordId() + "/quiz").session(word.session())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(Map.of("answer", word.meaningCn()))))
+                    .andExpect(status().isOk());
+        }
+        mockMvc.perform(get("/api/word-bank/words").session(word.session()).param("scope", "mastered"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(post("/api/reviews/" + word.wordId()).session(word.session())
+                        .contentType(MediaType.APPLICATION_JSON).content(reviewBody(word.word(), word.meaningCn())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.correct").value(true));
+        mockMvc.perform(get("/api/word-bank/words").session(word.session()).param("scope", "mastered"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.words[0].id").value(word.wordId()));
+        mockMvc.perform(get("/api/word-bank/words").session(other).param("scope", "mastered"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
+
+        mockMvc.perform(post("/api/words/" + word.wordId() + "/favorite").session(word.session()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.favorite").value(false));
+        mockMvc.perform(get("/api/word-bank/words").session(word.session()).param("scope", "favorites"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
+    }
+
+    @Test
+    void wordBankRejectsUnknownPersonalScope() throws Exception {
+        mockMvc.perform(get("/api/word-bank/words").session(studentSession()).param("scope", "not-a-scope"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void wordBankSearchMatchesChineseMeaningPrefixOnly() throws Exception {
         mockMvc.perform(get("/api/word-bank/words")
                         .session(studentSession())

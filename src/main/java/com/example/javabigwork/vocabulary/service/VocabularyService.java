@@ -84,6 +84,7 @@ public class VocabularyService {
         return progressMapper.selectList(new QueryWrapper<UserWordProgress>()
                         .eq("user_id", userContext.userId())
                         .ge("familiarity", 3)
+                        .and(query -> query.eq("wrong_count", 0).or().isNull("wrong_count"))
                         .orderByDesc("familiarity")
                         .orderByDesc("last_review_at")
                         .orderByDesc("id")
