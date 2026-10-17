@@ -149,50 +149,42 @@
             }}
           </h1>
         </div>
-        <div v-if="activeSection === 'dashboard'" class="header-progress">
-          <span
-            class="progress-ring"
-            :style="{ '--progress': routeProgressPercent }"
-            ><strong>{{ routeDoneCount }}<small>/5</small></strong></span
-          >
-          <div>
-            <strong>今日学习</strong>
-          </div>
-        </div>
       </header>
       <section
         id="dashboard"
         class="section"
         :class="{ active: activeSection === 'dashboard' }"
       >
-        <section class="focus-session">
+        <section class="focus-session" aria-labelledby="studio-focus-title">
           <div class="focus-copy">
             <span class="session-label"
-              ><span class="status-dot"></span>今日练习</span
+              ><span class="status-dot"></span>今日焦点</span
             >
-            <h2>从一个小进步<br />开始今天。</h2>
-            <button
-              class="primary-button"
-              type="button"
-              @click="goSection(focusStep?.section || 'vocabulary')"
-            >
-              {{
-                routeDoneCount === journeySteps.length
-                  ? "再练习一次"
-                  : "开始" + (focusStep?.title || "学习")
-              }}<AppIcon name="arrow" />
-            </button>
+            <h2 id="studio-focus-title">{{ routeDoneCount === journeySteps.length ? '这一路，' : '今天，从' }}<br /><span>{{ routeDoneCount === journeySteps.length ? '又前进了一点。' : (focusStep?.title || '记单词') + '开始。' }}</span></h2>
+            <p class="studio-focus-detail">{{ focusDescription }}</p>
+            <div class="studio-focus-actions">
+              <button
+                class="primary-button"
+                type="button"
+                @click="goSection(focusStep?.section || 'vocabulary')"
+              >
+                {{ routeDoneCount === journeySteps.length ? '再练习一次' : '开始' + (focusStep?.title || '学习') }}<AppIcon name="arrow" />
+              </button>
+              <button v-if="state.report.reviewWords && focusStep?.section !== 'review'" class="studio-review-link" type="button" @click="goSection('review')"><AppIcon name="review" />复习 {{ state.report.reviewWords }} 词</button>
+            </div>
           </div>
-          <WordAtmosphere v-if="activeSection === 'dashboard'" variant="dashboard" />
-          <div class="focus-art">
-            <LearningBloom />
+          <div class="studio-art">
+            <LearningStudioArt />
+            <WordAtmosphere v-if="activeSection === 'dashboard'" variant="studio" />
           </div>
+          <div class="studio-canvas-footer" aria-hidden="true"><span>LINGUAMATE</span><span>A little. Every day.</span></div>
         </section>
         <div class="home-grid">
           <section class="duo-route-shell">
             <div class="duo-route-heading">
               <div>
-                <h2>今天的学习路线</h2>
+                <span class="studio-section-kicker">YOUR JOURNEY</span>
+                <h2>学习路线</h2>
               </div>
               <div
                 class="duo-route-progress"
@@ -200,12 +192,10 @@
                   '学习路线完成 ' + routeDoneCount + '/' + journeySteps.length
                 "
               >
-                <strong>{{ routeDoneCount }}/{{ journeySteps.length }}</strong>
-                <div class="duo-route-progress-bar">
-                  <i :style="{ width: routeProgressPercent + '%' }"></i>
-                </div>
+                <strong>{{ routeDoneCount }}<small>/{{ journeySteps.length }}</small></strong><span>已完成</span>
               </div>
             </div>
+            <div class="duo-route-progress-bar" role="progressbar" aria-label="学习路线进度" :aria-valuenow="routeProgressPercent" aria-valuemin="0" aria-valuemax="100"><i :style="{ width: routeProgressPercent + '%' }"></i></div>
             <div class="duo-route-track" role="list" aria-label="学习路线">
               <div
                 v-for="(step, index) in journeySteps"
@@ -217,13 +207,7 @@
                 }"
                 role="listitem"
               >
-                <span
-                  v-if="index < journeySteps.length - 1"
-                  class="duo-step-connector"
-                  :class="{ 'is-complete': step.done }"
-                  aria-hidden="true"
-                ></span
-                ><button
+                <button
                   class="duo-step-button"
                   :class="{
                     'is-complete': step.done,
@@ -233,76 +217,17 @@
                   :aria-label="routeStepAriaLabel(step)"
                   @click="goSection(step.section)"
                 >
-                  <AppIcon :name="step.done ? 'check' : step.section" /></button
-                ><button
-                  class="route-step-copy"
-                  type="button"
-                  @click="goSection(step.section)"
-                >
-                  <span class="route-step-number">0{{ index + 1 }}</span
-                  ><span
-                    ><strong>{{ step.title }}</strong
-                    ><small>{{ step.detail }}</small></span
-                  ></button
-                ><span v-if="step.done" class="route-state">已完成</span
-                ><span v-else-if="step.recommended" class="duo-current-flag"
-                  >接下来</span
-                ><AppIcon v-else class="route-arrow" name="arrow" />
+                  <span class="studio-step-icon"><AppIcon :name="step.section" /></span>
+                  <span class="route-step-copy"><strong>{{ step.title }}</strong><small>{{ step.detail }}</small></span>
+                  <AppIcon v-if="step.done" class="studio-step-done" name="check" />
+                  <span v-else-if="step.recommended" class="studio-step-next">开始<AppIcon name="arrow" /></span>
+                  <span v-else class="route-step-number">0{{ index + 1 }}</span>
+                </button>
               </div>
             </div>
           </section>
-          <aside id="dashboard-footprints" class="daily-panel">
-            <section class="duo-quest-panel">
-              <div class="panel-heading">
-                <h2>学习足迹</h2>
-                <AppIcon name="spark" />
-              </div>
-              <div class="learning-stats">
-                <div>
-                  <strong
-                    >{{ state.report.learnedWords || 0
-                    }}<small>词</small></strong
-                  ><span>已掌握单词</span>
-                </div>
-                <div>
-                  <strong
-                    >{{ state.report.reviewWords || 0
-                    }}<small>词</small></strong
-                  ><span>等待复习</span>
-                </div>
-                <div>
-                  <strong
-                    >{{ state.report.essayCount || 0 }}<small>篇</small></strong
-                  ><span>写作练习</span>
-                </div>
-                <div>
-                  <strong
-                    >{{ state.report.readingCount || 0
-                    }}<small>篇</small></strong
-                  ><span>阅读记录</span>
-                </div>
-              </div>
-            </section>
-            <section class="duo-tips-panel">
-              <h2>今日建议</h2>
-              <ul v-if="state.report.nextActions?.length" class="clean-list">
-                <li
-                  v-for="item in state.report.nextActions.slice(0, 2)"
-                  :key="item"
-                >
-                  {{ item }}
-                </li>
-              </ul>
-              <p v-else>不必一口气学很多。完成一个小练习，就是今天的进步。</p>
-              <button
-                type="button"
-                class="text-button"
-                @click="goSection('chat')"
-              >
-                和学习助手聊聊 <AppIcon name="arrow" />
-              </button>
-            </section>
-          </aside>
+          <div class="studio-journey-note"><AppIcon name="spark" /><p>{{ state.report.nextActions?.[0] || '从推荐练习开始，找到适合自己的学习节奏。' }}</p></div>
+          <button class="studio-assistant-link" type="button" @click="goSection('chat')"><AppIcon name="chat" /><span>和学习助手聊聊</span><AppIcon name="arrow" /></button>
         </div>
         <button
           class="dashboard-details-toggle"
@@ -335,6 +260,7 @@
               :key="word.id"
               class="word-card daily-word"
               type="button"
+              :aria-label="word.word + '，查看单词详情'"
               @click="state.selectedWord = word"
             >
               <strong>{{ word.word }}</strong
@@ -346,6 +272,17 @@
             </button>
           </div>
         </section>
+        <aside id="dashboard-footprints" class="daily-panel">
+          <section class="duo-quest-panel">
+            <div class="panel-heading"><h2>学习足迹</h2><span>累计</span></div>
+            <div class="learning-stats">
+              <button type="button" @click="goSection('wordbank')"><strong>{{ state.report.learnedWords || 0 }}<small>词</small></strong><span>已掌握单词</span></button>
+              <button type="button" @click="goSection('review')"><strong>{{ state.report.reviewWords || 0 }}<small>词</small></strong><span>等待复习</span></button>
+              <button type="button" @click="goSection('writing')"><strong>{{ state.report.essayCount || 0 }}<small>篇</small></strong><span>写作练习</span></button>
+              <button type="button" @click="goSection('news')"><strong>{{ state.report.readingCount || 0 }}<small>篇</small></strong><span>阅读记录</span></button>
+            </div>
+          </section>
+        </aside>
       </section>
 
       <section
@@ -1766,7 +1703,7 @@
 
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
-import LearningBloom from "@/components/LearningBloom.vue";
+import LearningStudioArt from "@/components/LearningStudioArt.vue";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import UserAccountMenu from "@/components/UserAccountMenu.vue";
 import ThemeToggle from "@/components/ThemeToggle.vue";
@@ -2097,6 +2034,16 @@ const journeyEnergy = computed(() =>
 const focusStep = computed(
   () => journeySteps.value.find((step) => !step.done) || journeySteps.value[0],
 );
+const focusDescription = computed(() => {
+  if (routeDoneCount.value === journeySteps.value.length) return "继续探索，或再练习一次喜欢的内容。";
+  return {
+    chat: "选一个生活场景，用英语聊起来。",
+    vocabulary: `${state.words.length} 个单词，在语境中建立记忆。`,
+    review: `${state.report.reviewWords || 0} 个待复习单词，巩固容易忘记的表达。`,
+    writing: "写下一段英文，把想法表达得更清楚。",
+    news: "读一篇文章，在真实内容里发现新表达。",
+  }[focusStep.value?.section] || "选择一项练习，开始今天的学习。";
+});
 const currentQuizWord = computed(() => state.words[state.quizIndex]);
 const quizResultForCurrent = computed(() =>
   currentQuizWord.value ? state.quizAnswers[currentQuizWord.value.id] : null,

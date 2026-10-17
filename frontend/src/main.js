@@ -16,6 +16,7 @@ import "./styles/quiz-workspace.css";
 import "./styles/review-library.css";
 import "./styles/reading-workspace.css";
 import "./styles/theme.css";
+import "./styles/dashboard-studio.css";
 
 initializeTheme();
 createApp(App).use(router).use(ElementPlus).mount("#app");
