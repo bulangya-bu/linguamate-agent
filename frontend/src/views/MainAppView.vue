@@ -560,7 +560,10 @@
       <section
         id="vocabulary"
         class="section"
-        :class="{ active: activeSection === 'vocabulary' }"
+        :class="{
+          active: activeSection === 'vocabulary',
+          'has-insight': quizPane === 'insight',
+        }"
       >
         <section class="panel">
           <div class="panel-heading">
@@ -691,13 +694,14 @@
                 </div>
               </article>
               <QuizInsight
+                v-if="quizPane === 'insight'"
                 id="quiz-analysis"
                 :key="currentQuizWord.id"
                 :word="currentQuizWord"
                 :detail="quizResultForCurrent ? wordDetailForCurrent : null"
-                :answered="Boolean(quizResultForCurrent)"
                 :source="modelLabel(wordDetailForCurrent?.data)"
                 @request="(force) => loadWordDetail(currentQuizWord, force)"
+                @close="closeQuizInsight"
               />
               <div class="quiz-nav">
                 <button
@@ -709,18 +713,19 @@
                   上一题
                 </button>
                 <button
+                  ref="quizInsightToggle"
                   class="quiz-insight-toggle settings-secondary"
                   type="button"
-                  aria-controls="quiz-practice quiz-analysis"
-                  :aria-pressed="quizPane === 'insight'"
+                  aria-controls="quiz-analysis"
+                  :aria-expanded="quizPane === 'insight'"
                   :disabled="!quizResultForCurrent"
                   @click="
                     quizPane === 'insight'
-                      ? (quizPane = 'practice')
+                      ? closeQuizInsight()
                       : openQuizInsight()
                   "
                 >
-                  {{ quizPane === "insight" ? "返回练习" : "深度解析"
+                  {{ quizPane === "insight" ? "收起解析" : "深度解析"
                   }}<AppIcon
                     :name="quizPane === 'insight' ? 'vocabulary' : 'spark'"
                   />
@@ -1696,6 +1701,7 @@ const route = useRoute();
 const router = useRouter();
 const readerRef = ref(null);
 const quizPane = ref("practice");
+const quizInsightToggle = ref(null);
 const dashboardExpanded = ref(false);
 const newsLibraryOpen = ref(false);
 const newsLibraryButtonRef = ref(null);
@@ -2408,6 +2414,12 @@ function openQuizInsight() {
   if (!quizResultForCurrent.value) return;
   quizPane.value = "insight";
   loadWordDetail(currentQuizWord.value);
+}
+
+async function closeQuizInsight() {
+  quizPane.value = "practice";
+  await nextTick();
+  quizInsightToggle.value?.focus({ preventScroll: true });
 }
 
 function applyWordProgress(wordId, result) {

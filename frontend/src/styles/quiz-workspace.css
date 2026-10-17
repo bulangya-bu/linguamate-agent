@@ -7,7 +7,13 @@
 }
 .app-shell #vocabulary > .panel > .panel-heading {
   flex-shrink: 0;
+  width: 100%;
+  max-width: 820px;
+  margin-inline: auto;
   margin-bottom: 14px;
+}
+.app-shell #vocabulary.has-insight > .panel > .panel-heading {
+  max-width: 1440px;
 }
 .app-shell .word-quiz-shell {
   display: flex;
@@ -18,12 +24,18 @@
 }
 .quiz-workbench {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 14px 22px;
   flex: 1;
   min-width: 0;
   min-height: 0;
+  max-width: 820px;
+  margin-inline: auto;
+}
+.quiz-workbench.shows-insight {
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
+  max-width: 1440px;
 }
 .app-shell .word-quiz-card {
   display: flex;
@@ -130,7 +142,9 @@
   min-height: 42px;
 }
 .quiz-insight-toggle {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 .app-shell .favorite-button,
 .wordbank-dialog .favorite-button {
@@ -181,6 +195,22 @@
   border: 1px solid #d7e8f5;
   border-radius: 18px;
   background: linear-gradient(160deg, #f7fcff, #f0f8ff);
+  animation: insight-reveal 180ms ease-out;
+}
+@keyframes insight-reveal {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quiz-insight {
+    animation: none;
+  }
 }
 .insight-heading,
 .insight-heading > div {
@@ -204,61 +234,87 @@
   white-space: nowrap;
 }
 .insight-source {
+  min-width: 0;
   overflow: hidden;
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
+.insight-actions {
+  min-width: 0;
+}
+.insight-close {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border: 1px solid #dce9f3;
+  border-radius: 9px;
+  color: var(--muted);
+  background: #fff9;
+}
+.insight-close:hover {
+  color: var(--ink);
+  background: #fff;
+}
 .insight-word {
   flex-shrink: 0;
-  margin: 24px 0 20px;
+  margin: 0 0 18px;
   font:
     30px/1.2 Georgia,
     serif;
   overflow-wrap: anywhere;
 }
-.insight-tabs {
-  display: flex;
-  flex-shrink: 0;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 10px;
-  background: #e6f0f8;
-}
-.insight-tabs > button {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 4px;
-  border-radius: 7px;
-  color: var(--muted);
-  font-size: 13px;
-}
-.insight-tabs > button[aria-selected="true"] {
-  color: var(--blue-ink);
-  background: #fff;
-  box-shadow: 0 2px 6px #23314306;
-}
 .insight-content {
   flex: 1;
   min-height: 0;
   min-width: 0;
-  margin-top: 22px;
+  margin-top: 20px;
+  padding-right: 8px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.insight-section + .insight-section {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #dce9f3;
+}
+.insight-section h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 700;
+  color: var(--blue-ink);
 }
 .insight-entry {
-  break-inside: avoid-column;
-  padding: 0 0 18px;
-  margin: 0 0 18px;
-  border-bottom: 1px solid #dce9f3;
+  padding: 0;
+  margin: 0 0 14px;
 }
 .insight-entry p,
 .insight-note {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-size: 15px;
-  line-height: 1.85;
+  line-height: 1.7;
+}
+.insight-entry > p:last-child {
+  margin-bottom: 0;
+}
+.insight-variant {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 12px;
+}
+.insight-variant > p {
+  margin: 0;
 }
 .insight-note {
-  padding-bottom: 18px;
+  padding-bottom: 0;
 }
 .insight-entry:last-child,
 .insight-note:last-child {
@@ -268,7 +324,7 @@
 }
 .insight-entry .insight-english {
   font-size: 17px;
-  line-height: 1.7;
+  line-height: 1.6;
 }
 .insight-entry .insight-chinese {
   font-size: 14px;
@@ -304,22 +360,6 @@
   padding: 24px 0;
   text-align: center;
 }
-.insight-empty-mark {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  margin-bottom: 20px;
-  border: 1px solid #dceaf4;
-  border-radius: 20px;
-  color: #73a6c4;
-  background: #fff9;
-  transform: rotate(-6deg);
-}
-.insight-empty-mark svg {
-  width: 28px;
-  height: 28px;
-}
 .insight-placeholder h3 {
   margin: 8px 0 12px;
   font-size: 17px;
@@ -337,11 +377,17 @@
   min-height: 42px;
   background: #fff;
 }
+@media (min-width: 1200px) {
+  .app-shell .quiz-option {
+    min-height: 66px;
+  }
+}
 @media (max-width: 1199px) {
   .page-vocabulary .topbar {
     display: none;
   }
-  .quiz-workbench {
+  .quiz-workbench,
+  .quiz-workbench.shows-insight {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
   }
@@ -349,14 +395,8 @@
     grid-column: 1;
     grid-row: 1;
   }
-  .shows-practice .quiz-insight,
   .shows-insight .word-quiz-card {
     display: none;
-  }
-  .app-shell .quiz-insight-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
   }
   .quiz-example-en {
     font-size: 20px;
@@ -420,7 +460,7 @@
     padding: 20px;
   }
   .insight-word {
-    margin: 18px 0 14px;
+    margin-bottom: 18px;
     font-size: 28px;
   }
   .insight-content {
