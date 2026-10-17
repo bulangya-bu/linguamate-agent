@@ -64,7 +64,6 @@
           <UserAccountMenu
             :user="state.user || {}"
             :busy="state.logoutBusy"
-            :show-model-settings="false"
             portal-path="/"
             portal-label="学习空间"
             @logout="logout"

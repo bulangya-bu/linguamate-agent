@@ -61,7 +61,7 @@
         </button>
       </nav>
       <div class="sidebar-bottom">
-        <div class="sidebar-progress">
+        <div class="sidebar-progress desktop-account-legacy">
           <div>
             <span>学习等级</span
             ><strong>Lv.{{ state.level.level || 1 }}</strong>
@@ -77,6 +77,16 @@
             {{ state.level.nextLevelXp || 100 }} XP</small
           >
         </div>
+        <button
+          class="sidebar-model-config"
+          type="button"
+          aria-label="模型配置"
+          @click="openSettings($event.currentTarget)"
+        >
+          <span class="sidebar-model-icon"><AppIcon name="settings" /></span>
+          <span>模型配置</span>
+          <small :class="{ 'is-ready': state.aiSummary.label === '已配置' }">{{ state.aiSummary.label }}</small>
+        </button>
         <RouterLink
           v-if="state.currentUser?.role === 'ADMIN'"
           class="nav-link-button desktop-account-legacy"
@@ -121,11 +131,9 @@
           <UserAccountMenu
             :user="state.currentUser || {}"
             :busy="state.logoutBusy"
-            :model-status="state.aiSummary.label"
+            :level="state.level"
             :portal-path="state.currentUser?.role === 'ADMIN' ? '/admin' : ''"
             portal-label="管理工作台"
-            @open="loadAiSummary"
-            @settings="openSettings"
             @logout="logout"
           />
         </div>
@@ -3357,6 +3365,7 @@ async function boot() {
     loadReviews(),
     loadNewsTopics().then(() => loadNews()),
     loadConversations(),
+    loadAiSummary(),
   ]);
   if (activeSection.value === "wordbank") {
     await loadWordBank();
@@ -3425,3 +3434,34 @@ onBeforeUnmount(() => {
   clearTimeout(state.progressTimer);
 });
 </script>
+
+<style scoped>
+.sidebar-model-config { display: none; }
+@media (min-width: 981px) {
+  .sidebar-model-config {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 56px;
+    padding: 9px 11px;
+    border: 1px solid #e1eaf0;
+    border-radius: 13px;
+    background: #f8fbfd;
+    color: #476174;
+    text-align: left;
+    font-size: 13px;
+    transition: background 200ms ease, border-color 200ms ease;
+  }
+  .sidebar-model-config:hover { border-color: #c5dfed; background: #f0f8fd; }
+  .sidebar-model-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: #eaf2f8; color: #6993ad; }
+  .sidebar-model-icon > svg { width: 19px; height: 19px; transition: transform 240ms var(--ease); }
+  .sidebar-model-config:hover .sidebar-model-icon > svg { transform: rotate(20deg); }
+  .sidebar-model-config > small { margin-left: auto; color: #8b9eab; font-size: 10px; }
+  .sidebar-model-config > small.is-ready { color: #638a49; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-model-config,
+  .sidebar-model-icon > svg { transition: none; }
+}
+</style>

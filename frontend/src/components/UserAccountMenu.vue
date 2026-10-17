@@ -15,7 +15,13 @@
       @keydown.up.prevent="openMenu('last')"
     >
       <span class="account-avatar" aria-hidden="true">{{ displayName.slice(0, 1) }}</span>
-      <span class="account-trigger-name">{{ displayName }}</span>
+      <span class="account-trigger-info">
+        <span class="account-trigger-copy">
+          <span class="account-trigger-name">{{ displayName }}</span>
+          <small v-if="level" class="account-trigger-level">Lv.{{ level.level || 1 }}</small>
+        </span>
+        <span v-if="level" class="account-trigger-progress" aria-hidden="true"><i :style="{ width: progressPercent + '%' }"></i></span>
+      </span>
       <span class="account-chevron" aria-hidden="true"></span>
     </button>
     <Teleport to="body">
@@ -37,10 +43,13 @@
               <span>@{{ user.username || 'user' }}<small v-if="user.role === 'ADMIN'">管理员</small></span>
             </div>
           </div>
-          <button v-if="showModelSettings" class="account-menu-item" role="menuitem" type="button" @click="selectSettings">
-            <AppIcon name="settings" /><span>模型设置</span>
-            <small class="account-model-status" :class="{ 'is-ready': modelStatus === '已配置' }">{{ modelStatus || '个人配置' }}</small>
-          </button>
+          <div v-if="level" class="account-learning">
+            <div class="account-learning-heading"><span>学习等级</span><strong>Lv.{{ level.level || 1 }}</strong></div>
+            <div class="account-xp-track" role="progressbar" aria-label="升级进度" :aria-valuenow="progressPercent" aria-valuemin="0" aria-valuemax="100" :aria-valuetext="experience + ' / ' + nextLevelXp + ' XP'">
+              <span :style="{ width: progressPercent + '%' }"></span>
+            </div>
+            <div class="account-xp-caption"><span>学习经验</span><strong>{{ experience }} <span>/ {{ nextLevelXp }} XP</span></strong></div>
+          </div>
           <RouterLink v-if="portalPath" class="account-menu-item" role="menuitem" :to="portalPath" @click="closeMenu(false)">
             <AppIcon :name="user.role === 'ADMIN' && portalPath === '/admin' ? 'overview' : 'dashboard'" /><span>{{ portalLabel }}</span><AppIcon class="account-item-arrow" name="arrow" />
           </RouterLink>
@@ -62,12 +71,11 @@ import AppIcon from '@/components/AppIcon.vue';
 const props = defineProps({
   user: { type: Object, default: () => ({}) },
   busy: Boolean,
-  showModelSettings: { type: Boolean, default: true },
-  modelStatus: { type: String, default: '' },
+  level: { type: Object, default: null },
   portalPath: { type: String, default: '' },
   portalLabel: { type: String, default: '' },
 });
-const emit = defineEmits(['open', 'settings', 'logout']);
+const emit = defineEmits(['logout']);
 const route = useRoute();
 const opened = ref(false);
 const triggerRef = ref(null);
@@ -75,6 +83,9 @@ const menuRef = ref(null);
 const position = reactive({ top: 0, left: 0 });
 const menuId = 'account-menu-' + useId();
 const displayName = computed(() => props.user.nickname || props.user.username || '学习者');
+const experience = computed(() => Math.max(0, Number(props.level?.experience) || 0));
+const nextLevelXp = computed(() => Math.max(1, Number(props.level?.nextLevelXp) || 100));
+const progressPercent = computed(() => Math.min(100, Math.round(experience.value / nextLevelXp.value * 100)));
 
 function updatePosition() {
   if (!opened.value || !triggerRef.value) return;
@@ -93,7 +104,6 @@ async function openMenu(focus = 'first') {
   if (!opened.value) {
     opened.value = true;
     updatePosition();
-    emit('open');
   }
   await nextTick();
   const items = menuItems();
@@ -113,11 +123,6 @@ function disableLeavingMenu(element) {
 function toggleMenu() {
   if (opened.value) closeMenu(true);
   else openMenu();
-}
-
-function selectSettings() {
-  closeMenu(true);
-  emit('settings', triggerRef.value);
 }
 
 function selectLogout() {
@@ -201,6 +206,8 @@ onBeforeUnmount(() => {
   font-size: 13px;
   font-weight: 600;
 }
+.account-trigger-info { display: flex; flex-direction: column; gap: 5px; }
+.account-trigger-copy { display: flex; align-items: center; gap: 8px; }
 .account-trigger-name {
   max-width: 120px;
   overflow: hidden;
@@ -209,6 +216,9 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.account-trigger-level { color: #568432; font-size: 10px; font-weight: 650; }
+.account-trigger-progress { height: 3px; overflow: hidden; border-radius: 5px; background: #dfe9ee; }
+.account-trigger-progress > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #64c92a, #46b8de); transition: width 600ms var(--ease); }
 .account-chevron {
   width: 6px;
   height: 6px;
@@ -246,6 +256,16 @@ onBeforeUnmount(() => {
 .account-profile-copy > strong { display: block; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
 .account-profile-copy > span { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; margin-top: 5px; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
 .account-profile-copy small { padding: 2px 5px; border-radius: 4px; color: var(--blue-ink); background: #eaf4fb; font-size: 10px; }
+.account-learning { margin: 2px 4px 9px; padding: 12px; border: 1px solid #e5efdf; border-radius: 10px; background: linear-gradient(120deg, #f5faee, #f1f8fc); }
+.account-learning-heading,
+.account-xp-caption { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.account-learning-heading { color: #657b6b; font-size: 12px; }
+.account-learning-heading > strong { color: #50842b; font-size: 16px; font-weight: 650; }
+.account-xp-track { height: 5px; margin: 10px 0 9px; overflow: hidden; border-radius: 8px; background: #dce8e6; }
+.account-xp-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #64c92a, #46b8de); transition: width 600ms var(--ease); }
+.account-xp-caption { color: #82928b; font-size: 10px; }
+.account-xp-caption > strong { color: #486358; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.account-xp-caption > strong > span { color: #81928a; font-weight: 400; }
 .account-menu-item {
   display: flex;
   align-items: center;
@@ -262,8 +282,6 @@ onBeforeUnmount(() => {
 .account-menu-item > span { flex: 1; }
 .account-menu-item:hover,
 .account-menu-item:focus-visible { background: #edf6fc; color: #236d95; }
-.account-model-status { padding: 3px 6px; border-radius: 5px; color: #8092a0; background: #f0f4f7; font-size: 10px; }
-.account-model-status.is-ready { color: #548039; background: #edf7e4; }
 .account-menu-item > .account-item-arrow { width: 14px; height: 14px; }
 .account-menu-divider { height: 1px; margin: 7px 10px; background: #e9eff3; }
 .account-menu-logout { color: #a86b60; }
@@ -277,6 +295,8 @@ onBeforeUnmount(() => {
 .account-popover-leave-to { opacity: 0; transform: translateY(-5px) scale(.98); }
 @media (prefers-reduced-motion: reduce) {
   .account-chevron,
+  .account-trigger-progress > i,
+  .account-xp-track > span,
   .account-popover-enter-active,
   .account-popover-leave-active { transition: none; }
 }
