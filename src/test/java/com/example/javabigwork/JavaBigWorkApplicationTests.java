@@ -54,6 +54,7 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data", hasSize(8)))
                 .andExpect(jsonPath("$.data[0].word").isNotEmpty())
+                .andExpect(jsonPath("$.data[0].definitions").isNotEmpty())
                 .andExpect(jsonPath("$.data[0].levelTag").isNotEmpty())
                 .andExpect(jsonPath("$.data[0].exampleEn").isNotEmpty());
     }
@@ -67,6 +68,19 @@ class JavaBigWorkApplicationTests {
                 .andExpect(content().string(containsString("cet6-bank")))
                 .andExpect(content().string(containsString("kaoyan-bank")))
                 .andExpect(content().string(containsString("ielts-bank")));
+    }
+
+    @Test
+    void wordBankReturnsEveryPartOfSpeechFromLocalTranslations() throws Exception {
+        mockMvc.perform(get("/api/word-bank/words")
+                        .param("search", "revolutionary")
+                        .session(studentSession()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.words[0].word").value("revolutionary"))
+                .andExpect(jsonPath("$.data.words[0].definitions[*].partOfSpeech")
+                        .value(org.hamcrest.Matchers.hasItem("n")))
+                .andExpect(jsonPath("$.data.words[0].definitions[*].meaningCn")
+                        .value(org.hamcrest.Matchers.hasItem(containsString("革命者"))));
     }
 
     @Test

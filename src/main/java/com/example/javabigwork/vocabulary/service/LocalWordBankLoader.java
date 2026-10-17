@@ -2,6 +2,7 @@ package com.example.javabigwork.vocabulary.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.example.javabigwork.vocabulary.entity.Word;
+import com.example.javabigwork.vocabulary.dto.WordDefinition;
 import com.example.javabigwork.vocabulary.mapper.WordMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,10 +35,12 @@ public class LocalWordBankLoader {
     };
 
     private final WordMapper wordMapper;
+    private final WordDefinitionService definitionService;
     private final ObjectMapper json = new ObjectMapper();
 
-    public LocalWordBankLoader(WordMapper wordMapper) {
+    public LocalWordBankLoader(WordMapper wordMapper, WordDefinitionService definitionService) {
         this.wordMapper = wordMapper;
+        this.definitionService = definitionService;
     }
 
     @EventListener(ApplicationStartedEvent.class)
@@ -201,6 +204,12 @@ public class LocalWordBankLoader {
                 }
             }
             if (meaningCn.isEmpty()) return null;
+            definitionService.register(headWord, trans.stream()
+                    .filter(item -> item.get("tranCn") != null)
+                    .map(item -> new WordDefinition(
+                            Objects.toString(item.get("pos"), ""),
+                            item.get("tranCn").toString()))
+                    .toList());
 
             Word word = new Word();
             word.word = headWord.toLowerCase(Locale.ROOT);

@@ -659,13 +659,25 @@
                   <div
                     class="quiz-example-slot"
                     :class="{ 'is-visible': quizResultForCurrent }"
+                    :tabindex="quizResultForCurrent ? 0 : -1"
+                    :aria-hidden="!quizResultForCurrent"
+                    aria-label="完整词性释义与例句"
                   >
-                    <PagedReading
-                      v-if="quizResultForCurrent"
-                      class="quiz-example-panel"
-                      label="例句"
-                      compact
-                    >
+                    <div v-if="quizResultForCurrent" class="quiz-example-panel">
+                      <dl class="quiz-definitions" aria-label="完整词性与释义">
+                        <div
+                          v-for="group in quizDefinitionGroups"
+                          :key="group.partOfSpeech"
+                          class="quiz-definition-group"
+                        >
+                          <dt>{{ group.partOfSpeech || "释义" }}</dt>
+                          <dd>
+                            <p v-for="meaning in group.meanings" :key="meaning">
+                              {{ meaning }}
+                            </p>
+                          </dd>
+                        </div>
+                      </dl>
                       <p
                         class="quiz-example-en"
                         v-html="
@@ -683,7 +695,7 @@
                           quizExampleCn(currentQuizWord, quizResultForCurrent)
                         }}
                       </p>
-                    </PagedReading>
+                    </div>
                   </div>
                 </div>
                 <div class="quiz-feedback-slot" aria-live="polite">
@@ -1680,7 +1692,7 @@
 import AppIcon from "@/components/AppIcon.vue";
 import LearningBloom from "@/components/LearningBloom.vue";
 import QuizInsight from "@/components/QuizInsight.vue";
-import PagedReading from "@/components/PagedReading.vue";
+import { wordDefinitionGroups } from "@/word-definitions";
 import { ElMessage } from "element-plus";
 import {
   computed,
@@ -2001,6 +2013,14 @@ const quizResultForCurrent = computed(() =>
 );
 const wordDetailForCurrent = computed(() =>
   currentQuizWord.value ? state.wordDetails[currentQuizWord.value.id] : null,
+);
+const quizDefinitionGroups = computed(() =>
+  wordDefinitionGroups(
+    currentQuizWord.value,
+    wordDetailForCurrent.value?.status === "ready"
+      ? wordDetailForCurrent.value.data
+      : null,
+  ),
 );
 const currentReviewWord = computed(() => state.reviewWords[state.reviewIndex]);
 const selectedWordDetail = computed(() =>

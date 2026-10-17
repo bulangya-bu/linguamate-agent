@@ -80,10 +80,55 @@
 }
 .app-shell .quiz-example-slot {
   height: auto;
-  max-height: 200px;
+  max-height: none;
   min-height: 0;
   padding: 0 6px;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.quiz-definitions {
+  display: grid;
+  gap: 10px;
+  max-width: 620px;
+  margin: 0 auto 22px;
+  text-align: left;
+}
+.quiz-definition-group {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+.quiz-definition-group dt {
+  margin-top: 1px;
+  padding: 2px 5px;
+  border-radius: 6px;
+  color: var(--blue-ink);
+  background: #eaf5fc;
+  font-size: 13px;
+  line-height: 1.65;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.quiz-definition-group dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.quiz-definition-group p {
+  margin: 0;
+}
+.quiz-definition-group p + p {
+  margin-top: 4px;
+}
+.quiz-example-panel {
+  max-width: 740px;
+  margin-inline: auto;
 }
 .quiz-example-en {
   margin: 0 0 10px;
@@ -395,30 +440,6 @@
   font-weight: 700;
   color: var(--blue-ink);
 }
-.insight-definition-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 10px;
-}
-.insight-definition-row + .insight-definition-row {
-  margin-top: 10px;
-}
-.insight-pos-label {
-  flex-shrink: 0;
-  padding: 2px 7px;
-  border-radius: 5px;
-  color: var(--blue-ink);
-  background: #e5f1f9;
-  font-size: 13px;
-  line-height: 1.6;
-}
-.insight-definition-row > p {
-  margin: 0;
-  color: var(--ink);
-  font-size: 16px;
-  line-height: 1.7;
-}
 .insight-entry {
   padding: 0;
   margin: 0 0 14px;
@@ -563,6 +584,21 @@
   .app-shell .quiz-example-slot {
     padding: 0;
   }
+  .quiz-definitions {
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .quiz-definition-group {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 8px;
+  }
+  .quiz-definition-group dt {
+    font-size: 11px;
+  }
+  .quiz-definition-group dd {
+    font-size: 15px;
+    line-height: 1.5;
+  }
   .quiz-example-en {
     margin-bottom: 6px;
     font-size: 18px;
@@ -573,7 +609,7 @@
     line-height: 1.6;
   }
   .quiz-feedback-slot {
-    min-height: 32px;
+    min-height: 28px;
   }
   .quiz-review-notice {
     padding: 5px 8px;
@@ -597,6 +633,11 @@
   }
   .insight-content {
     margin-top: 16px;
+  }
+}
+@media (min-width: 1200px) and (max-height: 800px) {
+  .app-shell.page-vocabulary .topbar {
+    display: none;
   }
 }
 @media (max-width: 760px) and (max-height: 740px) {

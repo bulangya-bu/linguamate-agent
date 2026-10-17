@@ -38,22 +38,6 @@
         aria-label="完整解析内容"
       >
         <div class="insight-word">{{ word.word }}</div>
-        <section
-          v-if="definitions.length"
-          class="insight-section insight-definition"
-        >
-          <h3>词性与释义</h3>
-          <div
-            v-for="(definition, i) in definitions"
-            :key="i"
-            class="insight-definition-row"
-          >
-            <span v-if="definition.type" class="insight-pos-label">{{
-              definition.type
-            }}</span>
-            <p v-if="definition.meaningCn">{{ definition.meaningCn }}</p>
-          </div>
-        </section>
         <section v-if="detail.data.usageNotes?.length" class="insight-section">
           <h3>用法</h3>
           <p
@@ -123,7 +107,7 @@
       <template v-if="detail?.status === 'loading'">
         <span class="quiz-ai-spinner" aria-hidden="true"></span>
         <h3>正在解析 {{ word.word }}</h3>
-        <p>正在整理词性、用法与例句</p>
+        <p>正在整理用法、搭配与例句</p>
       </template>
       <template v-else-if="detail?.status === 'error'">
         <AppIcon name="ai" />
@@ -160,14 +144,6 @@ const root = ref(null);
 const content = ref(null);
 const isBaseForm = (variant) =>
   variant.form?.trim().toLowerCase() === props.word.word.trim().toLowerCase();
-const definitions = computed(() => {
-  const supplied = props.detail?.data?.variants?.filter(isBaseForm) || [];
-  if (supplied.length) return supplied;
-  const type = props.detail?.data?.partOfSpeech || props.word.partOfSpeech;
-  return type || props.word.meaningCn
-    ? [{ type, meaningCn: props.word.meaningCn }]
-    : [];
-});
 const derivedForms = computed(
   () =>
     props.detail?.data?.variants?.filter((variant) => !isBaseForm(variant)) ||
@@ -180,8 +156,8 @@ function request(force) {
 }
 const hasContent = computed(
   () =>
-    definitions.value.length ||
-    ["usageNotes", "examples", "variants", "collocations"].some(
+    derivedForms.value.length ||
+    ["usageNotes", "examples", "collocations"].some(
       (key) => props.detail?.data?.[key]?.length,
     ),
 );

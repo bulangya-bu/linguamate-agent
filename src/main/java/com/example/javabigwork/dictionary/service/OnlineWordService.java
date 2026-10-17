@@ -7,6 +7,7 @@ import com.example.javabigwork.dictionary.dto.DictionaryTranslationRequest;
 import com.example.javabigwork.vocabulary.dto.WordCardView;
 import com.example.javabigwork.vocabulary.entity.Word;
 import com.example.javabigwork.vocabulary.mapper.WordMapper;
+import com.example.javabigwork.vocabulary.service.WordDefinitionService;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -26,17 +27,20 @@ public class OnlineWordService {
     private final CommonWordPoolService wordPoolService;
     private final DictionaryApiService dictionaryApiService;
     private final DictionaryTranslationService translationService;
+    private final WordDefinitionService definitionService;
 
     public OnlineWordService(
             WordMapper wordMapper,
             CommonWordPoolService wordPoolService,
             DictionaryApiService dictionaryApiService,
-            DictionaryTranslationService translationService
+            DictionaryTranslationService translationService,
+            WordDefinitionService definitionService
     ) {
         this.wordMapper = wordMapper;
         this.wordPoolService = wordPoolService;
         this.dictionaryApiService = dictionaryApiService;
         this.translationService = translationService;
+        this.definitionService = definitionService;
     }
 
     public List<WordCardView> randomWordCards(int limit) {
@@ -277,7 +281,8 @@ public class OnlineWordService {
                 word.levelTag,
                 0,
                 0,
-                false
+                false,
+                definitionService.definitionsFor(word)
         );
     }
 }

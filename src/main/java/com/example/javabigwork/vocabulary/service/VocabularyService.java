@@ -28,6 +28,7 @@ public class VocabularyService {
     private final WordReviewLogMapper logMapper;
     private final ExperienceService experienceService;
     private final UserContext userContext;
+    private final WordDefinitionService definitionService;
 
     public VocabularyService(
             OnlineWordService onlineWordService,
@@ -35,7 +36,8 @@ public class VocabularyService {
             UserWordProgressMapper progressMapper,
             WordReviewLogMapper logMapper,
             ExperienceService experienceService,
-            UserContext userContext
+            UserContext userContext,
+            WordDefinitionService definitionService
     ) {
         this.onlineWordService = onlineWordService;
         this.wordMapper = wordMapper;
@@ -43,6 +45,7 @@ public class VocabularyService {
         this.logMapper = logMapper;
         this.experienceService = experienceService;
         this.userContext = userContext;
+        this.definitionService = definitionService;
     }
 
     public List<WordCardView> todayWords(int limit) {
@@ -216,7 +219,8 @@ public class VocabularyService {
                 word.levelTag,
                 progress == null ? 0 : value(progress.familiarity),
                 progress == null ? 0 : value(progress.wrongCount),
-                progress != null && Boolean.TRUE.equals(progress.favorite)
+                progress != null && Boolean.TRUE.equals(progress.favorite),
+                definitionService.definitionsFor(word)
         );
     }
 
