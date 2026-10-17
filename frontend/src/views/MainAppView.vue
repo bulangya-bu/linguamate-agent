@@ -79,12 +79,12 @@
         </div>
         <RouterLink
           v-if="state.currentUser?.role === 'ADMIN'"
-          class="nav-link-button"
+          class="nav-link-button desktop-account-legacy"
           to="/admin"
           >管理工作台 <AppIcon name="arrow"
         /></RouterLink>
         <button
-          class="sidebar-user"
+          class="sidebar-user desktop-account-legacy"
           type="button"
           aria-label="打开我的 API 设置"
           @click="openSettings"
@@ -94,7 +94,7 @@
             ><strong>{{ userName }}</strong></span
           ><AppIcon name="settings" />
         </button>
-        <button class="nav-logout-button" type="button" @click="logout">
+        <button class="nav-logout-button desktop-account-legacy" type="button" @click="logout">
           <AppIcon name="logout" />退出登录
         </button>
       </div>
@@ -113,11 +113,21 @@
           <span class="today-date">{{ todayLabel }}</span
           ><button
             type="button"
-            class="connection-button"
+            class="connection-button desktop-account-legacy"
             @click="openSettings"
           >
             <span class="status-dot"></span>模型设置<AppIcon name="settings" />
           </button>
+          <UserAccountMenu
+            :user="state.currentUser || {}"
+            :busy="state.logoutBusy"
+            :model-status="state.aiSummary.label"
+            :portal-path="state.currentUser?.role === 'ADMIN' ? '/admin' : ''"
+            portal-label="管理工作台"
+            @open="loadAiSummary"
+            @settings="openSettings"
+            @logout="logout"
+          />
         </div>
       </header>
       <header class="topbar">
@@ -1396,7 +1406,7 @@
     </main>
 
     <button
-      class="settings-fab"
+      class="settings-fab desktop-account-legacy"
       type="button"
       aria-label="我的 API 设置"
       title="我的 API 设置"
@@ -1749,6 +1759,7 @@
 import AppIcon from "@/components/AppIcon.vue";
 import LearningBloom from "@/components/LearningBloom.vue";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
+import UserAccountMenu from "@/components/UserAccountMenu.vue";
 import QuizInsight from "@/components/QuizInsight.vue";
 import { wordDefinitionGroups } from "@/word-definitions";
 import { ElMessage } from "element-plus";
@@ -1788,6 +1799,7 @@ const showAllNewsTopics = ref(false);
 const settingsPanelRef = ref(null);
 const wordDialogRef = ref(null);
 let previousFocus;
+let settingsReturnFocus;
 function closeOverlays() {
   state.settingsOpen = false;
   state.selectedWord = null;
@@ -2026,6 +2038,8 @@ const state = reactive({
   settingsOpen: false,
   ai: { baseUrl: "", apiKey: "", chatModel: "", models: [], status: "未连接" },
   aiBusy: false,
+  logoutBusy: false,
+  aiSummary: { label: "个人配置", loaded: false, loading: false },
 });
 
 const activeSection = computed(() => route.meta.section || "dashboard");
@@ -2353,8 +2367,16 @@ async function loadLearningCardPage(message, index, direction) {
 }
 
 async function logout() {
-  await authApi.logout();
-  router.replace("/login");
+  if (state.logoutBusy) return;
+  state.logoutBusy = true;
+  try {
+    await authApi.logout();
+    await router.replace("/login");
+  } catch (error) {
+    ElMessage.error(error.message || "退出登录失败，请重试");
+  } finally {
+    state.logoutBusy = false;
+  }
 }
 
 function sameLocalDay(value) {
@@ -3258,7 +3280,21 @@ function scheduleWordBankSearch() {
   }, 350);
 }
 
-async function openSettings() {
+function updateAiSummary(settings) {
+  state.aiSummary.label = settings.hasApiKey && settings.chatModel ? "已配置" : "未配置";
+  state.aiSummary.loaded = true;
+}
+
+async function loadAiSummary() {
+  if (state.aiSummary.loaded || state.aiSummary.loading) return;
+  state.aiSummary.loading = true;
+  try { updateAiSummary(await aiApi.settings()); }
+  catch { state.aiSummary.label = "查看配置"; }
+  finally { state.aiSummary.loading = false; }
+}
+
+async function openSettings(returnTarget) {
+  settingsReturnFocus = returnTarget instanceof HTMLElement ? returnTarget : null;
   state.settingsOpen = true;
   try {
     const settings = await aiApi.settings();
@@ -3267,6 +3303,7 @@ async function openSettings() {
     state.ai.apiKey = "";
     state.ai.models = settings.chatModel ? [settings.chatModel] : [];
     state.ai.status = settings.hasApiKey ? "已保存密钥" : "未保存密钥";
+    updateAiSummary(settings);
   } catch (error) {
     state.ai.status = error.message || "加载设置失败";
   }
@@ -3304,6 +3341,7 @@ async function saveAiSettings() {
     state.ai.apiKey = "";
     state.ai.chatModel = settings.chatModel || state.ai.chatModel;
     state.ai.status = `已应用 ${state.ai.chatModel || "当前模型"}`;
+    updateAiSummary(settings);
     ElMessage.success("AI 设置已保存");
   } finally {
     state.aiBusy = false;
@@ -3342,7 +3380,7 @@ watch(
   () => state.settingsOpen || wordDialogVisible.value,
   async (open) => {
     if (open) {
-      previousFocus = document.activeElement;
+      previousFocus = state.settingsOpen && settingsReturnFocus ? settingsReturnFocus : document.activeElement;
       document.body.style.overflow = "hidden";
       await nextTick();
       const dialog = state.settingsOpen
@@ -3355,6 +3393,7 @@ watch(
       document.body.style.overflow = "";
       await nextTick();
       previousFocus?.focus();
+      settingsReturnFocus = null;
     }
   },
   { flush: "post" },

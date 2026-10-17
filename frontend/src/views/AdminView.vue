@@ -35,7 +35,7 @@
           <AppIcon :name="item.id" /><span>{{ item.label }}</span>
         </button>
       </nav>
-      <div class="nav-account">
+      <div class="nav-account desktop-account-legacy">
         <div class="user-chip">
           <span>{{
             state.user?.nickname || state.user?.username || "管理员"
@@ -57,9 +57,19 @@
             sections.find((item) => item.id === state.section)?.label
           }}</strong>
         </div>
-        <RouterLink class="text-button" to="/"
+        <RouterLink class="text-button desktop-account-legacy" to="/"
           >前往学习空间<AppIcon name="arrow"
         /></RouterLink>
+        <div class="workspace-tools">
+          <UserAccountMenu
+            :user="state.user || {}"
+            :busy="state.logoutBusy"
+            :show-model-settings="false"
+            portal-path="/"
+            portal-label="学习空间"
+            @logout="logout"
+          />
+        </div>
       </header>
       <header class="topbar admin-topbar">
         <div>
@@ -643,6 +653,7 @@
 
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
+import UserAccountMenu from "@/components/UserAccountMenu.vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { computed, onMounted, reactive } from "vue";
 import { useRouter } from "vue-router";
@@ -690,6 +701,7 @@ const emptyNews = () => ({
 });
 
 const state = reactive({
+  logoutBusy: false,
   loading: true,
   user: null,
   section: "overview",
@@ -765,8 +777,14 @@ async function showSection(id) {
 }
 
 async function logout() {
-  await authApi.logout();
-  router.replace("/login");
+  if (state.logoutBusy) return;
+  state.logoutBusy = true;
+  try {
+    await authApi.logout();
+    await router.replace("/login");
+  } catch (error) {
+    ElMessage.error(error.message || "退出登录失败，请重试");
+  } finally { state.logoutBusy = false; }
 }
 
 async function loadSummary() {
