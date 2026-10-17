@@ -91,6 +91,6 @@ public class VocabularyController {
 
     @PostMapping("/dictionary/save")
     public ApiResponse<HoverWordResponse> save(@RequestParam String word) {
-        return ApiResponse.ok("已加入错词本", dictionaryTool.saveToReviewBook(word));
+        return ApiResponse.ok("已加入待复习", dictionaryTool.saveToReviewBook(word));
     }
 }

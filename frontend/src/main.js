@@ -13,5 +13,6 @@ import "./styles/layout.css";
 import "./styles/typography.css";
 import "./styles/quiz-workspace.css";
 import "./styles/review-library.css";
+import "./styles/reading-workspace.css";
 
 createApp(App).use(router).use(ElementPlus).mount("#app");

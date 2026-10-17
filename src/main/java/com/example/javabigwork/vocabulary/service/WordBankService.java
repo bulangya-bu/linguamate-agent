@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.javabigwork.vocabulary.dto.WordCardView;
 import com.example.javabigwork.vocabulary.dto.WordBankPage;
 import com.example.javabigwork.vocabulary.dto.WordBankCategory;
+import com.example.javabigwork.vocabulary.dto.WordBankStats;
 import com.example.javabigwork.vocabulary.entity.Word;
 import com.example.javabigwork.vocabulary.mapper.WordMapper;
 import com.example.javabigwork.auth.UserContext;
@@ -54,17 +55,7 @@ public class WordBankService {
         int safePage = Math.max(0, page);
         int safeSize = Math.min(100, Math.max(10, size));
 
-        QueryWrapper<Word> wrapper = new QueryWrapper<>();
-        switch (scope == null ? "all" : scope) {
-            case "all" -> { }
-            case "favorites" -> wrapper.apply(
-                    "id IN (SELECT word_id FROM user_word_progress WHERE user_id = {0} AND favorite = TRUE)",
-                    userContext.userId());
-            case "mastered" -> wrapper.apply(
-                    "id IN (SELECT word_id FROM user_word_progress WHERE user_id = {0} AND familiarity >= 3 AND COALESCE(wrong_count, 0) = 0)",
-                    userContext.userId());
-            default -> throw new IllegalArgumentException("不支持的词库分组");
-        }
+        QueryWrapper<Word> wrapper = scopeQuery(scope);
 
         if (category != null && !category.isBlank()) {
             wrapper.eq("level_tag", category.trim());
@@ -89,5 +80,32 @@ public class WordBankService {
                 .collect(Collectors.toList());
 
         return new WordBankPage(views, result.getTotal(), safePage, safeSize);
+    }
+
+    public WordBankStats stats() {
+        return new WordBankStats(
+                wordMapper.selectCount(scopeQuery("all")),
+                wordMapper.selectCount(scopeQuery("review")),
+                wordMapper.selectCount(scopeQuery("favorites")),
+                wordMapper.selectCount(scopeQuery("mastered"))
+        );
+    }
+
+    private QueryWrapper<Word> scopeQuery(String scope) {
+        QueryWrapper<Word> wrapper = new QueryWrapper<>();
+        switch (scope == null ? "all" : scope) {
+            case "all" -> { }
+            case "review" -> wrapper.apply(
+                    "id IN (SELECT word_id FROM user_word_progress WHERE user_id = {0} AND wrong_count > 0)",
+                    userContext.userId());
+            case "favorites" -> wrapper.apply(
+                    "id IN (SELECT word_id FROM user_word_progress WHERE user_id = {0} AND favorite = TRUE)",
+                    userContext.userId());
+            case "mastered" -> wrapper.apply(
+                    "id IN (SELECT word_id FROM user_word_progress WHERE user_id = {0} AND familiarity >= 3 AND COALESCE(wrong_count, 0) = 0)",
+                    userContext.userId());
+            default -> throw new IllegalArgumentException("不支持的词库分组");
+        }
+        return wrapper;
     }
 }

@@ -3,6 +3,7 @@ package com.example.javabigwork.vocabulary.controller;
 import com.example.javabigwork.common.ApiResponse;
 import com.example.javabigwork.vocabulary.dto.WordBankCategory;
 import com.example.javabigwork.vocabulary.dto.WordBankPage;
+import com.example.javabigwork.vocabulary.dto.WordBankStats;
 import com.example.javabigwork.vocabulary.service.WordBankService;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,5 +34,10 @@ public class WordBankController {
             @RequestParam(defaultValue = "all") String scope
     ) {
         return ApiResponse.ok(wordBankService.words(category, search, page, size, scope));
+    }
+
+    @GetMapping("/stats")
+    public ApiResponse<WordBankStats> stats() {
+        return ApiResponse.ok(wordBankService.stats());
     }
 }

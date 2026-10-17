@@ -261,6 +261,19 @@ class JavaBigWorkApplicationTests {
         MockHttpSession other = login(otherUsername, "userpass123");
         mockMvc.perform(get("/api/word-bank/words").session(other).param("scope", "favorites"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
+        mockMvc.perform(get("/api/word-bank/stats").session(other))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.review").value(0))
+                .andExpect(jsonPath("$.data.favorites").value(0)).andExpect(jsonPath("$.data.mastered").value(0));
+        mockMvc.perform(get("/api/word-bank/stats").session(word.session()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.all", greaterThan(0)))
+                .andExpect(jsonPath("$.data.review").value(1)).andExpect(jsonPath("$.data.favorites").value(1))
+                .andExpect(jsonPath("$.data.mastered").value(0));
+        mockMvc.perform(get("/api/word-bank/words").session(word.session())
+                        .param("scope", "review").param("search", word.word()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1))
+                .andExpect(jsonPath("$.data.words[0].id").value(word.wordId()));
+        mockMvc.perform(get("/api/word-bank/words").session(other).param("scope", "review"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
 
         // Familiarity alone must not hide a still-active wrong word in the mastered group.
         for (int i = 0; i < 4; i++) {
@@ -277,6 +290,9 @@ class JavaBigWorkApplicationTests {
         mockMvc.perform(get("/api/word-bank/words").session(word.session()).param("scope", "mastered"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(1))
                 .andExpect(jsonPath("$.data.words[0].id").value(word.wordId()));
+        mockMvc.perform(get("/api/word-bank/stats").session(word.session()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.review").value(0))
+                .andExpect(jsonPath("$.data.mastered").value(1)).andExpect(jsonPath("$.data.favorites").value(1));
         mockMvc.perform(get("/api/word-bank/words").session(other).param("scope", "mastered"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
 
@@ -719,6 +735,31 @@ class JavaBigWorkApplicationTests {
         mockMvc.perform(get("/api/report/summary").session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.reviewWords").value(1));
+        mockMvc.perform(get("/api/word-bank/stats").session(session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.review").value(1))
+                .andExpect(jsonPath("$.data.favorites").value(0));
+    }
+
+    @Test
+    void readingCanRequeueMasteredWordsWithoutChangingFavorites() throws Exception {
+        ReviewWord word = seedWrongReviewWord();
+        mockMvc.perform(post("/api/words/" + word.wordId() + "/favorite").session(word.session()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.favorite").value(true));
+        mockMvc.perform(post("/api/reviews/" + word.wordId()).session(word.session())
+                        .contentType(MediaType.APPLICATION_JSON).content(reviewBody(word.word(), word.meaningCn())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.correct").value(true));
+        mockMvc.perform(get("/api/dictionary/lookup").param("word", word.word()).session(word.session()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.savedInReviewBook").value(false));
+        for (int i = 0; i < 2; i++) {
+            mockMvc.perform(post("/api/dictionary/save").param("word", word.word()).session(word.session()))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.savedInReviewBook").value(true));
+        }
+        mockMvc.perform(get("/api/word-bank/stats").session(word.session()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.review").value(1))
+                .andExpect(jsonPath("$.data.favorites").value(1)).andExpect(jsonPath("$.data.mastered").value(0));
+        mockMvc.perform(get("/api/reviews/today").session(word.session()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].id").value(word.wordId()));
     }
 
     @Test

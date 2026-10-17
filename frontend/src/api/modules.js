@@ -38,6 +38,7 @@ export const learningApi = {
   saveDictionaryWord: (word) => api(`/api/dictionary/save${query({ word })}`, { method: "POST" }),
   translateArticle: (payload) => api("/api/news/translate", { method: "POST", body: JSON.stringify(payload) }),
   wordBankCategories: () => api("/api/word-bank/categories"),
+  wordBankStats: () => api("/api/word-bank/stats"),
   wordBankWords: (params) => api(`/api/word-bank/words${query(params)}`),
   writingReview: (payload) => api("/api/writing/review", { method: "POST", body: JSON.stringify(payload) })
 };

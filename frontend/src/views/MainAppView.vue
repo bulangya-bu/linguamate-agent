@@ -1048,7 +1048,8 @@
         <div class="news-layout">
           <section id="news-library" class="panel news-library">
             <div class="panel-heading news-heading">
-              <h2>阅读推荐</h2>
+              <h2><AppIcon name="news" /> 阅读推荐</h2>
+              <span class="news-library-count">{{ state.newsList.length }} 篇</span>
               <button
                 ref="newsLibraryCloseRef"
                 class="reading-library-close text-button"
@@ -1070,6 +1071,7 @@
                     :class="{
                       'is-active': state.newsDifficulty === item.value,
                     }"
+                    :aria-pressed="state.newsDifficulty === item.value"
                     @click="setNewsDifficulty(item.value)"
                   >
                     {{ item.label }}
@@ -1085,6 +1087,7 @@
                     type="button"
                     class="news-topic-chip"
                     :class="{ 'is-active': state.newsTopic === topic.value }"
+                    :aria-pressed="state.newsTopic === topic.value"
                     @click="setNewsTopic(topic.value)"
                   >
                     {{ topic.label }}
@@ -1113,29 +1116,52 @@
                 :class="{
                   'is-active': state.currentArticle?.id === article.id,
                 }"
+                :aria-pressed="state.currentArticle?.id === article.id"
                 @click="loadArticle(article.id)"
               >
+                <div class="news-item-topline">
+                  <span>{{ newsTopicLabel(splitArticleTopics(article.topicTags)[0]) || '精选' }}</span>
+                  <span v-if="article.finished" class="news-item-finished"><AppIcon name="check" />已读</span>
+                  <span v-else>{{ articleReadingTime(article) }} 分钟</span>
+                </div>
                 <strong>{{ article.title }}</strong>
                 <p>{{ article.summary }}</p>
-                <span
-                  >{{ difficultyLabel(article.difficulty) }} ·
-                  {{ articleTopicText(article.topicTags) }} ·
-                  {{ article.readProgress || 0 }}%</span
-                >
+                <div class="news-item-bottomline">
+                  <span class="news-level" :data-level="article.difficulty">{{ difficultyLabel(article.difficulty) }}</span>
+                  <span v-if="article.readProgress && !article.finished" class="news-item-progress">已读 {{ article.readProgress }}%</span>
+                  <AppIcon name="arrow" />
+                </div>
               </article>
               <p v-if="!state.newsList.length" class="news-empty">
                 当前筛选暂无文章，换个难度或主题试试。
               </p>
             </div>
           </section>
-          <section class="panel reader-panel">
-            <div class="panel-heading">
-              <div>
-                <p class="eyebrow compact">
-                  {{ state.currentArticle?.sourceName || "Reader" }}
-                </p>
-                <h2>{{ state.currentArticle?.title || "选择一篇文章" }}</h2>
+          <section class="panel reader-panel" :aria-busy="state.articleBusy">
+            <header class="reader-cover">
+              <div class="reader-cover-meta">
+                <span class="reader-source">{{ state.currentArticle?.sourceName || "LinguaMate Reader" }}</span>
+                <span v-if="state.currentArticle" class="reader-topic">{{ articleTopicText(state.currentArticle.topicTags) }}</span>
               </div>
+              <div class="reader-cover-title">
+                <div>
+                  <h2 :key="state.currentArticle?.id">{{ state.currentArticle?.title || "从一个感兴趣的主题开始" }}</h2>
+                  <p v-if="state.currentArticle?.summary" class="reader-deck">{{ state.currentArticle.summary }}</p>
+                  <div v-if="state.currentArticle" class="reader-byline">
+                    <span class="news-level" :data-level="state.currentArticle.difficulty">{{ difficultyLabel(state.currentArticle.difficulty) }}</span>
+                    <span>{{ articleWordCount }} 词</span>
+                    <span>约 {{ articleReadingTime(state.currentArticle) }} 分钟</span>
+                  </div>
+                </div>
+                <div class="reader-cover-art" aria-hidden="true">
+                  <span class="reader-art-orbit"></span><span class="reader-art-orbit"></span>
+                  <span class="reader-art-glyph">Aa<span>·</span></span>
+                  <span class="reader-art-line"></span><span class="reader-art-spark">✦</span>
+                </div>
+              </div>
+            </header>
+            <div class="reader-tools">
+              <span class="reader-hint"><AppIcon name="spark" />点选单词，即时查词</span>
               <div class="reader-toolbar">
                 <button
                   ref="newsLibraryButtonRef"
@@ -1150,42 +1176,30 @@
                 <button
                   class="translate-btn"
                   type="button"
-                  :disabled="!state.currentArticle || state.translateBusy"
+                  :disabled="!state.currentArticle || state.translateBusy || state.articleBusy"
                   @click="translateArticle"
                 >
-                  {{ state.translateBusy ? "翻译中..." : "全文翻译" }}
+                  <span class="reader-translate-symbol" aria-hidden="true">译</span>
+                  {{ state.translateBusy ? "翻译中…" : state.translation.contentCn || state.translation.titleCn ? "收起译文" : "全文翻译" }}
                 </button>
               </div>
-            </div>
-            <p class="reader-hint">点按或悬停单词查词</p>
-            <div class="reader-progress">
-              <div class="reader-progress-track">
-                <span :style="{ width: readerProgress + '%' }"></span>
-              </div>
-              <span>{{ readerProgress }}%</span>
-              <button
-                class="reader-finish-btn"
-                type="button"
-                :disabled="!state.currentArticle"
-                @click="finishReading"
-              >
-                完成阅读
-              </button>
             </div>
             <div
               ref="readerRef"
               class="reader-scroll-area"
               @scroll="handleReaderScroll"
             >
-              <article class="reader-content">
+              <article :key="state.currentArticle?.id" class="reader-content" aria-label="英文正文">
                 <template v-for="token in articleTokens" :key="token.key">
                   <span
                     v-if="token.word"
                     class="reader-word"
+                    :class="{ 'is-looked-up': state.tooltip.visible && state.tooltip.lookupKey === normalizeLookupWord(token.text) }"
                     tabindex="0"
                     @focus="showTooltip(token.text, $event)"
                     @blur="scheduleHideTooltip"
                     @click="showTooltip(token.text, $event)"
+                    @keydown.enter.prevent="focusLookupActions(token.text, $event)"
                     @mouseenter="showTooltip(token.text, $event)"
                     @mouseleave="scheduleHideTooltip"
                     >{{ token.text }}</span
@@ -1193,6 +1207,7 @@
                   <span v-else>{{ token.text }}</span>
                 </template>
               </article>
+              <div v-if="state.currentArticle" class="reader-endmark" aria-hidden="true"><span></span>✦<span></span></div>
               <div
                 v-if="state.translation.titleCn || state.translation.contentCn"
                 class="translation-area"
@@ -1201,6 +1216,16 @@
                 <p>{{ state.translation.contentCn }}</p>
               </div>
             </div>
+            <footer class="reader-progress">
+              <span class="reader-progress-label">{{ state.currentArticle?.finished ? "本篇已读完" : "阅读进度" }}</span>
+              <div class="reader-progress-track" role="progressbar" aria-label="阅读进度" :aria-valuenow="readerProgress" aria-valuemin="0" aria-valuemax="100">
+                <span :style="{ width: readerProgress + '%' }"></span>
+              </div>
+              <span>{{ readerProgress }}%</span>
+              <button class="reader-finish-btn" type="button" :disabled="!state.currentArticle || state.readingBusy || state.articleBusy || state.currentArticle.finished" @click="finishReading">
+                <AppIcon name="check" />{{ state.readingBusy ? "保存中…" : state.currentArticle?.finished ? "已完成" : "完成阅读" }}
+              </button>
+            </footer>
           </section>
         </div>
       </section>
@@ -1222,14 +1247,17 @@
                 aria-controls="wordbank-results"
                 @click="setWordBankScope(scope.id)"
               >
-                {{ scope.label }}
+                {{ scope.label }}<span class="wordbank-scope-count">{{ state.wordBank.stats[scope.id] ?? '—' }}</span>
               </button>
             </div>
-            <span class="energy-pill">{{
+            <div class="wordbank-heading-actions">
+              <button v-if="state.wordBank.scope === 'review' && state.wordBank.stats.review" type="button" class="wordbank-start-review" @click="router.push('/review')">开始复习<AppIcon name="arrow" /></button>
+              <span class="energy-pill">{{
               state.wordBank.loading
                 ? "正在加载"
                 : state.wordBank.total + " 个单词"
-            }}</span>
+              }}</span>
+            </div>
           </div>
           <div class="wordbank-filters">
             <div class="wordbank-categories" role="group" aria-label="词库分类">
@@ -1673,10 +1701,16 @@
 
     <div
       v-if="state.tooltip.visible"
+      ref="tooltipRef"
       class="word-tooltip visible"
+      role="dialog"
+      :aria-label="state.tooltip.data.word + ' 的释义'"
       :style="{ left: state.tooltip.x + 'px', top: state.tooltip.y + 'px' }"
       @mouseenter="cancelTooltipHide"
       @mouseleave="scheduleHideTooltip"
+      @focusin="cancelTooltipHide"
+      @focusout="handleTooltipFocusOut"
+      @keydown.esc.stop="state.tooltip.visible = false"
     >
       <div class="tooltip-head">
         <strong>{{ state.tooltip.data.word }}</strong>
@@ -1697,16 +1731,15 @@
       <small v-if="state.tooltip.data.exampleEn">{{
         state.tooltip.data.exampleEn
       }}</small>
-      <button
-        class="tooltip-save-word"
-        type="button"
-        :disabled="
-          state.tooltip.loading || state.tooltip.data.savedInReviewBook
-        "
-        @click="saveReaderWord(state.tooltip.data.word)"
-      >
-        {{ state.tooltip.data.savedInReviewBook ? "已在生词本" : "加入生词本" }}
-      </button>
+      <div class="tooltip-actions">
+        <button class="tooltip-save-word" type="button" :class="{ 'is-saved': state.tooltip.data.savedInReviewBook }"
+          :disabled="state.tooltip.loading || state.tooltip.saving || state.tooltip.data.savedInReviewBook"
+          @click="saveReaderWord(state.tooltip.data.word)">
+          <AppIcon :name="state.tooltip.data.savedInReviewBook ? 'check' : 'review'" />
+          {{ state.tooltip.saving ? "加入中…" : state.tooltip.data.savedInReviewBook ? "已加入待复习" : "加入待复习" }}
+        </button>
+        <button v-if="state.tooltip.data.savedInReviewBook" type="button" class="tooltip-library-link" @click="openPendingLibrary">查看词库<AppIcon name="arrow" /></button>
+      </div>
     </div>
   </div>
 </template>
@@ -1737,6 +1770,7 @@ import {
 const route = useRoute();
 const router = useRouter();
 const readerRef = ref(null);
+const tooltipRef = ref(null);
 const wordBankGrid = ref(null);
 const quizPane = ref("practice");
 const quizInsightToggle = ref(null);
@@ -1817,6 +1851,7 @@ const navItems = [
 
 const wordBankScopes = [
   { id: "all", label: "全部单词" },
+  { id: "review", label: "待复习" },
   { id: "favorites", label: "收藏词" },
   { id: "mastered", label: "已掌握" },
 ];
@@ -1956,6 +1991,8 @@ const state = reactive({
   newsDifficulty: "",
   newsTopic: "",
   currentArticle: null,
+  articleBusy: false,
+  readingBusy: false,
   readerProgress: 0,
   progressTimer: null,
   lookupCache: {},
@@ -1963,6 +2000,7 @@ const state = reactive({
   tooltip: {
     visible: false,
     loading: false,
+    saving: false,
     lookupKey: "",
     x: 0,
     y: 0,
@@ -1972,6 +2010,7 @@ const state = reactive({
   translation: {},
   wordBank: {
     scope: "all",
+    stats: {},
     loading: false,
     categories: [],
     words: [],
@@ -2075,6 +2114,7 @@ const wordBankEmptyText = computed(() => {
     return "没有符合筛选的单词";
   if (state.wordBank.scope === "favorites") return "还没有收藏词";
   if (state.wordBank.scope === "mastered") return "还没有已掌握的单词";
+  if (state.wordBank.scope === "review") return "暂时没有待复习的单词";
   return "词库暂时为空";
 });
 const newsTopicOptions = computed(() => {
@@ -2224,6 +2264,15 @@ const articleTokens = computed(() => {
     word: /^[A-Za-z][A-Za-z'-]*$/.test(text),
   }));
 });
+
+const articleWordCount = computed(() =>
+  (state.currentArticle?.content?.match(/[A-Za-z][A-Za-z'-]*/g) || []).length,
+);
+
+function articleReadingTime(article) {
+  const words = (article?.content || article?.summary || "").match(/[A-Za-z][A-Za-z'-]*/g) || [];
+  return Math.max(1, Math.ceil(words.length / 180));
+}
 
 function phonetic(word) {
   const value = word?.phoneticUs || word?.phoneticUk || "";
@@ -2604,7 +2653,7 @@ async function toggleFavorite(word) {
     applyFavoriteUpdate(updated);
     await loadReport();
     if (activeSection.value === "wordbank")
-      await loadWordBankWords(state.wordBank.page);
+      await Promise.all([loadWordBankStats(), loadWordBankWords(state.wordBank.page)]);
   } catch (error) {
     ElMessage.error(error.message || "收藏失败");
   }
@@ -2842,15 +2891,23 @@ async function loadNewsTopics() {
   state.newsTopics = await learningApi.newsTopics();
 }
 
+let newsRequestId = 0;
 async function loadNews() {
-  state.newsList = await learningApi.newsRecommendations({
+  const requestId = ++newsRequestId;
+  const articles = await learningApi.newsRecommendations({
     difficulty: state.newsDifficulty,
     topic: state.newsTopic,
   });
+  if (requestId !== newsRequestId) return;
+  state.newsList = articles;
   const currentVisible = state.newsList.some(
     (article) => article.id === state.currentArticle?.id,
   );
   if (!state.newsList.length) {
+    ++articleRequestId;
+    clearTimeout(state.progressTimer);
+    state.tooltip.visible = false;
+    state.articleBusy = false;
     state.currentArticle = null;
     state.translation = {};
     state.readerProgress = 0;
@@ -2861,13 +2918,26 @@ async function loadNews() {
   }
 }
 
+let articleRequestId = 0;
 async function loadArticle(id) {
-  state.currentArticle = await learningApi.article(id);
-  newsLibraryOpen.value = false;
-  state.translation = {};
-  state.readerProgress = state.currentArticle.readProgress || 0;
-  await nextTick();
-  if (readerRef.value) readerRef.value.scrollTop = 0;
+  const requestId = ++articleRequestId;
+  clearTimeout(state.progressTimer);
+  state.tooltip.visible = false;
+  state.articleBusy = true;
+  try {
+    const article = await learningApi.article(id);
+    if (requestId !== articleRequestId) return;
+    state.currentArticle = article;
+    newsLibraryOpen.value = false;
+    state.translation = {};
+    state.readerProgress = article.readProgress || 0;
+    await nextTick();
+    if (readerRef.value) readerRef.value.scrollTop = 0;
+  } catch (error) {
+    if (requestId === articleRequestId) ElMessage.error(error.message || "文章加载失败，请重试");
+  } finally {
+    if (requestId === articleRequestId) state.articleBusy = false;
+  }
 }
 
 function calculateReaderProgress() {
@@ -2882,41 +2952,64 @@ function calculateReaderProgress() {
 }
 
 function handleReaderScroll() {
-  if (!state.currentArticle) return;
+  if (!state.currentArticle || state.articleBusy) return;
   const nextProgress = calculateReaderProgress();
   state.readerProgress = nextProgress;
   clearTimeout(state.progressTimer);
-  state.progressTimer = setTimeout(
-    () => updateReadingProgress(nextProgress, false),
-    500,
-  );
+  const articleId = state.currentArticle.id;
+  state.progressTimer = setTimeout(() => updateReadingProgress(nextProgress, false, articleId).catch(() => {}), 500);
 }
 
-async function updateReadingProgress(progress, finished) {
-  if (!state.currentArticle) return;
-  const result = await learningApi.articleProgress(state.currentArticle.id, {
+async function updateReadingProgress(progress, finished, articleId = state.currentArticle?.id) {
+  if (!articleId) return;
+  const result = await learningApi.articleProgress(articleId, {
     readProgress: progress,
     finished,
   });
-  state.currentArticle.readProgress = result.readProgress;
-  state.currentArticle.finished = result.finished;
-  state.readerProgress = result.readProgress;
+  if (state.currentArticle?.id === articleId) {
+    state.currentArticle.readProgress = result.readProgress;
+    state.currentArticle.finished = result.finished;
+    state.readerProgress = result.readProgress;
+  }
+  const listed = state.newsList.find((article) => article.id === articleId);
+  if (listed) Object.assign(listed, { readProgress: result.readProgress, finished: result.finished });
   await loadReport();
 }
 
 async function finishReading() {
-  await updateReadingProgress(100, true);
-  ElMessage.success("阅读进度已完成");
+  if (!state.currentArticle || state.readingBusy) return;
+  clearTimeout(state.progressTimer);
+  state.readingBusy = true;
+  try {
+    await updateReadingProgress(100, true);
+    ElMessage.success("本篇阅读已完成");
+  } catch (error) {
+    ElMessage.error(error.message || "阅读进度保存失败，请重试");
+  } finally {
+    state.readingBusy = false;
+  }
 }
 
 async function translateArticle() {
-  if (!state.currentArticle) return;
+  if (!state.currentArticle || state.translateBusy) return;
+  if (state.translation.contentCn || state.translation.titleCn) {
+    state.translation = {};
+    return;
+  }
+  const articleId = state.currentArticle.id;
   state.translateBusy = true;
   try {
-    state.translation = await learningApi.translateArticle({
+    const translation = await learningApi.translateArticle({
       title: state.currentArticle.title,
       content: state.currentArticle.content,
     });
+    if (state.currentArticle?.id === articleId) {
+      state.translation = translation;
+      await nextTick();
+      readerRef.value?.querySelector('.translation-area')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  } catch (error) {
+    if (state.currentArticle?.id === articleId) ElMessage.error(error.message || "翻译失败，请稍后重试");
   } finally {
     state.translateBusy = false;
   }
@@ -2958,14 +3051,19 @@ function normalizeLookupWord(word) {
 }
 
 function placeTooltip(event) {
-  const width = 310;
-  const height = 210;
+  if (event?.currentTarget) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    state.tooltip.anchor = { left: rect.left, top: rect.top, bottom: rect.bottom };
+  }
+  const rect = state.tooltip.anchor;
+  if (!rect) return;
+  const width = tooltipRef.value?.offsetWidth || 340;
+  const height = tooltipRef.value?.offsetHeight || 260;
   const margin = 14;
-  const rect = event.currentTarget?.getBoundingClientRect();
-  const x =
-    (Number.isFinite(event.clientX) ? event.clientX : rect?.left || 0) + 14;
-  const y =
-    (Number.isFinite(event.clientY) ? event.clientY : rect?.bottom || 0) + 16;
+  const x = rect.left - 20;
+  const y = rect.bottom + height + margin > window.innerHeight
+    ? rect.top - height - 10
+    : rect.bottom + 10;
   state.tooltip.x = Math.max(
     margin,
     Math.min(x, window.innerWidth - width - margin),
@@ -2977,6 +3075,7 @@ function placeTooltip(event) {
 }
 
 async function showTooltip(word, event) {
+  if (state.tooltip.saving) return;
   const normalized = normalizeLookupWord(word);
   if (!normalized || lookupStopWords.has(normalized)) return;
   cancelTooltipHide();
@@ -2988,6 +3087,7 @@ async function showTooltip(word, event) {
     word: normalized,
     meaningCn: "查询中...",
   };
+  nextTick(() => placeTooltip());
   if (state.lookupCache[normalized]) {
     return;
   }
@@ -3010,12 +3110,22 @@ async function showTooltip(word, event) {
   } finally {
     if (state.tooltip.lookupKey === normalized) {
       state.tooltip.loading = false;
+      await nextTick();
+      placeTooltip();
     }
   }
 }
 
+async function focusLookupActions(word, event) {
+  if (lookupStopWords.has(normalizeLookupWord(word))) return;
+  await showTooltip(word, event);
+  await nextTick();
+  tooltipRef.value?.querySelector('button:not(:disabled)')?.focus();
+}
+
 function scheduleHideTooltip() {
   clearTimeout(state.tooltipTimer);
+  if (state.tooltip.saving || tooltipRef.value?.matches(':hover') || tooltipRef.value?.contains(document.activeElement)) return;
   state.tooltipTimer = setTimeout(() => {
     state.tooltip.visible = false;
   }, 240);
@@ -3025,14 +3135,36 @@ function cancelTooltipHide() {
   clearTimeout(state.tooltipTimer);
 }
 
+function handleTooltipFocusOut(event) {
+  if (!event.currentTarget.contains(event.relatedTarget)) scheduleHideTooltip();
+}
+
+function openPendingLibrary() {
+  state.tooltip.visible = false;
+  router.push({ path: '/wordbank', query: { scope: 'review' } });
+}
+
 async function saveReaderWord(word) {
-  if (!word || state.tooltip.loading) return;
-  const result = await learningApi.saveDictionaryWord(word);
+  if (!word || state.tooltip.loading || state.tooltip.saving || state.tooltip.data.savedInReviewBook) return;
   const normalized = normalizeLookupWord(word);
-  state.lookupCache[normalized] = result;
-  state.tooltip.data = result;
-  ElMessage.success("已加入生词本");
-  await loadReport();
+  const lookupKey = state.tooltip.lookupKey;
+  state.tooltip.saving = true;
+  try {
+    const result = await learningApi.saveDictionaryWord(word);
+    for (const [key, cached] of Object.entries(state.lookupCache)) {
+      if (normalizeLookupWord(cached.word) === normalized) state.lookupCache[key] = result;
+    }
+    state.lookupCache[normalized] = result;
+    if (state.tooltip.lookupKey === lookupKey) state.tooltip.data = result;
+    ElMessage.success("已加入待复习");
+    await Promise.allSettled([loadReport(), loadWordBankStats()]);
+  } catch (error) {
+    ElMessage.error(error.message || "加入待复习失败，请重试");
+  } finally {
+    state.tooltip.saving = false;
+    await nextTick();
+    placeTooltip();
+  }
 }
 
 let wordBankSearchTimer;
@@ -3044,10 +3176,15 @@ async function loadWordBank() {
     : "all";
   const page = state.wordBank.scope === scope ? state.wordBank.page : 0;
   state.wordBank.scope = scope;
-  if (!state.wordBank.categories.length) {
-    state.wordBank.categories = await learningApi.wordBankCategories();
-  }
+  await Promise.all([
+    loadWordBankStats(),
+    !state.wordBank.categories.length ? learningApi.wordBankCategories().then((categories) => { state.wordBank.categories = categories; }) : Promise.resolve(),
+  ]);
   await loadWordBankWords(page);
+}
+
+async function loadWordBankStats() {
+  state.wordBank.stats = await learningApi.wordBankStats();
 }
 
 async function loadWordBankWords(page = 0) {
@@ -3223,6 +3360,8 @@ watch(
 
 watch([activeSection, () => route.query.scope], async ([section]) => {
   document.title = sectionTitle.value + " · LinguaMate";
+  state.tooltip.visible = false;
+  if (section === "news") state.lookupCache = {};
   if (section === "wordbank" && !state.loading) await loadWordBank();
 });
 

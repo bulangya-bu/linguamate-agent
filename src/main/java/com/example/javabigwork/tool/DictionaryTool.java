@@ -19,6 +19,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Component
@@ -60,6 +61,7 @@ public class DictionaryTool {
         return toHoverResponse(word);
     }
 
+    @Transactional
     public HoverWordResponse saveToReviewBook(String rawWord) {
         String normalized = normalize(rawWord);
         if (!StringUtils.hasText(normalized)) {
@@ -75,10 +77,10 @@ public class DictionaryTool {
             wordMapper.insert(word);
         }
         cacheWordLookup(normalized, word);
-        long existing = progressMapper.selectCount(Wrappers.<UserWordProgress>query()
+        UserWordProgress existing = progressMapper.selectOne(Wrappers.<UserWordProgress>query()
                 .eq("user_id", userContext.userId())
                 .eq("word_id", word.id));
-        if (existing == 0) {
+        if (existing == null) {
             UserWordProgress progress = new UserWordProgress();
             progress.userId = userContext.userId();
             progress.wordId = word.id;
@@ -86,9 +88,14 @@ public class DictionaryTool {
             progress.wrongCount = 1;
             progress.reviewCount = 0;
             progress.favorite = false;
-            progress.lastReviewAt = LocalDateTime.now();
-            progress.nextReviewAt = LocalDateTime.now().plusDays(1);
+            progress.nextReviewAt = LocalDateTime.now();
             progressMapper.insert(progress);
+        } else if (existing.wrongCount == null || existing.wrongCount <= 0) {
+            // Re-adding a learned or favorite word must actually put it in the review queue.
+            existing.wrongCount = 1;
+            existing.familiarity = 1;
+            existing.nextReviewAt = LocalDateTime.now();
+            progressMapper.updateById(existing);
         }
         return toHoverResponse(word);
     }
@@ -133,7 +140,8 @@ public class DictionaryTool {
         boolean saved = word.id != null && progressMapper.selectCount(
                 Wrappers.<UserWordProgress>query()
                         .eq("user_id", userContext.userId())
-                        .eq("word_id", word.id)) > 0;
+                        .eq("word_id", word.id)
+                        .gt("wrong_count", 0)) > 0;
         return new HoverWordResponse(
                 word.word,
                 word.phoneticUs,
