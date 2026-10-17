@@ -19,6 +19,7 @@ export const learningApi = {
   conversations: () => api("/api/conversations"),
   messages: (id) => api(`/api/conversations/${id}/messages`),
   chat: (payload) => api("/api/chat", { method: "POST", body: JSON.stringify(payload) }),
+  practiceContext: () => api("/api/chat/practice-context"),
   advisorVocabulary: (params) => api(`/api/learning-advisor/vocabulary${query(params)}`),
   quizCategories: () => api("/api/word-bank/categories"),
   todayWords: (params) => api(`/api/words/today${query(params)}`),

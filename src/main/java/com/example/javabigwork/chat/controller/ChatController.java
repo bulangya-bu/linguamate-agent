@@ -6,6 +6,7 @@ import com.example.javabigwork.chat.dto.ConversationView;
 import com.example.javabigwork.chat.entity.Message;
 import com.example.javabigwork.chat.service.ChatService;
 import com.example.javabigwork.chat.service.ConversationService;
+import com.example.javabigwork.agent.dto.CoachFeedback.TargetWord;
 import com.example.javabigwork.common.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -35,6 +36,11 @@ public class ChatController {
     @GetMapping("/conversations")
     public ApiResponse<List<ConversationView>> conversations() {
         return ApiResponse.ok(conversationService.list());
+    }
+
+    @GetMapping("/chat/practice-context")
+    public ApiResponse<List<TargetWord>> practiceContext() {
+        return ApiResponse.ok(chatService.practiceContext());
     }
 
     @GetMapping("/conversations/{id}/messages")

@@ -18,6 +18,7 @@ import "./styles/reading-workspace.css";
 import "./styles/theme.css";
 import "./styles/dashboard-studio.css";
 import "./styles/workspace-shell.css";
+import "./styles/chat-studio.css";
 
 initializeTheme();
 createApp(App).use(router).use(ElementPlus).mount("#app");

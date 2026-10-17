@@ -88,8 +88,7 @@ public class AgentOrchestrator {
                     + localKnowledgeHint(snippets);
         } else {
             String fallbackReply = "Great. Let's practice in English. Please answer this question: What is one thing you learned today? "
-                    + "回答后我会帮你修改表达，并解释可以升级的词汇。"
-                    + localKnowledgeHint(snippets);
+                    + "这是本地练习问题。切换到对话练习并接通模型，可获得针对你的表达反馈。";
             reply = webAnswerService.answer(scene, message, history, snippets)
                     .map(answer -> {
                         log.info("Agent LLM call succeeded");

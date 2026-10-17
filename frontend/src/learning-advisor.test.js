@@ -2,9 +2,20 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   learningMessageFromResponse,
+  learningMessageFromHistory,
   nextVocabularyPage,
   normalizeLearningAction,
 } from "./learning-advisor.js";
+
+test("history restores per-turn coaching and safely reads legacy metadata", () => {
+  const coaching = { source: "model", modelName: "test-model", improved: "I went home." };
+  const restored = learningMessageFromHistory({ role: "assistant", content: "How was your day?", metadata: JSON.stringify({ coaching, trace: [{ phase: "Act" }] }) });
+  assert.deepEqual(restored.coaching, coaching);
+  assert.equal(restored.content, "How was your day?");
+  assert.equal(restored.trace[0].phase, "Act");
+  assert.equal(learningMessageFromHistory({ role: "user", content: "Hi", metadata: "trace=4" }).role, "user");
+  assert.equal(learningMessageFromHistory({ role: "assistant", content: "Hi", metadata: "null" }).coaching, null);
+});
 
 test("learning response keeps structured cards and only allows known routes", () => {
   const message = learningMessageFromResponse({

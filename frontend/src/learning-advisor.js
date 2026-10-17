@@ -28,11 +28,20 @@ export function learningMessageFromResponse(result = {}) {
   return {
     role: "assistant",
     content: result.reply || "",
+    coaching: result.coaching || null,
+    trace: result.trace || [],
     learningCard: result.learningCard || null,
     actions: (result.actions || [])
       .map(normalizeLearningAction)
       .filter(Boolean),
   };
+}
+
+export function learningMessageFromHistory(message = {}) {
+  let metadata = {};
+  try { metadata = JSON.parse(message.metadata || "{}"); } catch { /* Legacy trace=N metadata. */ }
+  if (!metadata || typeof metadata !== "object") metadata = {};
+  return { ...message, ...learningMessageFromResponse({ ...metadata, reply: message.content }), role: message.role };
 }
 
 export function nextVocabularyPage(card, direction) {

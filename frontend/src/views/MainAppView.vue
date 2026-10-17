@@ -229,7 +229,7 @@
             </div>
           </section>
           <div class="studio-journey-note"><AppIcon name="spark" /><p>{{ state.report.nextActions?.[0] || '从推荐练习开始，找到适合自己的学习节奏。' }}</p></div>
-          <button class="studio-assistant-link" type="button" @click="goSection('chat')"><AppIcon name="chat" /><span>和学习助手聊聊</span><AppIcon name="arrow" /></button>
+          <button class="studio-assistant-link" type="button" @click="openLearningAssistant"><AppIcon name="chat" /><span>和学习助手聊聊</span><AppIcon name="arrow" /></button>
         </div>
         <button
           class="dashboard-details-toggle"
@@ -292,126 +292,15 @@
         class="section chat-workspace"
         :class="{ active: activeSection === 'chat' }"
       >
-        <section class="panel chat-panel">
-          <div class="chat-panel-heading">
-            <div class="chat-title-block">
-              <h2>英语对话</h2>
-              <p>{{ currentConversationTitle }}</p>
-            </div>
-            <div class="chat-controls" aria-label="对话控制">
-              <button
-                class="chat-new-button"
-                type="button"
-                @click="newConversation"
-              >
-                新对话
-              </button>
-              <el-select
-                class="chat-dropdown chat-conversation-select"
-                :model-value="conversationSelectValue"
-                placeholder="历史会话"
-                filterable
-                :teleported="true"
-                popper-class="chat-select-popper"
-                @change="handleConversationSelect"
-              >
-                <el-option value="new" label="新对话">
-                  <span class="chat-option-title">新对话</span>
-                  <span class="chat-option-meta">从空白会话开始</span>
-                </el-option>
-                <el-option
-                  v-for="conv in state.conversations"
-                  :key="conv.id"
-                  :value="`${conv.id}`"
-                  :label="conv.title || '学习对话'"
-                >
-                  <span class="chat-option-title">{{
-                    conv.title || "学习对话"
-                  }}</span>
-                  <span class="chat-option-meta"
-                    >{{ sceneLabel(conv.scene) }} ·
-                    {{ formatDate(conv.updatedAt) }}</span
-                  >
-                </el-option>
-              </el-select>
-              <el-select
-                v-model="state.chatScene"
-                class="chat-dropdown chat-scene-select"
-                aria-label="选择对话场景"
-                :teleported="true"
-                popper-class="chat-select-popper"
-              >
-                <el-option
-                  v-for="scene in chatSceneOptions"
-                  :key="scene.value"
-                  :label="scene.label"
-                  :value="scene.value"
-                />
-              </el-select>
-              <el-popover
-                placement="bottom-end"
-                trigger="click"
-                :width="360"
-                :teleported="true"
-                popper-class="trace-popover"
-              >
-                <template #reference>
-                  <button class="trace-toggle" type="button">
-                    思考过程
-                    <span>{{ state.trace.length || 0 }}</span>
-                  </button>
-                </template>
-                <div class="trace-dropdown-list">
-                  <article
-                    v-for="(step, index) in state.trace"
-                    :key="`${step.phase}-${index}`"
-                    class="trace-item"
-                  >
-                    <span>{{ step.phase }}</span>
-                    <strong>{{ step.title }}</strong>
-                    <p>{{ step.detail }}</p>
-                  </article>
-                  <p v-if="!state.trace.length" class="trace-empty">
-                    暂无思考过程
-                  </p>
-                </div>
-              </el-popover>
-            </div>
-          </div>
-          <div
-            class="chat-messages"
-            aria-live="polite"
-            :aria-busy="state.chatBusy"
-          >
-            <div v-if="!state.messages.length" class="chat-welcome">
-              <span class="chat-welcome-mark"><AppIcon name="chat" /></span>
-              <h3>想聊点什么？</h3>
-              <p>练习日常表达，或让助手安排今天的学习。</p>
-              <div class="conversation-prompts">
-                <button
-                  v-for="prompt in [
-                    'Let’s talk about my day.',
-                    '帮我安排今天的学习',
-                    'How can I introduce myself?',
-                  ]"
-                  :key="prompt"
-                  type="button"
-                  @click="state.chatInput = prompt"
-                >
-                  {{ prompt }}<AppIcon name="arrow" />
-                </button>
-              </div>
-            </div>
-            <article
-              v-for="(message, index) in state.messages"
-              :key="`${message.role}-${index}-${message.createdAt || ''}`"
-              class="chat-message"
-              :class="message.role"
-            >
-              <strong>{{
-                message.role === "user" ? "你" : "LinguaMate"
-              }}</strong>
-              <p>{{ message.content }}</p>
+        <ChatStudio
+          :messages="state.messages" :conversations="state.conversations" :conversation-id="state.conversationId"
+          :scene="state.chatScene" :mode="state.chatMode" v-model:draft="state.chatInput" :busy="state.chatBusy"
+          :error="state.chatError" :model-name="state.aiSummary.modelName" :context-words="state.coachWords" :trace="state.trace"
+          @send="sendChat" @prompt="sendChatPrompt" @mode="state.chatMode = $event" @scene="state.chatScene = $event"
+          @history="handleConversationSelect" @new="newConversation" @settings="openSettings"
+          @review="router.push({ path: '/wordbank', query: { scope: 'review' } })"
+        >
+          <template #message-extra="{ message, index }">
               <section
                 v-if="message.learningCard"
                 class="learning-advisor-card"
@@ -500,20 +389,8 @@
                   {{ action.label }}<span>→</span>
                 </button>
               </div>
-            </article>
-          </div>
-          <form class="input-row" @submit.prevent="sendChat">
-            <input
-              v-model.trim="state.chatInput"
-              autocomplete="off"
-              aria-label="对话内容"
-              placeholder="说点什么，或问我问题"
-            />
-            <button type="submit" :disabled="state.chatBusy">
-              {{ state.chatBusy ? "思考中..." : "发送" }}
-            </button>
-          </form>
-        </section>
+          </template>
+        </ChatStudio>
       </section>
 
       <section
@@ -1705,6 +1582,7 @@
 
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
+import ChatStudio from "@/components/ChatStudio.vue";
 import LearningStudioArt from "@/components/LearningStudioArt.vue";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import UserAccountMenu from "@/components/UserAccountMenu.vue";
@@ -1726,6 +1604,7 @@ import { aiApi, authApi, learningApi } from "@/api/modules";
 import { formatDate, normalizeModelList } from "@/api/client";
 import {
   learningMessageFromResponse,
+  learningMessageFromHistory,
   nextVocabularyPage,
 } from "@/learning-advisor";
 
@@ -1928,6 +1807,9 @@ const state = reactive({
   chatScene: "daily",
   chatInput: "",
   chatBusy: false,
+  chatMode: "practice",
+  chatError: "",
+  coachWords: [],
   words: [],
   quizCategory: "",
   quizCategories: [],
@@ -1988,7 +1870,7 @@ const state = reactive({
   ai: { baseUrl: "", apiKey: "", chatModel: "", models: [], status: "未连接" },
   aiBusy: false,
   logoutBusy: false,
-  aiSummary: { label: "个人配置", loaded: false, loading: false },
+  aiSummary: { label: "个人配置", modelName: "", loaded: false, loading: false },
 });
 
 const activeSection = computed(() => route.meta.section || "dashboard");
@@ -2302,6 +2184,11 @@ async function setNewsTopic(value) {
 function goSection(section, query = {}) {
   const target = navItems.find((item) => item.id === section) || navItems[0];
   router.push({ path: target.path, query });
+}
+
+function openLearningAssistant() {
+  state.chatMode = "assistant";
+  goSection("chat");
 }
 
 async function handleLearningAction(action) {
@@ -2787,29 +2674,6 @@ function modelLabel(detail) {
 
 async function loadConversations() {
   state.conversations = await learningApi.conversations();
-  if (state.conversations.length && !state.conversationId) {
-    await openConversation(state.conversations[0].id);
-  } else if (!state.messages.length) {
-    state.messages = [
-      {
-        role: "assistant",
-        content:
-          "你好，我是 LinguaMate。可以陪你练对话、背单词、批改作文，也能根据配置好的模型回答问题。",
-      },
-    ];
-    state.trace = [
-      {
-        phase: "Observe",
-        title: "等待输入",
-        detail: "选择场景或直接输入问题。",
-      },
-      {
-        phase: "Think",
-        title: "准备回答",
-        detail: "已载入本地学习工具和模型配置。",
-      },
-    ];
-  }
   return state.conversations;
 }
 
@@ -2819,10 +2683,15 @@ async function openConversation(id) {
     (item) => Number(item.id) === Number(id),
   );
   if (conversation?.scene) state.chatScene = conversation.scene;
-  state.messages = await learningApi.messages(id);
+  state.chatError = "";
+  state.messages = (await learningApi.messages(id)).map(learningMessageFromHistory);
+  const latest = state.messages.findLast(item => item.role === "assistant");
+  state.trace = latest?.trace || [];
+  state.chatMode = latest?.coaching ? "practice" : "assistant";
 }
 
 async function handleConversationSelect(value) {
+  if (state.chatBusy) return;
   if (value === "new") {
     newConversation();
     return;
@@ -2832,15 +2701,29 @@ async function handleConversationSelect(value) {
 }
 
 function newConversation() {
+  if (state.chatBusy) return;
+  state.chatError = "";
   state.conversationId = null;
   state.messages = [];
   state.trace = [];
   state.chatInput = "";
 }
 
+function sendChatPrompt(prompt) {
+  if (state.chatBusy) return;
+  state.chatInput = prompt;
+  return sendChat();
+}
+
+async function loadCoachContext() {
+  try { state.coachWords = await learningApi.practiceContext(); }
+  catch { state.coachWords = []; }
+}
+
 async function sendChat() {
-  if (!state.chatInput || state.chatBusy) return;
-  const message = state.chatInput;
+  if (!state.chatInput.trim() || state.chatBusy) return;
+  const message = state.chatInput.trim();
+  state.chatError = "";
   state.chatInput = "";
   state.messages.push({ role: "user", content: message });
   state.chatBusy = true;
@@ -2848,12 +2731,17 @@ async function sendChat() {
     const result = await learningApi.chat({
       conversationId: state.conversationId,
       scene: state.chatScene,
+      mode: state.chatMode,
       message,
     });
     state.conversationId = result.conversationId;
     state.messages.push(learningMessageFromResponse(result));
     state.trace = result.trace || [];
-    await Promise.all([loadConversations(), loadReport()]);
+    await Promise.allSettled([loadConversations(), loadReport()]);
+  } catch (error) {
+    state.messages.pop();
+    state.chatInput = message;
+    state.chatError = error.message || "暂时没能发送，内容已保留，请重试。";
   } finally {
     state.chatBusy = false;
   }
@@ -3241,6 +3129,7 @@ function scheduleWordBankSearch() {
 
 function updateAiSummary(settings) {
   state.aiSummary.label = settings.hasApiKey && settings.chatModel ? "已配置" : "未配置";
+  state.aiSummary.modelName = settings.chatModel || "";
   state.aiSummary.loaded = true;
 }
 
@@ -3317,6 +3206,7 @@ async function boot() {
     loadNewsTopics().then(() => loadNews()),
     loadConversations(),
     loadAiSummary(),
+    loadCoachContext(),
   ]);
   if (activeSection.value === "wordbank") {
     await loadWordBank();
@@ -3364,6 +3254,7 @@ watch([activeSection, () => route.query.scope], async ([section]) => {
   state.tooltip.visible = false;
   if (section === "news") state.lookupCache = {};
   if (section === "wordbank" && !state.loading) await loadWordBank();
+  if (section === "chat" && !state.loading) await loadCoachContext();
 });
 
 onMounted(() => {

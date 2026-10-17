@@ -48,6 +48,46 @@ class JavaBigWorkApplicationTests {
     }
 
     @Test
+    void practiceUsesOnlyCurrentUsersWeakWordsAndPersistsFeedback() throws Exception {
+        ReviewWord reviewWord = seedWrongReviewWord();
+        mockMvc.perform(get("/api/chat/practice-context").session(reviewWord.session()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(reviewWord.wordId()));
+        String username = "coach-" + System.nanoTime();
+        registerUser(username, "练习者");
+        MockHttpSession other = login(username, "userpass123");
+        mockMvc.perform(get("/api/chat/practice-context").session(other))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data").isEmpty());
+        MvcResult result = mockMvc.perform(post("/api/chat").session(reviewWord.session())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("mode", "practice", "scene", "daily", "message", "I had a busy day."))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.coaching.source").value("local"))
+                .andExpect(jsonPath("$.data.coaching.improved").value(""))
+                .andExpect(jsonPath("$.data.coaching.targetWords[0].id").value(reviewWord.wordId()))
+                .andReturn();
+        long id = objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("conversationId").asLong();
+        MvcResult history = mockMvc.perform(get("/api/conversations/" + id + "/messages").session(reviewWord.session()))
+                .andExpect(status().isOk()).andReturn();
+        JsonNode messages = objectMapper.readTree(history.getResponse().getContentAsString()).path("data");
+        assertTrue(messages.get(0).path("role").asText().equals("user"));
+        assertTrue(messages.get(1).path("role").asText().equals("assistant"));
+        JsonNode metadata = objectMapper.readTree(messages.get(1).path("metadata").asText());
+        assertTrue(metadata.path("coaching").path("source").asText().equals("local"));
+        assertTrue(metadata.path("trace").size() >= 4);
+        mockMvc.perform(post("/api/chat").session(reviewWord.session()).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("conversationId", id, "mode", "practice", "message", "It was interesting."))))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/conversations/" + id + "/messages").session(reviewWord.session()))
+                .andExpect(jsonPath("$.data[0].role").value("user"))
+                .andExpect(jsonPath("$.data[1].role").value("assistant"))
+                .andExpect(jsonPath("$.data[2].role").value("user"))
+                .andExpect(jsonPath("$.data[3].role").value("assistant"));
+        mockMvc.perform(get("/api/conversations/" + id + "/messages").session(other))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void todayWordsReturnsEightWords() throws Exception {
         mockMvc.perform(get("/api/words/today").param("limit", "8").session(studentSession()))
                 .andExpect(status().isOk())
