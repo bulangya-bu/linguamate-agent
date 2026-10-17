@@ -164,6 +164,7 @@
               }}<AppIcon name="arrow" />
             </button>
           </div>
+          <WordAtmosphere v-if="activeSection === 'dashboard'" variant="dashboard" />
           <div class="focus-art">
             <LearningBloom />
           </div>
@@ -1747,6 +1748,7 @@
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
 import LearningBloom from "@/components/LearningBloom.vue";
+import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import QuizInsight from "@/components/QuizInsight.vue";
 import { wordDefinitionGroups } from "@/word-definitions";
 import { ElMessage } from "element-plus";
