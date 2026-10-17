@@ -1,14 +1,1 @@
-<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">LinguaMate icon</title>
-  <desc id="desc">A bright green English learning assistant icon with an open book, chat bubble, and learning sparkle.</desc>
-  <rect x="10" y="8" width="108" height="112" rx="30" fill="#58CC02"/>
-  <path d="M10 88C10 105.673 24.327 120 42 120H86C103.673 120 118 105.673 118 88V98C118 115.673 103.673 130 86 130H42C24.327 130 10 115.673 10 98V88Z" fill="#44A700" opacity=".55"/>
-  <path d="M34 38C34 34.686 36.686 32 40 32H59C63.418 32 67 35.582 67 40V88C67 89.657 65.657 91 64 91H41C37.134 91 34 87.866 34 84V38Z" fill="#FFFFFF"/>
-  <path d="M94 38C94 34.686 91.314 32 88 32H69C64.582 32 61 35.582 61 40V88C61 89.657 62.343 91 64 91H87C90.866 91 94 87.866 94 84V38Z" fill="#EAF8FF"/>
-  <path d="M64 39V91" stroke="#BFE8FF" stroke-width="5" stroke-linecap="round"/>
-  <path d="M44 48H55M44 60H54M73 48H84M73 60H82" stroke="#1F2A44" stroke-width="5" stroke-linecap="round"/>
-  <path d="M74 75C74 67.82 79.82 62 87 62H92C99.18 62 105 67.82 105 75C105 82.18 99.18 88 92 88H88L79 96V88.35C76.002 86.341 74 82.853 74 75Z" fill="#1CB0F6"/>
-  <circle cx="86" cy="75" r="3.5" fill="#FFFFFF"/>
-  <circle cx="95" cy="75" r="3.5" fill="#FFFFFF"/>
-  <path d="M31 29L34.5 21L38 29L46 32.5L38 36L34.5 44L31 36L23 32.5L31 29Z" fill="#FFC800"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none"><title>LinguaMate</title><rect x="2" y="2" width="76" height="76" rx="25" fill="#284e3b"/><path d="M22 23v29c0 4 3 7 7 7h27" stroke="#eef0d2" stroke-width="6" stroke-linecap="round"/><path d="M35 23v18c0 5 4 9 9 9s9-4 9-9V23" stroke="#eef0d2" stroke-width="6" stroke-linecap="round"/><circle cx="61" cy="58" r="4" fill="#c8dba5"/></svg>

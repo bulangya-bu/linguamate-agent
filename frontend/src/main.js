@@ -5,8 +5,8 @@ import App from "./App.vue";
 import router from "./router";
 import "./styles/app.css";
 import "./styles/vue-overrides.css";
+import "./styles/learning.css";
+import "./styles/surfaces.css";
+import "./styles/responsive.css";
 
-createApp(App)
-  .use(router)
-  .use(ElementPlus)
-  .mount("#app");
+createApp(App).use(router).use(ElementPlus).mount("#app");
