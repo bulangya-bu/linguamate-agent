@@ -38,6 +38,22 @@
         aria-label="完整解析内容"
       >
         <div class="insight-word">{{ word.word }}</div>
+        <section
+          v-if="definitions.length"
+          class="insight-section insight-definition"
+        >
+          <h3>词性与释义</h3>
+          <div
+            v-for="(definition, i) in definitions"
+            :key="i"
+            class="insight-definition-row"
+          >
+            <span v-if="definition.type" class="insight-pos-label">{{
+              definition.type
+            }}</span>
+            <p v-if="definition.meaningCn">{{ definition.meaningCn }}</p>
+          </div>
+        </section>
         <section v-if="detail.data.usageNotes?.length" class="insight-section">
           <h3>用法</h3>
           <p
@@ -47,33 +63,6 @@
           >
             {{ note }}
           </p>
-        </section>
-        <section v-if="detail.data.examples?.length" class="insight-section">
-          <h3>例句</h3>
-          <article
-            v-for="(example, i) in detail.data.examples"
-            :key="i"
-            class="insight-entry"
-          >
-            <p class="insight-english">{{ example.en }}</p>
-            <p v-if="example.cn" class="insight-chinese">{{ example.cn }}</p>
-          </article>
-        </section>
-        <section v-if="detail.data.variants?.length" class="insight-section">
-          <h3>词形</h3>
-          <article
-            v-for="(variant, i) in detail.data.variants"
-            :key="i"
-            class="insight-entry insight-variant"
-          >
-            <p>
-              <strong class="insight-term">{{ variant.form }}</strong
-              ><span class="insight-pos">{{ variant.type }}</span>
-            </p>
-            <p v-if="variant.meaningCn" class="insight-chinese">
-              {{ variant.meaningCn }}
-            </p>
-          </article>
         </section>
         <section
           v-if="detail.data.collocations?.length"
@@ -96,6 +85,33 @@
             </p>
           </article>
         </section>
+        <section v-if="detail.data.examples?.length" class="insight-section">
+          <h3>例句</h3>
+          <article
+            v-for="(example, i) in detail.data.examples"
+            :key="i"
+            class="insight-entry"
+          >
+            <p class="insight-english">{{ example.en }}</p>
+            <p v-if="example.cn" class="insight-chinese">{{ example.cn }}</p>
+          </article>
+        </section>
+        <section v-if="derivedForms.length" class="insight-section">
+          <h3>词形变化</h3>
+          <article
+            v-for="(variant, i) in derivedForms"
+            :key="i"
+            class="insight-entry insight-variant"
+          >
+            <p>
+              <strong class="insight-term">{{ variant.form }}</strong
+              ><span class="insight-pos">{{ variant.type }}</span>
+            </p>
+            <p v-if="variant.meaningCn" class="insight-chinese">
+              {{ variant.meaningCn }}
+            </p>
+          </article>
+        </section>
         <p v-if="!hasContent" class="insight-note">当前暂无补充内容。</p>
       </section>
     </template>
@@ -107,7 +123,7 @@
       <template v-if="detail?.status === 'loading'">
         <span class="quiz-ai-spinner" aria-hidden="true"></span>
         <h3>正在解析 {{ word.word }}</h3>
-        <p>正在整理用法、例句与词形</p>
+        <p>正在整理词性、用法与例句</p>
       </template>
       <template v-else-if="detail?.status === 'error'">
         <AppIcon name="ai" />
@@ -142,15 +158,32 @@ const props = defineProps({
 const emit = defineEmits(["request", "close"]);
 const root = ref(null);
 const content = ref(null);
+const isBaseForm = (variant) =>
+  variant.form?.trim().toLowerCase() === props.word.word.trim().toLowerCase();
+const definitions = computed(() => {
+  const supplied = props.detail?.data?.variants?.filter(isBaseForm) || [];
+  if (supplied.length) return supplied;
+  const type = props.detail?.data?.partOfSpeech || props.word.partOfSpeech;
+  return type || props.word.meaningCn
+    ? [{ type, meaningCn: props.word.meaningCn }]
+    : [];
+});
+const derivedForms = computed(
+  () =>
+    props.detail?.data?.variants?.filter((variant) => !isBaseForm(variant)) ||
+    [],
+);
 let focusOnReady = false;
 function request(force) {
   focusOnReady = root.value?.contains(document.activeElement);
   emit("request", force);
 }
-const hasContent = computed(() =>
-  ["usageNotes", "examples", "variants", "collocations"].some(
-    (key) => props.detail?.data?.[key]?.length,
-  ),
+const hasContent = computed(
+  () =>
+    definitions.value.length ||
+    ["usageNotes", "examples", "variants", "collocations"].some(
+      (key) => props.detail?.data?.[key]?.length,
+    ),
 );
 watch(
   () => props.detail?.status,

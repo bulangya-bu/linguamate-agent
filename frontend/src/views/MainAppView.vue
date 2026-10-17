@@ -599,6 +599,7 @@
             </div>
             <div
               v-else-if="currentQuizWord"
+              ref="quizWorkbench"
               class="quiz-workbench"
               :class="'shows-' + quizPane"
             >
@@ -635,6 +636,25 @@
                     <div class="quiz-word" :key="currentQuizWord.id">
                       {{ currentQuizWord.word }}
                     </div>
+                    <button
+                      ref="quizInsightToggle"
+                      class="quiz-insight-toggle"
+                      type="button"
+                      aria-controls="quiz-analysis"
+                      :aria-expanded="quizPane === 'insight'"
+                      :disabled="!quizResultForCurrent"
+                      @click="
+                        quizPane === 'insight'
+                          ? closeQuizInsight()
+                          : openQuizInsight()
+                      "
+                    >
+                      <AppIcon name="spark" />
+                      {{ quizPane === "insight" ? "收起解析" : "深度解析" }}
+                      <span class="quiz-insight-chevron" aria-hidden="true"
+                        >›</span
+                      >
+                    </button>
                   </div>
                   <div
                     class="quiz-example-slot"
@@ -711,24 +731,6 @@
                   :disabled="state.quizIndex <= 0"
                 >
                   上一题
-                </button>
-                <button
-                  ref="quizInsightToggle"
-                  class="quiz-insight-toggle settings-secondary"
-                  type="button"
-                  aria-controls="quiz-analysis"
-                  :aria-expanded="quizPane === 'insight'"
-                  :disabled="!quizResultForCurrent"
-                  @click="
-                    quizPane === 'insight'
-                      ? closeQuizInsight()
-                      : openQuizInsight()
-                  "
-                >
-                  {{ quizPane === "insight" ? "收起解析" : "深度解析"
-                  }}<AppIcon
-                    :name="quizPane === 'insight' ? 'vocabulary' : 'spark'"
-                  />
                 </button>
                 <button
                   class="quiz-primary"
@@ -1702,6 +1704,10 @@ const router = useRouter();
 const readerRef = ref(null);
 const quizPane = ref("practice");
 const quizInsightToggle = ref(null);
+const quizWorkbench = ref(null);
+let quizMotionId = 0;
+let quizTransition = null;
+let quizAnimations = [];
 const dashboardExpanded = ref(false);
 const newsLibraryOpen = ref(false);
 const newsLibraryButtonRef = ref(null);
@@ -2339,7 +2345,7 @@ async function loadWords(updateToday = true) {
     category: state.quizCategory,
   });
   state.quizIndex = 0;
-  quizPane.value = "practice";
+  resetQuizPane();
   state.quizAnswers = {};
   state.quizOptions = state.words.map((word, index) =>
     buildQuizOptions(word, index),
@@ -2412,14 +2418,108 @@ async function loadWordDetail(word, force = false) {
 
 function openQuizInsight() {
   if (!quizResultForCurrent.value) return;
-  quizPane.value = "insight";
+  changeQuizPane("insight");
   loadWordDetail(currentQuizWord.value);
 }
 
 async function closeQuizInsight() {
+  await changeQuizPane("practice");
+  if (quizPane.value === "practice") {
+    quizInsightToggle.value?.focus({ preventScroll: true });
+  }
+}
+
+function stopQuizMotion() {
+  quizMotionId++;
+  quizTransition?.skipTransition();
+  quizTransition = null;
+  quizAnimations.forEach((animation) => animation.cancel());
+  quizAnimations = [];
+}
+
+function resetQuizPane() {
+  stopQuizMotion();
   quizPane.value = "practice";
-  await nextTick();
-  quizInsightToggle.value?.focus({ preventScroll: true });
+}
+
+async function changeQuizPane(pane) {
+  stopQuizMotion();
+  const motionId = quizMotionId;
+  const update = async () => {
+    if (motionId !== quizMotionId) return;
+    quizPane.value = pane;
+    await nextTick();
+  };
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    await update();
+    return;
+  }
+  if (document.startViewTransition) {
+    const transition = document.startViewTransition(update);
+    quizTransition = transition;
+    transition.ready.catch(() => {});
+    await transition.finished.catch(() => {});
+    if (quizTransition === transition) quizTransition = null;
+    return;
+  }
+
+  // Keep both directions animated on browsers without View Transitions.
+  const surface = quizWorkbench.value;
+  const frames = [
+    ...(surface?.querySelectorAll(".word-quiz-card, .quiz-nav") || []),
+  ]
+    .filter((element) => element.getBoundingClientRect().width)
+    .map((element) => ({ element, before: element.getBoundingClientRect() }));
+  const animate = (element, keyframes, duration = 380) => {
+    const animation = element.animate(keyframes, {
+      duration,
+      easing: "cubic-bezier(.22,1,.36,1)",
+    });
+    quizAnimations.push(animation);
+    return animation.finished.catch(() => {});
+  };
+  const aside = surface?.querySelector(".quiz-insight");
+  if (pane === "practice" && aside) {
+    await animate(
+      aside,
+      [
+        { opacity: 1, transform: "none" },
+        { opacity: 0, transform: "translateX(16px)" },
+      ],
+      180,
+    );
+  }
+  if (motionId !== quizMotionId) return;
+  await update();
+  const motions = frames.flatMap(({ element, before }) => {
+    const after = element.getBoundingClientRect();
+    if (!after.width || !after.height) return [];
+    return [
+      animate(element, [
+        {
+          transformOrigin: "0 0",
+          transform: `translate(${before.x - after.x}px, ${before.y - after.y}px) scale(${before.width / after.width}, ${before.height / after.height})`,
+        },
+        { transformOrigin: "0 0", transform: "none" },
+      ]),
+    ];
+  });
+  const incoming = surface?.querySelector(
+    pane === "insight" ? ".quiz-insight" : ".word-quiz-card",
+  );
+  if (
+    incoming &&
+    (pane === "insight" || !frames.some(({ element }) => element === incoming))
+  ) {
+    motions.push(
+      animate(incoming, [
+        { opacity: 0, transform: "translateX(16px)" },
+        { opacity: 1, transform: "none" },
+      ]),
+    );
+  }
+  await Promise.all(motions);
+  if (motionId === quizMotionId) quizAnimations = [];
 }
 
 function applyWordProgress(wordId, result) {
@@ -3009,7 +3109,7 @@ async function boot() {
 watch(
   () => currentQuizWord.value?.id,
   () => {
-    quizPane.value = "practice";
+    resetQuizPane();
   },
 );
 
@@ -3056,6 +3156,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  stopQuizMotion();
   document.removeEventListener("keydown", trapDialogFocus, true);
   document.body.style.overflow = "";
   clearTimeout(wordBankSearchTimer);
