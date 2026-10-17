@@ -565,7 +565,7 @@
         <section class="panel">
           <div class="panel-heading">
             <div>
-              <h2>选择正确释义</h2>
+              <h2 id="quiz-task-heading">选择正确释义</h2>
             </div>
             <select
               v-model="state.quizCategory"
@@ -594,228 +594,111 @@
                 再来一轮
               </button>
             </div>
-            <article
+            <div
               v-else-if="currentQuizWord"
-              class="word-quiz-card"
-              :class="{
-                'is-answered': quizResultForCurrent,
-                'has-ai-detail': wordDetailForCurrent,
-              }"
+              class="quiz-workbench"
+              :class="'shows-' + quizPane"
             >
-              <div class="quiz-progress">
-                <span
-                  >第 {{ state.quizIndex + 1 }} /
-                  {{ state.words.length }} 题</span
-                >
-                <div class="quiz-progress-track">
-                  <i :style="{ width: quizProgress + '%' }"></i>
-                </div>
-              </div>
-              <div class="quiz-study-stage">
-                <div class="quiz-word-shell">
-                  <button
-                    class="favorite-button quiz-favorite"
-                    :class="{ 'is-active': currentQuizWord.favorite }"
-                    type="button"
-                    :aria-label="
-                      (currentQuizWord.favorite ? '取消收藏 ' : '收藏 ') +
-                      currentQuizWord.word
-                    "
-                    :aria-pressed="String(Boolean(currentQuizWord.favorite))"
-                    @click="toggleFavorite(currentQuizWord)"
-                  >
-                    ★
-                  </button>
-                  <div class="quiz-word" :key="currentQuizWord.id">
-                    {{ currentQuizWord.word }}
-                  </div>
-                </div>
-                <div
-                  class="quiz-example-slot"
-                  :class="{ 'is-visible': quizResultForCurrent }"
-                >
-                  <aside
-                    v-if="quizResultForCurrent"
-                    class="quiz-example-panel"
-                    aria-label="单词例句"
-                  >
-                    <p
-                      class="quiz-example-en"
-                      v-html="
-                        highlightTerm(
-                          quizExampleText(
-                            currentQuizWord,
-                            quizResultForCurrent,
-                          ),
-                          currentQuizWord.word,
-                        )
-                      "
-                    ></p>
-                    <p class="quiz-example-cn">
-                      {{ quizExampleCn(currentQuizWord, quizResultForCurrent) }}
-                    </p>
-                    <span
-                      v-if="quizResultForCurrent.nextReviewHint"
-                      class="quiz-example-source"
-                      >{{ quizResultForCurrent.nextReviewHint }}</span
-                    >
-                  </aside>
-                </div>
-              </div>
-              <div class="quiz-detail-actions">
-                <button
-                  v-if="quizResultForCurrent"
-                  class="quiz-detail-button"
-                  :class="{
-                    'is-loading': wordDetailForCurrent?.status === 'loading',
-                    'is-done': wordDetailForCurrent?.status === 'ready',
-                  }"
-                  type="button"
-                  :disabled="wordDetailForCurrent?.status === 'loading'"
-                  @click="loadWordDetail(currentQuizWord)"
-                >
-                  {{
-                    wordDetailForCurrent?.status === "loading"
-                      ? "生成中..."
-                      : wordDetailForCurrent?.status === "ready"
-                        ? "已生成解析"
-                        : "深度解析"
-                  }}
-                </button>
-              </div>
-              <section
-                v-if="wordDetailForCurrent"
-                class="quiz-ai-detail"
-                :class="{
-                  'is-loading': wordDetailForCurrent.status === 'loading',
-                  'is-error': wordDetailForCurrent.status === 'error',
-                }"
+              <article
+                id="quiz-practice"
+                class="word-quiz-card"
+                :class="{ 'is-answered': quizResultForCurrent }"
+                aria-labelledby="quiz-task-heading"
               >
-                <template v-if="wordDetailForCurrent.status === 'loading'">
-                  <span class="quiz-ai-spinner" aria-hidden="true"></span>
-                  <span>正在生成 {{ currentQuizWord.word }} 的深度解析...</span>
-                </template>
-                <template v-else-if="wordDetailForCurrent.status === 'error'">
-                  <span>{{
-                    wordDetailForCurrent.message ||
-                    "模型未配置或暂时不可用，请检查 AI 设置"
-                  }}</span>
-                  <button
-                    class="quiz-detail-button retry-detail-button"
-                    type="button"
-                    @click="loadWordDetail(currentQuizWord, true)"
+                <div class="quiz-progress">
+                  <span
+                    >第 {{ state.quizIndex + 1 }} /
+                    {{ state.words.length }} 题</span
                   >
-                    重试
+                  <div class="quiz-progress-track">
+                    <i :style="{ width: quizProgress + '%' }"></i>
+                  </div>
+                </div>
+                <div class="quiz-study-stage">
+                  <div class="quiz-word-shell">
+                    <button
+                      class="favorite-button quiz-favorite"
+                      :class="{ 'is-active': currentQuizWord.favorite }"
+                      type="button"
+                      :aria-label="
+                        (currentQuizWord.favorite ? '取消收藏 ' : '收藏 ') +
+                        currentQuizWord.word
+                      "
+                      :aria-pressed="String(Boolean(currentQuizWord.favorite))"
+                      @click="toggleFavorite(currentQuizWord)"
+                    >
+                      <AppIcon name="star" />
+                    </button>
+                    <div class="quiz-word" :key="currentQuizWord.id">
+                      {{ currentQuizWord.word }}
+                    </div>
+                  </div>
+                  <div
+                    class="quiz-example-slot"
+                    :class="{ 'is-visible': quizResultForCurrent }"
+                  >
+                    <PagedReading
+                      v-if="quizResultForCurrent"
+                      class="quiz-example-panel"
+                      label="例句"
+                      compact
+                    >
+                      <p
+                        class="quiz-example-en"
+                        v-html="
+                          highlightTerm(
+                            quizExampleText(
+                              currentQuizWord,
+                              quizResultForCurrent,
+                            ),
+                            currentQuizWord.word,
+                          )
+                        "
+                      ></p>
+                      <p class="quiz-example-cn">
+                        {{
+                          quizExampleCn(currentQuizWord, quizResultForCurrent)
+                        }}
+                      </p>
+                    </PagedReading>
+                  </div>
+                </div>
+                <div class="quiz-feedback-slot" aria-live="polite">
+                  <span
+                    v-if="quizResultForCurrent?.nextReviewHint"
+                    class="quiz-review-notice"
+                    :class="{ 'is-wrong': !quizResultForCurrent.correct }"
+                    ><AppIcon
+                      :name="quizResultForCurrent.correct ? 'check' : 'review'"
+                    />{{ quizResultForCurrent.nextReviewHint }}</span
+                  >
+                </div>
+                <div class="quiz-options">
+                  <button
+                    v-for="(option, optionIndex) in quizOptions"
+                    :key="option"
+                    class="quiz-option"
+                    :class="quizOptionClass(option)"
+                    type="button"
+                    :disabled="state.quizBusy || Boolean(quizResultForCurrent)"
+                    @click="submitQuiz(option)"
+                  >
+                    <span class="option-letter">{{
+                      String.fromCharCode(65 + optionIndex)
+                    }}</span
+                    ><span>{{ option }}</span>
                   </button>
-                </template>
-                <template v-else>
-                  <div class="quiz-ai-head">
-                    <strong
-                      >深度解析 ·
-                      {{
-                        wordDetailForCurrent.data?.word || currentQuizWord.word
-                      }}</strong
-                    >
-                    <span
-                      >{{ modelLabel(wordDetailForCurrent.data)
-                      }}{{
-                        wordDetailForCurrent.data?.cached ? " · 已缓存" : ""
-                      }}</span
-                    >
-                  </div>
-                  <div class="quiz-ai-grid">
-                    <section
-                      v-if="wordDetailForCurrent.data?.examples?.length"
-                      class="quiz-ai-section"
-                    >
-                      <h3>更多例句</h3>
-                      <div
-                        v-for="example in wordDetailForCurrent.data.examples"
-                        :key="example.en"
-                        class="quiz-ai-row"
-                      >
-                        <p
-                          v-html="
-                            highlightTerm(
-                              example.en || '',
-                              currentQuizWord.word,
-                            )
-                          "
-                        ></p>
-                        <small v-if="example.cn">{{ example.cn }}</small>
-                      </div>
-                    </section>
-                    <section
-                      v-if="wordDetailForCurrent.data?.variants?.length"
-                      class="quiz-ai-section"
-                    >
-                      <h3>词性变种</h3>
-                      <div
-                        v-for="variant in wordDetailForCurrent.data.variants"
-                        :key="`${variant.form}-${variant.type}`"
-                        class="quiz-ai-row"
-                      >
-                        <p>
-                          <b>{{ variant.form }}</b> {{ variant.type }}
-                        </p>
-                        <small v-if="variant.meaningCn">{{
-                          variant.meaningCn
-                        }}</small>
-                      </div>
-                    </section>
-                    <section
-                      v-if="wordDetailForCurrent.data?.usageNotes?.length"
-                      class="quiz-ai-section"
-                    >
-                      <h3>用法提示</h3>
-                      <div
-                        v-for="note in wordDetailForCurrent.data.usageNotes"
-                        :key="note"
-                        class="quiz-ai-row"
-                      >
-                        <p>{{ note }}</p>
-                      </div>
-                    </section>
-                    <section
-                      v-if="wordDetailForCurrent.data?.collocations?.length"
-                      class="quiz-ai-section"
-                    >
-                      <h3>固定搭配</h3>
-                      <div
-                        v-for="item in wordDetailForCurrent.data.collocations"
-                        :key="`${item.phrase}-${item.meaningCn}`"
-                        class="quiz-ai-row"
-                      >
-                        <p>
-                          <b>{{ item.phrase }}</b> {{ item.meaningCn }}
-                        </p>
-                        <small
-                          v-if="item.exampleEn"
-                          v-html="
-                            highlightTerm(item.exampleEn, currentQuizWord.word)
-                          "
-                        ></small>
-                      </div>
-                    </section>
-                  </div>
-                </template>
-              </section>
-              <div class="quiz-options">
-                <button
-                  v-for="(option, optionIndex) in quizOptions"
-                  :key="option"
-                  class="quiz-option"
-                  :class="quizOptionClass(option)"
-                  type="button"
-                  :disabled="state.quizBusy || Boolean(quizResultForCurrent)"
-                  @click="submitQuiz(option)"
-                >
-                  <span class="option-letter">{{
-                    String.fromCharCode(65 + optionIndex)
-                  }}</span
-                  ><span>{{ option }}</span>
-                </button>
-              </div>
+                </div>
+              </article>
+              <QuizInsight
+                id="quiz-analysis"
+                :key="currentQuizWord.id"
+                :word="currentQuizWord"
+                :detail="quizResultForCurrent ? wordDetailForCurrent : null"
+                :answered="Boolean(quizResultForCurrent)"
+                :source="modelLabel(wordDetailForCurrent?.data)"
+                @request="(force) => loadWordDetail(currentQuizWord, force)"
+              />
               <div class="quiz-nav">
                 <button
                   class="quiz-secondary"
@@ -824,6 +707,23 @@
                   :disabled="state.quizIndex <= 0"
                 >
                   上一题
+                </button>
+                <button
+                  class="quiz-insight-toggle settings-secondary"
+                  type="button"
+                  aria-controls="quiz-practice quiz-analysis"
+                  :aria-pressed="quizPane === 'insight'"
+                  :disabled="!quizResultForCurrent"
+                  @click="
+                    quizPane === 'insight'
+                      ? (quizPane = 'practice')
+                      : openQuizInsight()
+                  "
+                >
+                  {{ quizPane === "insight" ? "返回练习" : "深度解析"
+                  }}<AppIcon
+                    :name="quizPane === 'insight' ? 'vocabulary' : 'spark'"
+                  />
                 </button>
                 <button
                   class="quiz-primary"
@@ -838,7 +738,7 @@
                   }}
                 </button>
               </div>
-            </article>
+            </div>
             <div v-else class="quiz-empty">当前词库暂无单词。</div>
           </div>
         </section>
@@ -1032,7 +932,7 @@
                   :aria-pressed="String(Boolean(word.favorite))"
                   @click="toggleFavorite(word)"
                 >
-                  ★
+                  <AppIcon name="star" />
                 </button>
               </div>
               <p>{{ word.meaningCn }}</p>
@@ -1388,7 +1288,7 @@
                   :aria-pressed="String(Boolean(word.favorite))"
                   @click.stop="toggleFavorite(word)"
                 >
-                  ★
+                  <AppIcon name="star" />
                 </button>
               </div>
               <p>{{ word.meaningCn }}</p>
@@ -1566,7 +1466,7 @@
               :aria-pressed="String(Boolean(state.selectedWord.favorite))"
               @click="toggleFavorite(state.selectedWord)"
             >
-              ★
+              <AppIcon name="star" />
             </button>
             <button
               class="wordbank-dialog-close"
@@ -1772,6 +1672,8 @@
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
 import LearningBloom from "@/components/LearningBloom.vue";
+import QuizInsight from "@/components/QuizInsight.vue";
+import PagedReading from "@/components/PagedReading.vue";
 import { ElMessage } from "element-plus";
 import {
   computed,
@@ -1793,6 +1695,7 @@ import {
 const route = useRoute();
 const router = useRouter();
 const readerRef = ref(null);
+const quizPane = ref("practice");
 const dashboardExpanded = ref(false);
 const newsLibraryOpen = ref(false);
 const newsLibraryButtonRef = ref(null);
@@ -2430,6 +2333,7 @@ async function loadWords(updateToday = true) {
     category: state.quizCategory,
   });
   state.quizIndex = 0;
+  quizPane.value = "practice";
   state.quizAnswers = {};
   state.quizOptions = state.words.map((word, index) =>
     buildQuizOptions(word, index),
@@ -2483,6 +2387,7 @@ async function submitQuiz(answer) {
 
 async function loadWordDetail(word, force = false) {
   if (!word) return;
+  if (state.wordDetails[word.id]?.status === "loading") return;
   if (state.wordDetails[word.id]?.status === "ready" && !force) return;
   state.wordDetails[word.id] = { status: "loading" };
   try {
@@ -2497,6 +2402,12 @@ async function loadWordDetail(word, force = false) {
     };
     ElMessage.error(state.wordDetails[word.id].message);
   }
+}
+
+function openQuizInsight() {
+  if (!quizResultForCurrent.value) return;
+  quizPane.value = "insight";
+  loadWordDetail(currentQuizWord.value);
 }
 
 function applyWordProgress(wordId, result) {
@@ -3082,6 +2993,13 @@ async function boot() {
   }
   state.loading = false;
 }
+
+watch(
+  () => currentQuizWord.value?.id,
+  () => {
+    quizPane.value = "practice";
+  },
+);
 
 watch(newsLibraryOpen, async (open) => {
   await nextTick();

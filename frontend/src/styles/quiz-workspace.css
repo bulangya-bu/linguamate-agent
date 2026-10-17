@@ -1,0 +1,437 @@
+/* A fixed study surface and a separate reading surface share the viewport. */
+.app-shell #vocabulary > .panel {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.app-shell #vocabulary > .panel > .panel-heading {
+  flex-shrink: 0;
+  margin-bottom: 14px;
+}
+.app-shell .word-quiz-shell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  max-width: 1440px;
+  width: 100%;
+}
+.quiz-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 14px 22px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.app-shell .word-quiz-card {
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: #fff;
+  overflow: auto;
+}
+.app-shell .quiz-progress {
+  flex-shrink: 0;
+  margin: 0;
+}
+.app-shell .quiz-study-stage {
+  display: grid;
+  grid-template-rows: minmax(64px, 2fr) minmax(108px, 3fr);
+  justify-content: stretch;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  text-align: center;
+}
+.app-shell .quiz-word-shell {
+  min-height: 0;
+  padding: 0 48px;
+}
+.app-shell .quiz-word {
+  font-size: clamp(36px, 3.7vw, 64px);
+  line-height: 1.15;
+}
+.app-shell .quiz-example-slot {
+  height: auto;
+  max-height: 200px;
+  min-height: 0;
+  padding: 0 6px;
+  overflow: visible;
+}
+.quiz-example-en {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1.5;
+}
+.quiz-example-cn {
+  margin: 0;
+  color: #5d7184;
+  font-size: 16px;
+  line-height: 1.65;
+}
+.quiz-feedback-slot {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+}
+.quiz-review-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border: 1px solid #d5eac4;
+  border-radius: 8px;
+  color: var(--green-ink);
+  background: #f2faeb;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.quiz-review-notice.is-wrong {
+  color: #986129;
+  border-color: #f1dfbd;
+  background: #fff8e9;
+}
+.quiz-review-notice svg {
+  width: 16px;
+  height: 16px;
+}
+.app-shell .quiz-options {
+  flex-shrink: 0;
+  gap: 8px;
+}
+.app-shell .quiz-option {
+  min-height: 54px;
+  gap: 10px;
+  padding: 10px 12px;
+}
+.app-shell .quiz-nav {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 46px;
+  margin: 0;
+  padding: 0 2px 3px;
+  border: 0;
+}
+.app-shell .quiz-nav > button {
+  min-height: 42px;
+}
+.quiz-insight-toggle {
+  display: none;
+}
+.app-shell .favorite-button,
+.wordbank-dialog .favorite-button {
+  width: 36px;
+  height: 36px;
+  color: #a18138;
+  border-color: #e5d9bc;
+  background: #fffdf6;
+}
+.favorite-button > svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.9;
+}
+.app-shell .quiz-favorite {
+  top: 4px;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+.quiz-favorite > svg {
+  width: 26px;
+  height: 26px;
+}
+.app-shell .favorite-button:hover {
+  color: #956a00;
+  border-color: #e9c75b;
+  background: #fff7d7;
+}
+.app-shell .favorite-button.is-active,
+.wordbank-dialog .favorite-button.is-active {
+  color: #a07000;
+  border-color: #ebcb64;
+  background: #fff3c3;
+}
+.favorite-button.is-active svg {
+  fill: var(--amber);
+}
+.quiz-insight {
+  display: flex;
+  grid-column: 2;
+  grid-row: 1 / -1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 24px;
+  border: 1px solid #d7e8f5;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f7fcff, #f0f8ff);
+}
+.insight-heading,
+.insight-heading > div {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 9px;
+}
+.insight-heading {
+  justify-content: space-between;
+  gap: 12px;
+}
+.insight-heading svg {
+  color: var(--blue-ink);
+  width: 18px;
+  height: 18px;
+}
+.insight-heading h2 {
+  margin: 0;
+  font-size: 17px;
+  white-space: nowrap;
+}
+.insight-source {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.insight-word {
+  flex-shrink: 0;
+  margin: 24px 0 20px;
+  font:
+    30px/1.2 Georgia,
+    serif;
+  overflow-wrap: anywhere;
+}
+.insight-tabs {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #e6f0f8;
+}
+.insight-tabs > button {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 4px;
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.insight-tabs > button[aria-selected="true"] {
+  color: var(--blue-ink);
+  background: #fff;
+  box-shadow: 0 2px 6px #23314306;
+}
+.insight-content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  margin-top: 22px;
+}
+.insight-entry {
+  break-inside: avoid-column;
+  padding: 0 0 18px;
+  margin: 0 0 18px;
+  border-bottom: 1px solid #dce9f3;
+}
+.insight-entry p,
+.insight-note {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.85;
+}
+.insight-note {
+  padding-bottom: 18px;
+}
+.insight-entry:last-child,
+.insight-note:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.insight-entry .insight-english {
+  font-size: 17px;
+  line-height: 1.7;
+}
+.insight-entry .insight-chinese {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--muted);
+}
+.insight-entry .insight-term {
+  font-size: 18px;
+  font-weight: 600;
+}
+.insight-pos {
+  margin-left: 10px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.insight-collocation-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  margin-bottom: 10px;
+}
+.insight-collocation-heading > p {
+  margin: 0;
+}
+.insight-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  padding: 24px 0;
+  text-align: center;
+}
+.insight-empty-mark {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 20px;
+  border: 1px solid #dceaf4;
+  border-radius: 20px;
+  color: #73a6c4;
+  background: #fff9;
+  transform: rotate(-6deg);
+}
+.insight-empty-mark svg {
+  width: 28px;
+  height: 28px;
+}
+.insight-placeholder h3 {
+  margin: 8px 0 12px;
+  font-size: 17px;
+  line-height: 1.6;
+}
+.insight-placeholder p {
+  margin-bottom: 24px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.insight-placeholder > button {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 42px;
+  background: #fff;
+}
+@media (max-width: 1199px) {
+  .page-vocabulary .topbar {
+    display: none;
+  }
+  .quiz-workbench {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .quiz-insight {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .shows-practice .quiz-insight,
+  .shows-insight .word-quiz-card {
+    display: none;
+  }
+  .app-shell .quiz-insight-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .quiz-example-en {
+    font-size: 20px;
+  }
+}
+@media (max-width: 760px) {
+  .app-shell .word-quiz-card {
+    gap: 8px;
+    padding: 14px;
+  }
+  .app-shell .quiz-study-stage {
+    grid-template-rows: minmax(44px, 1fr) minmax(72px, 3fr);
+    gap: 4px;
+  }
+  .app-shell .quiz-word-shell {
+    padding: 0 40px;
+  }
+  .app-shell .quiz-word {
+    font-size: 34px;
+    letter-spacing: -1px;
+  }
+  .app-shell .quiz-favorite {
+    top: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+  .app-shell .quiz-example-slot {
+    padding: 0;
+  }
+  .quiz-example-en {
+    margin-bottom: 6px;
+    font-size: 18px;
+    line-height: 1.45;
+  }
+  .quiz-example-cn {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .quiz-feedback-slot {
+    min-height: 32px;
+  }
+  .quiz-review-notice {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
+  .app-shell .quiz-option {
+    min-height: 50px;
+    padding: 8px 10px;
+  }
+  .app-shell .quiz-nav > button {
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .quiz-nav .quiz-insight-toggle > svg {
+    width: 15px;
+    height: 15px;
+  }
+  .quiz-insight {
+    padding: 20px;
+  }
+  .insight-word {
+    margin: 18px 0 14px;
+    font-size: 28px;
+  }
+  .insight-content {
+    margin-top: 16px;
+  }
+}
+@media (max-height: 619px) {
+  .word-quiz-shell {
+    min-height: 540px;
+  }
+  .quiz-workbench {
+    min-height: 540px;
+  }
+}
