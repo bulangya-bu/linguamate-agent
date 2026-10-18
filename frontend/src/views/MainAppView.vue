@@ -176,7 +176,7 @@
             </div>
           </div>
           <div class="studio-art">
-            <LearningStudioArt />
+            <LearningStudioArt v-if="activeSection === 'dashboard'" />
             <WordAtmosphere v-if="activeSection === 'dashboard'" variant="studio" />
           </div>
           <div class="studio-canvas-footer" aria-hidden="true"><span>LINGUAMATE</span><span>A little. Every day.</span></div>
@@ -893,7 +893,7 @@
               </p>
             </div>
           </section>
-          <section class="panel reader-panel" :aria-busy="state.articleBusy">
+          <section class="panel reader-panel" :class="{'is-reading-focus':readerFocus}" :aria-busy="state.articleBusy">
             <header class="reader-cover">
               <div class="reader-cover-meta">
                 <span class="reader-source">{{ state.currentArticle?.sourceName || "LinguaMate Reader" }}</span>
@@ -909,11 +909,7 @@
                     <span>约 {{ articleReadingTime(state.currentArticle) }} 分钟</span>
                   </div>
                 </div>
-                <div class="reader-cover-art" aria-hidden="true">
-                  <span class="reader-art-orbit"></span><span class="reader-art-orbit"></span>
-                  <span class="reader-art-glyph">Aa<span>·</span></span>
-                  <span class="reader-art-line"></span><span class="reader-art-spark">✦</span>
-                </div>
+                <div class="reader-cover-art"><ReadingArt :active="readerFocus" :disabled="!state.currentArticle || state.articleBusy" @toggle="toggleReaderFocus" /></div>
               </div>
             </header>
             <div class="reader-tools">
@@ -951,18 +947,18 @@
                   <span
                     v-if="token.word"
                     class="reader-word"
-                    :class="{ 'is-looked-up': state.tooltip.visible && state.tooltip.lookupKey === normalizeLookupWord(token.text) }"
+                    :class="{ 'is-looked-up': state.tooltip.visible && state.tooltip.lookupKey === normalizeLookupWord(token.text), 'reader-art-dim':dimReaderToken(token) }"
                     tabindex="0"
                     :data-sentence="token.sentence"
-                    @focus="showTooltip(token.text, $event)"
+                    @focus="focusReaderWord(token, $event)"
                     @blur="scheduleHideTooltip"
                     @click="showTooltip(token.text, $event)"
                     @keydown.enter.prevent="focusLookupActions(token.text, $event)"
-                    @mouseenter="showTooltip(token.text, $event)"
+                    @mouseenter="focusReaderWord(token, $event)"
                     @mouseleave="scheduleHideTooltip"
                     >{{ token.text }}</span
                   >
-                  <span v-else>{{ token.text }}</span>
+                  <span v-else :class="{'reader-art-dim':dimReaderToken(token)}">{{ token.text }}</span>
                 </template>
               </article>
               <div v-if="state.currentArticle" class="reader-endmark" aria-hidden="true"><span></span>✦<span></span></div>
@@ -1508,6 +1504,8 @@ import WritingStudio from "@/components/WritingStudio.vue";
 import LearningEvidence from "@/components/LearningEvidence.vue";
 import { readingTokens } from "@/reading-context";
 import LearningStudioArt from "@/components/LearningStudioArt.vue";
+import ReadingArt from "@/components/ReadingArt.vue";
+import "@/styles/module-illustrations.css";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import UserAccountMenu from "@/components/UserAccountMenu.vue";
 import ThemeToggle from "@/components/ThemeToggle.vue";
@@ -2056,6 +2054,11 @@ function routeStepAriaLabel(step) {
 }
 
 const articleTokens = computed(() => readingTokens(state.currentArticle?.content || ""));
+const readerFocus = ref(false), focusedSentence = ref('');
+function toggleReaderFocus() { readerFocus.value=!readerFocus.value;focusedSentence.value=readerFocus.value ? articleTokens.value.find(token=>token.word)?.sentence || '' : ''; }
+function dimReaderToken(token) { return Boolean(readerFocus.value && focusedSentence.value && token.sentence && token.sentence!==focusedSentence.value); }
+function focusReaderWord(token,event) { if(readerFocus.value)focusedSentence.value=token.sentence;showTooltip(token.text,event); }
+watch(()=>state.currentArticle?.id,()=>{focusedSentence.value='';});
 
 const articleWordCount = computed(() =>
   (state.currentArticle?.content?.match(/[A-Za-z][A-Za-z'-]*/g) || []).length,

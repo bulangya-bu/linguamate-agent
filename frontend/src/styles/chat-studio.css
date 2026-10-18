@@ -41,12 +41,7 @@
 .studio-chat-welcome h2 { position: relative; margin: 20px 0 16px; font-size: clamp(36px, 3.25vw, 56px); line-height: 1.35; letter-spacing: -.055em; font-weight: 650; }
 .studio-chat-welcome h2 > span { color: var(--chat-green); }
 .studio-chat-welcome > p { position: relative; color: var(--muted); font-size: 13px; line-height: 1.8; }
-.studio-welcome-art { position: absolute; right: 0; top: 0; width: min(37%, 270px); color: var(--chat-blue); opacity: .8; pointer-events: none; }
-.studio-welcome-art svg { width: 100%; height: auto; }
-.studio-welcome-art ellipse { stroke: currentColor; stroke-width: .6; opacity: .4; }
-.studio-welcome-art path { stroke: var(--chat-green); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 350; animation: studio-ink 2.4s ease both; }
-.studio-welcome-art circle { fill: var(--green); }
-.studio-welcome-art > span { display: block; margin-top: -10px; text-align: center; font: italic 16px Georgia, serif; color: var(--chat-blue); }
+.studio-welcome-art { position: absolute; z-index:1; right: 0; top: 0; width: min(36%, 260px); }
 .studio-scene-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; margin: 28px 0 22px; }
 .studio-scene-choices > button { position: relative; display: grid; grid-template-columns: 25px 1fr 18px; gap: 5px 8px; padding: 15px 8px; border: 0; border-top: 1px solid var(--chat-rule); background: transparent; text-align: left; }
 .studio-scene-choices > button > span { grid-row: span 2; padding-top: 2px; color: var(--muted); font: 11px Georgia, serif; }

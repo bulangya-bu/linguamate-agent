@@ -39,7 +39,7 @@
           <div class="ws-retry-block"><span>把建议写成自己的表达</span><p>保留你的思路，试着重新组织这一段。</p><button type="button" :disabled="busy" @click="startRevision">自己改写一次<AppIcon name="arrow" /></button></div>
           <button class="ws-new-document" type="button" @click="newDocument">开始新作文</button>
         </template>
-        <div v-else class="ws-intro"><div class="ws-intro-art" aria-hidden="true"><i></i><i></i><span>A<span>a</span><b>✦</b></span><em></em></div><span class="ws-kicker">MAKE IT YOURS</span><h3>好表达，<br />从再写一次开始。</h3><ol><li><b>01</b><span>写下想法<small>保持你的观点与声音</small></span></li><li><b>02</b><span>看见修改<small>原句、理由与润色逐一对照</small></span></li><li><b>03</b><span>自己再写<small>留下两次表达的变化</small></span></li></ol></div>
+        <div v-else class="ws-intro"><div class="ws-intro-art"><WritingArt /></div><span class="ws-kicker">MAKE IT YOURS</span><h3>好表达，<br />从再写一次开始。</h3><ol><li><b>01</b><span>写下想法<small>保持你的观点与声音</small></span></li><li><b>02</b><span>看见修改<small>原句、理由与润色逐一对照</small></span></li><li><b>03</b><span>自己再写<small>留下两次表达的变化</small></span></li></ol></div>
       </div>
     </aside>
   </div>
@@ -48,6 +48,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import AppIcon from './AppIcon.vue';
+import WritingArt from './WritingArt.vue';
 import { learningApi } from '@/api/modules';
 import { annotatedText, revisionDiff, wordCount } from '@/writing-workspace';
 const props = defineProps({ userId: { type: [Number,String], required: true } });

@@ -29,13 +29,7 @@
 
         <div ref="thread" class="studio-thread" role="log" aria-label="对话记录" aria-live="polite" :aria-busy="busy">
           <div v-if="!messages.length" class="studio-chat-welcome">
-            <div class="studio-welcome-art" aria-hidden="true">
-              <svg viewBox="0 0 250 150" fill="none"><ellipse cx="125" cy="76" rx="98" ry="43" transform="rotate(-19 125 76)" />
-                <ellipse cx="125" cy="76" rx="70" ry="60" transform="rotate(33 125 76)" />
-                <path d="M80 73h6l5-16 8 40 9-61 9 76 9-63 9 44 8-26 6 6h21" />
-                <circle cx="204" cy="48" r="5"/><circle cx="58" cy="111" r="4"/>
-              </svg><span>hello, possibility.</span>
-            </div>
+            <div class="studio-welcome-art"><ConversationArt :scene="scene" :mode="mode" :disabled="busy" @suggest="suggestFromArt" /></div>
             <span class="studio-welcome-kicker">{{ mode === 'practice' ? '从一句话，走进真实情境' : '让学习记录，变成下一步行动' }}</span>
             <h2 v-if="mode === 'practice'">把英语，<br />聊成<span>自己的。</span></h2>
             <h2 v-else>今天的学习，<br /><span>一起安排。</span></h2>
@@ -121,6 +115,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import AppIcon from './AppIcon.vue';
+import ConversationArt from './ConversationArt.vue';
 const props = defineProps({ messages: { type: Array, default: () => [] }, conversations: { type: Array, default: () => [] }, conversationId: [Number, String],
   scene: { type: String, default: 'daily' }, mode: { type: String, default: 'practice' }, draft: { type: String, default: '' }, busy: Boolean,
   error: String, modelName: String, contextWords: { type: Array, default: () => [] }, trace: { type: Array, default: () => [] } });
@@ -147,6 +142,8 @@ let waitTimer;
 watch(() => props.busy, busy => { clearInterval(waitTimer); if (busy) { elapsed.value=0; waitTimer=setInterval(()=>elapsed.value++,1000); } });
 onBeforeUnmount(()=>clearInterval(waitTimer));
 function focusInput() { input.value?.focus(); }
+const lastArtPrompt=ref('');
+async function suggestFromArt(prompt) { if(props.busy)return;const existing=props.draft;const next=!existing.trim() ? prompt : lastArtPrompt.value && existing.endsWith(lastArtPrompt.value) ? existing.slice(0,-lastArtPrompt.value.length)+prompt : `${existing}\n${prompt}`;emit('update:draft',next.slice(0,2000));lastArtPrompt.value=prompt;await nextTick();focusInput(); }
 function submitPrompt(prompt) { if (!props.busy) emit('prompt', prompt); }
 function handleKeydown(event) { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); if (!props.busy && props.draft.trim()) emit('send'); } }
 watch(() => [props.messages.length, props.conversationId, props.busy], async () => {
