@@ -30,11 +30,13 @@ public class AuthService implements ApplicationRunner {
     private final UserAccountMapper userMapper;
     private final PasswordHasher passwordHasher;
     private final RedisCacheService redisCache;
+    private final LoginActivityService loginActivity;
 
-    public AuthService(UserAccountMapper userMapper, PasswordHasher passwordHasher, RedisCacheService redisCache) {
+    public AuthService(UserAccountMapper userMapper, PasswordHasher passwordHasher, RedisCacheService redisCache, LoginActivityService loginActivity) {
         this.userMapper = userMapper;
         this.passwordHasher = passwordHasher;
         this.redisCache = redisCache;
+        this.loginActivity = loginActivity;
     }
 
     @Override
@@ -59,6 +61,7 @@ public class AuthService implements ApplicationRunner {
         user.updatedAt = LocalDateTime.now();
         userMapper.insert(user);
         servletRequest.getSession(true).setAttribute(SESSION_USER_ID, user.id);
+        loginActivity.recordVisit(user.id, servletRequest.getSession());
         cacheSessionUser(user);
         return AuthUserView.from(user);
     }
@@ -72,6 +75,7 @@ public class AuthService implements ApplicationRunner {
             throw new AuthorizationException("账号已被禁用");
         }
         servletRequest.getSession(true).setAttribute(SESSION_USER_ID, user.id);
+        loginActivity.recordVisit(user.id, servletRequest.getSession());
         cacheSessionUser(user);
         return AuthUserView.from(user);
     }
@@ -109,6 +113,7 @@ public class AuthService implements ApplicationRunner {
                 return null;
             }
             redisCache.put(sessionUserKey(userId), cached, SESSION_USER_TTL);
+            loginActivity.recordVisit(userId, session);
             return toUserAccount(cached);
         }
         UserAccount user = userMapper.selectById(userId);
@@ -118,6 +123,7 @@ public class AuthService implements ApplicationRunner {
             return null;
         }
         cacheSessionUser(user);
+        loginActivity.recordVisit(userId, session);
         return user;
     }
 

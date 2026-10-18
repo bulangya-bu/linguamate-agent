@@ -18,6 +18,14 @@ public class DatabaseMigration implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS user_login_day (
+                    user_id BIGINT NOT NULL,
+                    login_date DATE NOT NULL,
+                    first_seen_at TIMESTAMP NOT NULL,
+                    PRIMARY KEY (user_id, login_date)
+                )
+                """);
         List<String> userOwnedTables = List.of(
                 "conversation",
                 "ai_setting",

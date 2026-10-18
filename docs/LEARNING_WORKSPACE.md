@@ -15,3 +15,11 @@ AI settings include a real chat-completion connection test against the current f
 Database additions are declared in `schema.sql` and applied to existing installations by `DatabaseMigration`. No bulk dictionary import or destructive migration is involved.
 
 Validation: full Maven test suite, frontend Node tests and Vite build, plus desktop browser checks at 1920×1080 and 1366×768 in light/dark themes. HTTP integration tests use a local OpenAI-compatible protocol fixture; they do not establish the quality or availability of an external provider.
+
+## Personal learning journal
+
+The sidebar's 学习档案 opens `/report` and reads the current user's `/api/report/journal`. Daily first-time words and cumulative words deduplicate actual QUIZ / STRICT_REVIEW word IDs; daily review words deduplicate strict-review words, while accuracy includes every strict-review attempt. Charts offer 7/30-day windows, the calendar shows 12 weeks, and the clickable tree connects recorded totals to practice, mastered words, reading and writing. Counts remain zero or unavailable when there are no records.
+
+Login days are persisted in `user_login_day` on successful registration/login or authenticated-session visits, once per user and Beijing calendar day. Existing session visits after midnight are included. Historical logins are not inferred from registration age or study records. The journal separately shows membership duration, recorded login days, current/longest login streaks, and days with dated study records. Study events are practice attempts, essay submissions, user chat messages and first recorded article visits. They are not a time-spent estimate.
+
+The journal uses locally bundled Rough.js (MIT) and Caveat (OFL) assets, loaded only when this page opens. Its strokes use stable seeds; chart lengths and bar heights are based on real values. Both light/dark desktop themes, keyboard navigation, reduced motion, error/retry and empty states are supported. References: [Rough.js](https://roughjs.com/), [handdrawn-diagrams skill](https://github.com/ongjin/handdrawn-diagrams/blob/main/skills/handdrawn-diagrams/SKILL.md).

@@ -16,6 +16,7 @@ export const aiApi = {
 
 export const learningApi = {
   report: () => api("/api/report/summary"),
+  journal: () => api("/api/report/journal"),
   level: () => api("/api/experience"),
   conversations: () => api("/api/conversations"),
   messages: (id) => api(`/api/conversations/${id}/messages`),

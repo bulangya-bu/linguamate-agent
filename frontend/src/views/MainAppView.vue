@@ -287,6 +287,7 @@
         </aside>
       </section>
 
+      <section id="journal" class="section" :class="{ active: activeSection === 'journal' }"><LearningJournal v-if="activeSection === 'journal'" @navigate="navigateJournal" /></section>
       <section
         id="chat"
         class="section chat-workspace"
@@ -1500,6 +1501,8 @@
 
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
+import { defineAsyncComponent } from "vue";
+const LearningJournal = defineAsyncComponent(() => import("@/components/LearningJournal.vue"));
 import ChatStudio from "@/components/ChatStudio.vue";
 import WritingStudio from "@/components/WritingStudio.vue";
 import LearningEvidence from "@/components/LearningEvidence.vue";
@@ -1547,6 +1550,7 @@ const newsLibraryButtonRef = ref(null);
 const newsLibraryCloseRef = ref(null);
 const showAllNewsTopics = ref(false);
 const settingsPanelRef = ref(null);
+function navigateJournal(section) { if(section==='mastered') router.push({path:'/wordbank',query:{scope:'mastered'}}); else goSection(section); }
 const wordDialogRef = ref(null);
 let previousFocus;
 let settingsReturnFocus;
@@ -1611,6 +1615,7 @@ const navItems = [
   { id: "writing", label: "写作工坊", path: "/writing" },
   { id: "news", label: "阅读空间", path: "/news" },
   { id: "wordbank", label: "我的词库", path: "/wordbank" },
+  { id: "journal", label: "学习档案", path: "/report" },
 ];
 
 const wordBankScopes = [
@@ -1715,6 +1720,7 @@ const sectionMeta = {
   writing: "写作工坊",
   news: "阅读空间",
   wordbank: "我的词库",
+  journal: "学习档案",
 };
 
 const state = reactive({

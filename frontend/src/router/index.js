@@ -57,7 +57,7 @@ const routes = [
     path: "/report",
     name: "report",
     component: MainAppView,
-    meta: { section: "dashboard" },
+    meta: { section: "journal" },
   },
   {
     path: "/wordbank",

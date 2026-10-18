@@ -20,6 +20,7 @@
 defineProps({ name: { type: String, default: "spark" } });
 const paths = {
   dashboard: ["M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"],
+  journal: ["M4 3h15a1 1 0 0 1 1 1v17H5a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1ZM3 17h17M8 13V9M12 13V6M16 13v-3"],
   chat: [
     "M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-2 2V11.5A8.5 8.5 0 0 1 10.5 3h2a8.5 8.5 0 0 1 8.5 8.5Z",
     "M7 10h9M7 14h5",

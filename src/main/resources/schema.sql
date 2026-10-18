@@ -9,6 +9,13 @@ CREATE TABLE IF NOT EXISTS user_account (
     updated_at TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS user_login_day (
+    user_id BIGINT NOT NULL,
+    login_date DATE NOT NULL,
+    first_seen_at TIMESTAMP NOT NULL,
+    PRIMARY KEY (user_id, login_date)
+);
+
 CREATE TABLE IF NOT EXISTS conversation (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL DEFAULT 1,
