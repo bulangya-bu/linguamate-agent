@@ -53,7 +53,8 @@ public class AiSettingsService {
         AiRuntimeSettings current = currentRuntime();
         String baseUrl = pick(request == null ? null : request.baseUrl(), current.baseUrl());
         String apiKey = pick(request == null ? null : request.apiKey(), current.apiKey());
-        return new AiRuntimeSettings(current.provider(), normalizeBaseUrl(baseUrl), apiKey, current.chatModel());
+        return new AiRuntimeSettings(current.provider(), normalizeBaseUrl(baseUrl), apiKey,
+                pick(request == null ? null : request.chatModel(), current.chatModel()));
     }
 
     public AiSettingsView save(AiSettingsRequest request) {

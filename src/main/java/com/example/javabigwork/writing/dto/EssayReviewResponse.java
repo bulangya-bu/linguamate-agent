@@ -15,6 +15,7 @@ public record EssayReviewResponse(
         List<SentenceFeedbackView> feedback,
         List<AgentTraceStep> trace,
         String reviewSource,
-        String modelName
+        String modelName,
+        RevisionComparison comparison
 ) {
 }

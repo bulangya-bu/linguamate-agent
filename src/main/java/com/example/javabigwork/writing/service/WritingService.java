@@ -6,19 +6,20 @@ import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.tool.EssayScoringResult;
 import com.example.javabigwork.tool.EssayScoringTool;
 import com.example.javabigwork.vocabulary.service.ExperienceService;
-import com.example.javabigwork.writing.dto.EssayReviewAiPayload;
 import com.example.javabigwork.writing.dto.EssayReviewDraft;
 import com.example.javabigwork.writing.dto.EssayReviewRequest;
 import com.example.javabigwork.writing.dto.EssayReviewResponse;
 import com.example.javabigwork.writing.dto.SentenceFeedbackView;
+import com.example.javabigwork.writing.dto.RevisionComparison;
 import com.example.javabigwork.writing.entity.EssayFeedback;
 import com.example.javabigwork.writing.entity.EssaySubmission;
 import com.example.javabigwork.writing.mapper.EssayFeedbackMapper;
 import com.example.javabigwork.writing.mapper.EssaySubmissionMapper;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Objects;
 
 @Service
 public class WritingService {
@@ -45,14 +46,34 @@ public class WritingService {
         this.userContext = userContext;
     }
 
+    @Transactional
     public EssayReviewResponse review(EssayReviewRequest request) {
+        EssaySubmission previous = null;
+        if (request.revisionOfId() != null) {
+            previous = submissionMapper.selectOne(Wrappers.<EssaySubmission>query()
+                    .eq("id", request.revisionOfId()).eq("user_id", userContext.userId()));
+            if (previous == null) throw new IllegalArgumentException("未找到可改写的作文");
+            if (previous.originalText.trim().equals(request.essayText().trim())) {
+                throw new IllegalArgumentException("请先修改作文，再提交复评");
+            }
+        }
         EssayReviewDraft draft = essayReviewAiService.review(request).orElseGet(() -> localDraft(request));
         EssaySubmission submission = persistSubmission(request, draft);
         persistFeedback(submission.id, draft.feedback());
         int xp = 20;
         if (draft.totalScore() >= 80) xp += 15;
         experienceService.addXp(xp);
-        return toResponse(submission.id, draft);
+        RevisionComparison comparison = null;
+        if (previous != null) {
+            boolean comparable = Objects.equals(previous.reviewSource, draft.reviewSource())
+                    && Objects.equals(previous.modelName, draft.modelName())
+                    && Objects.equals(previous.examType, submission.examType)
+                    && Objects.equals(previous.targetLevel, submission.targetLevel);
+            comparison = new RevisionComparison(previous.id, previous.totalScore, draft.totalScore(), comparable,
+                    comparable ? ("本地兜底".equals(draft.reviewSource()) ? "本地规则评分，仅供练习参考" : "同一模型与评分设置，分数仅供参考")
+                            : "模型、来源或评分设置发生变化，仅并列展示");
+        }
+        return toResponse(submission.id, draft, comparison);
     }
 
     public List<EssaySubmission> history() {
@@ -69,6 +90,10 @@ public class WritingService {
         submission.originalText = request.essayText();
         submission.polishedText = draft.polishedText();
         submission.totalScore = draft.totalScore();
+        submission.revisionOfId = request.revisionOfId();
+        submission.reviewSource = draft.reviewSource();
+        submission.modelName = draft.modelName();
+        submission.targetLevel = safeValue(request.targetLevel(), "B1");
         submission.createdAt = LocalDateTime.now();
         submissionMapper.insert(submission);
         return submission;
@@ -111,7 +136,7 @@ public class WritingService {
         );
     }
 
-    private EssayReviewResponse toResponse(Long essayId, EssayReviewDraft draft) {
+    private EssayReviewResponse toResponse(Long essayId, EssayReviewDraft draft, RevisionComparison comparison) {
         return new EssayReviewResponse(
                 essayId,
                 draft.totalScore(),
@@ -124,7 +149,8 @@ public class WritingService {
                 draft.feedback(),
                 draft.trace(),
                 draft.reviewSource(),
-                draft.modelName()
+                draft.modelName(),
+                comparison
         );
     }
 

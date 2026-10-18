@@ -60,6 +60,10 @@ CREATE TABLE IF NOT EXISTS user_word_progress (
     favorite BOOLEAN DEFAULT FALSE,
     next_review_at TIMESTAMP,
     last_review_at TIMESTAMP,
+    source_sentence TEXT,
+    source_title VARCHAR(255),
+    source_word VARCHAR(64),
+    source_article_id BIGINT,
     UNIQUE KEY uk_user_word_progress_user_word (user_id, word_id)
 );
 
@@ -95,6 +99,10 @@ CREATE TABLE IF NOT EXISTS essay_submission (
     original_text TEXT,
     polished_text TEXT,
     total_score DOUBLE,
+    revision_of_id BIGINT,
+    review_source VARCHAR(64),
+    model_name VARCHAR(128),
+    target_level VARCHAR(64),
     created_at TIMESTAMP
 );
 

@@ -8,6 +8,10 @@ import com.example.javabigwork.news.dto.ReadingProgressView;
 import com.example.javabigwork.news.service.NewsService;
 import com.example.javabigwork.news.service.NewsTranslationService;
 import com.example.javabigwork.news.service.ReadingAssistService;
+import com.example.javabigwork.news.service.ReadingContextService;
+import com.example.javabigwork.news.dto.ReadingContextRequest;
+import com.example.javabigwork.news.dto.ReadingContextView;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,15 +28,18 @@ public class NewsController {
     private final NewsService newsService;
     private final ReadingAssistService readingAssistService;
     private final NewsTranslationService translationService;
+    private final ReadingContextService readingContext;
 
     public NewsController(
             NewsService newsService,
             ReadingAssistService readingAssistService,
-            NewsTranslationService translationService
+            NewsTranslationService translationService,
+            ReadingContextService readingContext
     ) {
         this.newsService = newsService;
         this.readingAssistService = readingAssistService;
         this.translationService = translationService;
+        this.readingContext = readingContext;
     }
 
     @GetMapping("/recommendations")
@@ -64,6 +71,16 @@ public class NewsController {
     @GetMapping("/lookup")
     public ApiResponse<HoverWordResponse> lookup(@RequestParam String word) {
         return ApiResponse.ok(readingAssistService.lookup(word));
+    }
+
+    @PostMapping("/{articleId:\\d+}/explain")
+    public ApiResponse<ReadingContextView> explain(@PathVariable Long articleId, @Valid @RequestBody ReadingContextRequest request) {
+        return ApiResponse.ok(readingContext.explain(articleId, request));
+    }
+
+    @PostMapping("/{articleId:\\d+}/save-word")
+    public ApiResponse<HoverWordResponse> saveContext(@PathVariable Long articleId, @Valid @RequestBody ReadingContextRequest request) {
+        return ApiResponse.ok(readingContext.save(articleId, request));
     }
 
     @GetMapping("/{articleId:\\d+}/lookup")

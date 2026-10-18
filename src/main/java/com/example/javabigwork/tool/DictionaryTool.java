@@ -98,13 +98,13 @@ public class DictionaryTool {
             progress.wrongCount = 1;
             progress.reviewCount = 0;
             progress.favorite = false;
-            progress.nextReviewAt = LocalDateTime.now();
+            progress.nextReviewAt = LocalDateTime.now().withNano(0);
             progressMapper.insert(progress);
         } else if (existing.wrongCount == null || existing.wrongCount <= 0) {
             // Re-adding a learned or favorite word must actually put it in the review queue.
             existing.wrongCount = 1;
             existing.familiarity = 1;
-            existing.nextReviewAt = LocalDateTime.now();
+            existing.nextReviewAt = LocalDateTime.now().withNano(0);
             progressMapper.updateById(existing);
         }
         return toHoverResponse(word);

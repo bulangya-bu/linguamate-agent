@@ -9,6 +9,7 @@ export const authApi = {
 
 export const aiApi = {
   settings: () => api("/api/ai/settings"),
+  test: (payload) => api("/api/ai/test", { method: "POST", body: JSON.stringify(payload) }),
   saveSettings: (payload) => api("/api/ai/settings", { method: "PUT", body: JSON.stringify(payload) }),
   models: (payload) => api("/api/ai/models", { method: "POST", body: JSON.stringify(payload) })
 };
@@ -37,6 +38,9 @@ export const learningApi = {
     return api(`${base}${query({ word })}`);
   },
   saveDictionaryWord: (word) => api(`/api/dictionary/save${query({ word })}`, { method: "POST" }),
+  explainReadingWord: (id, payload) => api(`/api/news/${id}/explain`, { method: "POST", body: JSON.stringify(payload) }),
+  saveReadingWord: (id, payload) => api(`/api/news/${id}/save-word`, { method: "POST", body: JSON.stringify(payload) }),
+  writingHistory: () => api('/api/writing/history'),
   translateArticle: (payload) => api("/api/news/translate", { method: "POST", body: JSON.stringify(payload) }),
   wordBankCategories: () => api("/api/word-bank/categories"),
   wordBankStats: () => api("/api/word-bank/stats"),

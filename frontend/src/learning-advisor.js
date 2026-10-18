@@ -41,7 +41,9 @@ export function learningMessageFromHistory(message = {}) {
   let metadata = {};
   try { metadata = JSON.parse(message.metadata || "{}"); } catch { /* Legacy trace=N metadata. */ }
   if (!metadata || typeof metadata !== "object") metadata = {};
-  return { ...message, ...learningMessageFromResponse({ ...metadata, reply: message.content }), role: message.role };
+  const reading = metadata.readingArticle;
+  const readingArticle = reading && Number.isSafeInteger(reading.id) && typeof reading.title === 'string' ? {id:reading.id,title:reading.title} : null;
+  return { ...message, ...learningMessageFromResponse({ ...metadata, reply: message.content }), role: message.role, readingArticle };
 }
 
 export function nextVocabularyPage(card, direction) {

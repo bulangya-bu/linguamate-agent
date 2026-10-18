@@ -58,13 +58,14 @@
               <div class="studio-message-byline"><strong>{{ message.role === 'user' ? '你' : 'LinguaMate' }}</strong>
                 <span v-if="message.coaching">{{ message.coaching.source === 'model' ? 'AI 对话教练' : '本地场景练习' }}</span>
               </div>
+              <div v-if="message.role === 'user' && message.readingArticle" class="studio-reading-attachment"><AppIcon name="news" /><span>阅读讨论<strong>{{ message.readingArticle.title }}</strong></span></div>
               <p>{{ message.content }}</p>
               <slot name="message-extra" :message="message" :index="index" />
               <button v-if="message.coaching" class="studio-feedback-link" :class="{ selected: selectedIndex === index }" type="button"
                 :aria-pressed="selectedIndex === index" @click="selectedIndex = index"><AppIcon name="spark" />查看本轮反馈<AppIcon name="arrow" /></button>
             </div>
           </article>
-          <div v-if="busy" class="studio-thinking" role="status"><span><i></i><i></i><i></i></span>正在结合上下文准备回复…</div>
+          <div v-if="busy" class="studio-thinking" role="status"><span><i></i><i></i><i></i></span>{{ elapsed >= 15 ? '仍在等待模型回复…' : '正在结合上下文准备回复…' }}<small class="studio-wait-time">{{ elapsed }} 秒</small></div>
         </div>
 
         <form class="studio-composer" @submit.prevent="$emit('send')">
@@ -118,7 +119,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import AppIcon from './AppIcon.vue';
 const props = defineProps({ messages: { type: Array, default: () => [] }, conversations: { type: Array, default: () => [] }, conversationId: [Number, String],
   scene: { type: String, default: 'daily' }, mode: { type: String, default: 'practice' }, draft: { type: String, default: '' }, busy: Boolean,
@@ -141,6 +142,10 @@ const targetWords = computed(() => feedback.value?.targetWords || props.contextW
 const displayedTrace = computed(() => props.mode === 'practice' ? props.messages[selectedIndex.value]?.trace || props.trace : props.trace);
 const thread = ref(null);
 const input = ref(null);
+const elapsed = ref(0);
+let waitTimer;
+watch(() => props.busy, busy => { clearInterval(waitTimer); if (busy) { elapsed.value=0; waitTimer=setInterval(()=>elapsed.value++,1000); } });
+onBeforeUnmount(()=>clearInterval(waitTimer));
 function focusInput() { input.value?.focus(); }
 function submitPrompt(prompt) { if (!props.busy) emit('prompt', prompt); }
 function handleKeydown(event) { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); if (!props.busy && props.draft.trim()) emit('send'); } }

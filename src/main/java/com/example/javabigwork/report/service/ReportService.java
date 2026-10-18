@@ -5,6 +5,10 @@ import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.news.entity.ReadingRecord;
 import com.example.javabigwork.news.mapper.ReadingRecordMapper;
 import com.example.javabigwork.report.dto.LearningReportView;
+import com.example.javabigwork.report.dto.LearningEvidence;
+import com.example.javabigwork.vocabulary.entity.WordReviewLog;
+import com.example.javabigwork.vocabulary.mapper.WordReviewLogMapper;
+import java.util.stream.Collectors;
 import com.example.javabigwork.vocabulary.entity.UserWordProgress;
 import com.example.javabigwork.vocabulary.mapper.UserWordProgressMapper;
 import com.example.javabigwork.writing.entity.EssaySubmission;
@@ -20,17 +24,20 @@ public class ReportService {
     private final EssaySubmissionMapper essayMapper;
     private final ReadingRecordMapper readingRecordMapper;
     private final UserContext userContext;
+    private final WordReviewLogMapper reviewLogMapper;
 
     public ReportService(
             UserWordProgressMapper progressMapper,
             EssaySubmissionMapper essayMapper,
             ReadingRecordMapper readingRecordMapper,
-            UserContext userContext
+            UserContext userContext,
+            WordReviewLogMapper reviewLogMapper
     ) {
         this.progressMapper = progressMapper;
         this.essayMapper = essayMapper;
         this.readingRecordMapper = readingRecordMapper;
         this.userContext = userContext;
+        this.reviewLogMapper = reviewLogMapper;
     }
 
     public LearningReportView summary() {
@@ -62,8 +69,29 @@ public class ReportService {
                 essayCount,
                 readingCount,
                 painPoints(learnedWords, reviewWords, dueWords, favoriteWords, essayCount, readingCount, lookedUpWords),
-                nextActions(learnedWords, reviewWords, dueWords, favoriteWords, essayCount, readingCount, lookedUpWords)
+                nextActions(learnedWords, reviewWords, dueWords, favoriteWords, essayCount, readingCount, lookedUpWords),
+                dueWords,
+                evidence(userId)
         );
+    }
+
+    private LearningEvidence evidence(Long userId) {
+        LocalDateTime since = java.time.LocalDate.now().minusDays(6).atStartOfDay();
+        List<WordReviewLog> logs = reviewLogMapper.selectList(Wrappers.<WordReviewLog>query()
+                .eq("user_id", userId).eq("review_type", "STRICT_REVIEW")
+                .ge("created_at", since.minusDays(7)));
+        List<WordReviewLog> recent = logs.stream().filter(item -> !item.createdAt.isBefore(since)).toList();
+        List<WordReviewLog> previous = logs.stream().filter(item -> item.createdAt.isBefore(since)).toList();
+        long recurring = recent.stream().filter(item -> Boolean.FALSE.equals(item.correct))
+                .collect(Collectors.groupingBy(item -> item.wordId, Collectors.counting()))
+                .values().stream().filter(count -> count >= 2).count();
+        long revised = essayMapper.selectCount(Wrappers.<EssaySubmission>query()
+                .eq("user_id", userId).isNotNull("revision_of_id"));
+        return new LearningEvidence(recent.size(), accuracy(recent), previous.size(), accuracy(previous), recurring, revised);
+    }
+
+    private Long accuracy(List<WordReviewLog> logs) {
+        return logs.isEmpty() ? null : Math.round(100.0 * logs.stream().filter(item -> Boolean.TRUE.equals(item.correct)).count() / logs.size());
     }
 
     private List<String> painPoints(

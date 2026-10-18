@@ -32,6 +32,12 @@ public class ReviewScheduleService {
         return vocabularyService.favoriteWords(limit);
     }
 
+    public List<WordCardView> mistakeWords(int limit) {
+        return reviewPlannerTool.planMistakes(limit).stream()
+                .map(progress -> vocabularyService.getWord(progress.wordId))
+                .filter(java.util.Objects::nonNull).map(vocabularyService::toView).toList();
+    }
+
     public List<WordCardView> masteredWords(int limit) {
         return vocabularyService.masteredWords(limit);
     }

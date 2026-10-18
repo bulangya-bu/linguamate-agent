@@ -34,6 +34,14 @@ public class DatabaseMigration implements ApplicationRunner {
         addColumnIfMissing("word_review_log", "spelling_correct", "BOOLEAN");
         addColumnIfMissing("word_review_log", "meaning_correct", "BOOLEAN");
         addColumnIfMissing("word_review_log", "review_type", "VARCHAR(32)");
+        addColumnIfMissing("user_word_progress", "source_sentence", "TEXT");
+        addColumnIfMissing("user_word_progress", "source_title", "VARCHAR(255)");
+        addColumnIfMissing("user_word_progress", "source_word", "VARCHAR(64)");
+        addColumnIfMissing("user_word_progress", "source_article_id", "BIGINT");
+        addColumnIfMissing("essay_submission", "revision_of_id", "BIGINT");
+        addColumnIfMissing("essay_submission", "review_source", "VARCHAR(64)");
+        addColumnIfMissing("essay_submission", "model_name", "VARCHAR(128)");
+        addColumnIfMissing("essay_submission", "target_level", "VARCHAR(64)");
 
         backfillReadingRecordUpdatedAt();
         mergeDuplicateReadingRecords();

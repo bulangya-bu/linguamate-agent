@@ -27,12 +27,19 @@ public class ReviewPlannerTool {
         LocalDateTime now = LocalDateTime.now();
         return progressMapper.selectList(Wrappers.<UserWordProgress>query()
                         .eq("user_id", userContext.userId())
-                        .gt("wrong_count", 0))
+                        .le("next_review_at", now))
                 .stream()
                 .sorted(Comparator
                         .comparing((UserWordProgress progress) -> progress.wrongCount == null ? 0 : -progress.wrongCount)
                         .thenComparing(progress -> progress.nextReviewAt == null ? now : progress.nextReviewAt))
-                .limit(Math.max(1, limit))
+                .limit(Math.max(1, Math.min(80, limit)))
                 .toList();
+    }
+
+    public List<UserWordProgress> planMistakes(int limit) {
+        return progressMapper.selectList(Wrappers.<UserWordProgress>query()
+                        .eq("user_id", userContext.userId()).gt("wrong_count", 0)
+                        .orderByDesc("wrong_count").orderByAsc("next_review_at")
+                        .last("LIMIT " + Math.max(1, Math.min(80, limit))));
     }
 }

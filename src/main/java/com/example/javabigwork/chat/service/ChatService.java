@@ -13,6 +13,9 @@ import com.example.javabigwork.chat.entity.Conversation;
 import com.example.javabigwork.chat.entity.Message;
 import com.example.javabigwork.chat.mapper.MessageMapper;
 import com.example.javabigwork.vocabulary.service.ExperienceService;
+import com.example.javabigwork.news.service.NewsService;
+import com.example.javabigwork.news.dto.NewsArticleView;
+import java.util.Map;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -30,8 +33,9 @@ public class ChatService {
     private final AgentTraceRecorder traceRecorder;
     private final EnglishCoachService coach;
     private final ObjectMapper json;
+    private final NewsService news;
 
-    public ChatService(ConversationService conversationService, MessageMapper messageMapper, LinguaMateAgent agent, ExperienceService experienceService, AgentTraceRecorder traceRecorder, EnglishCoachService coach, ObjectMapper json) {
+    public ChatService(ConversationService conversationService, MessageMapper messageMapper, LinguaMateAgent agent, ExperienceService experienceService, AgentTraceRecorder traceRecorder, EnglishCoachService coach, ObjectMapper json, NewsService news) {
         this.conversationService = conversationService;
         this.messageMapper = messageMapper;
         this.agent = agent;
@@ -39,6 +43,7 @@ public class ChatService {
         this.traceRecorder = traceRecorder;
         this.coach = coach;
         this.json = json;
+        this.news = news;
     }
 
     public ChatResponse chat(ChatRequest request) {
@@ -49,11 +54,24 @@ public class ChatService {
                 .last("LIMIT 12"));
         Collections.reverse(history);
         boolean practice = "practice".equals(request.mode());
-        saveMessage(conversation.id, "user", request.message(), practice ? "{\"mode\":\"practice\"}" : "{\"mode\":\"assistant\"}");
+        Long articleId = request.readingArticleId();
+        if (articleId != null && (!practice || !"reading".equals(conversation.scene))) {
+            throw new IllegalArgumentException("请在阅读讨论场景中使用文章");
+        }
+        if (practice && "reading".equals(conversation.scene) && !history.isEmpty()) {
+            Message first = messageMapper.selectList(Wrappers.<Message>query().eq("conversation_id", conversation.id)
+                    .eq("role", "user").orderByAsc("id").last("LIMIT 1")).stream().findFirst().orElse(null);
+            Long originalArticle = readingArticleId(first);
+            if (articleId != null && !articleId.equals(originalArticle)) throw new IllegalArgumentException("请开启新对话讨论另一篇文章");
+            articleId = originalArticle;
+        }
+        NewsArticleView article = articleId == null ? null : news.detail(articleId);
+        saveMessage(conversation.id, "user", request.message(), userMetadata(practice, article));
         log.info("Chat request: conversationId={}, scene={}, message={}", conversation.id, conversation.scene, request.message());
         ChatResponse response;
         if (practice) {
-            var result = coach.practice(conversation.scene, request.message(), history);
+            var result = coach.practice(conversation.scene, request.message(), history, article == null ? ""
+                    : "Title: " + article.title() + "\nArticle:\n" + article.content().substring(0, Math.min(6000, article.content().length())));
             response = new ChatResponse(conversation.id, result.reply(), result.trace(), List.of(), null, List.of(), result.coaching());
         } else {
             var result = agent.chat(conversation.scene, request.message(), history);
@@ -67,6 +85,21 @@ public class ChatService {
     }
 
     public List<TargetWord> practiceContext() { return coach.context(); }
+
+    private Long readingArticleId(Message message) {
+        if (message == null || message.metadata == null) return null;
+        try {
+            var id = json.readTree(message.metadata).path("readingArticle").path("id");
+            return id.isIntegralNumber() ? id.asLong() : null;
+        } catch (Exception ignored) { return null; }
+    }
+
+    private String userMetadata(boolean practice, NewsArticleView article) {
+        try {
+            return json.writeValueAsString(article == null ? Map.of("mode", practice ? "practice" : "assistant")
+                    : Map.of("mode", "practice", "readingArticle", Map.of("id", article.id(), "title", article.title())));
+        } catch (JsonProcessingException exception) { throw new IllegalStateException("无法保存阅读上下文", exception); }
+    }
 
     private String metadata(ChatResponse response) {
         try { return json.writeValueAsString(response); }

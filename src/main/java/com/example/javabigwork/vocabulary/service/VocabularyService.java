@@ -221,7 +221,11 @@ public class VocabularyService {
                 progress == null ? 0 : value(progress.familiarity),
                 progress == null ? 0 : value(progress.wrongCount),
                 progress != null && Boolean.TRUE.equals(progress.favorite),
-                definitionService.definitionsFor(word)
+                definitionService.definitionsFor(word),
+                progress == null ? null : progress.sourceSentence,
+                progress == null ? null : progress.sourceTitle,
+                progress == null ? null : progress.sourceWord,
+                progress == null ? null : progress.sourceArticleId
         );
     }
 

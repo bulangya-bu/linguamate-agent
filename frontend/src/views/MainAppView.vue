@@ -55,9 +55,9 @@
         >
           <span class="nav-icon-wrap"><AppIcon :name="item.id" /></span><span>{{ item.label }}</span
           ><span
-            v-if="item.id === 'review' && state.report.reviewWords"
+            v-if="item.id === 'review' && state.report.dueWords"
             class="nav-count"
-            >{{ state.report.reviewWords }}</span
+            >{{ state.report.dueWords }}</span
           >
         </button>
       </nav>
@@ -85,7 +85,7 @@
           @click="openSettings($event.currentTarget)"
         >
           <span class="sidebar-model-icon"><AppIcon name="settings" /></span>
-          <span class="sidebar-model-copy"><strong>模型配置</strong><small :class="{ 'is-ready': state.aiSummary.label === '已配置' }">{{ state.aiSummary.label }}</small></span>
+          <span class="sidebar-model-copy"><strong>模型配置</strong><small :class="{ 'is-ready': state.aiSummary.label === '连接正常' }">{{ state.aiSummary.label }}</small></span>
           <AppIcon class="sidebar-model-arrow" name="arrow" />
         </button>
         <RouterLink
@@ -276,10 +276,10 @@
         </section>
         <aside id="dashboard-footprints" class="daily-panel">
           <section class="duo-quest-panel">
-            <div class="panel-heading"><h2>学习足迹</h2><span>累计</span></div>
+            <div class="panel-heading"><h2>学习足迹</h2><button class="evidence-open" type="button" @click="evidenceOpen = true">学习变化 ↗</button></div>
             <div class="learning-stats">
               <button type="button" @click="goSection('wordbank')"><strong>{{ state.report.learnedWords || 0 }}<small>词</small></strong><span>已掌握单词</span></button>
-              <button type="button" @click="goSection('review')"><strong>{{ state.report.reviewWords || 0 }}<small>词</small></strong><span>等待复习</span></button>
+              <button type="button" @click="goSection('review')"><strong>{{ state.report.dueWords || 0 }}<small>词</small></strong><span>到期复习</span></button>
               <button type="button" @click="goSection('writing')"><strong>{{ state.report.essayCount || 0 }}<small>篇</small></strong><span>写作练习</span></button>
               <button type="button" @click="goSection('news')"><strong>{{ state.report.readingCount || 0 }}<small>篇</small></strong><span>阅读记录</span></button>
             </div>
@@ -606,10 +606,8 @@
       >
         <section class="panel">
           <div class="panel-heading">
-            <h2>今日复习</h2>
-            <span class="review-priority"
-              ><AppIcon name="review" />错词优先</span
-            >
+            <div class="review-mode-switch" role="group" aria-label="复习类型"><button type="button" :class="{ active: state.reviewMode === 'today' }" :disabled="state.reviewBusy" @click="setReviewMode('today')">今日到期<span>{{ state.report.dueWords || 0 }}</span></button><button type="button" :class="{ active: state.reviewMode === 'mistakes' }" :disabled="state.reviewBusy" @click="setReviewMode('mistakes')">错词强化<span>{{ state.report.reviewWords || 0 }}</span></button></div>
+            <button class="evidence-open" type="button" @click="evidenceOpen = true">学习变化<AppIcon name="arrow" /></button>
           </div>
           <div class="review-workspace">
             <div
@@ -661,6 +659,7 @@
                   </div>
                 </div>
                 <div class="review-prompt">
+                  <button v-if="currentReviewWord.sourceTitle" class="review-source" type="button" @click="returnToArticle(currentReviewWord.sourceArticleId)"><AppIcon name="news" />来自阅读 · {{ currentReviewWord.sourceTitle }}<AppIcon name="arrow" /></button>
                   <div class="review-prompt-meta">
                     <span v-if="phonetic(currentReviewWord)">{{
                       phonetic(currentReviewWord)
@@ -683,7 +682,7 @@
                             currentReviewWord,
                             state.lastReviewResult,
                           ),
-                          state.lastReviewResult?.expectedWord ||
+                          currentReviewWord.sourceWord || state.lastReviewResult?.expectedWord ||
                             currentReviewWord.word,
                         )
                       "
@@ -726,7 +725,7 @@
                 >
                   <div class="review-input-grid">
                     <label>
-                      <span>英文拼写</span>
+                      <span>{{ currentReviewWord.sourceWord && currentReviewWord.sourceWord.toLowerCase() !== currentReviewWord.word.toLowerCase() ? '英文拼写（单词原形）' : '英文拼写' }}</span>
                       <input
                         v-model.trim="state.reviewForm.spellingAnswer"
                         autocomplete="off"
@@ -772,7 +771,7 @@
             </div>
             <div v-else class="review-empty-state">
               <AppIcon name="check" />
-              <h3>当前没有待复习的错词</h3>
+              <h3>{{ state.reviewMode === 'today' ? '当前到期任务已完成' : '当前没有待强化的错词' }}</h3><p class="review-empty-note">{{ state.reviewMode === 'today' ? '到复习时间后，单词会再次出现在这里。' : '单词练习中的错词会自动加入这里。' }}</p><button v-if="state.reviewMode === 'today' && state.report.reviewWords" class="settings-secondary" type="button" @click="setReviewMode('mistakes')">提前练习错词</button>
               <button
                 class="quiz-primary"
                 type="button"
@@ -790,87 +789,7 @@
         class="section"
         :class="{ active: activeSection === 'writing' }"
       >
-        <div class="writing-layout">
-          <section class="panel">
-            <div class="panel-heading">
-              <h2>写作内容</h2>
-              <select v-model="state.writing.examType" aria-label="作文类型">
-                <option value="general">通用写作</option>
-                <option value="cet4">四级作文</option>
-                <option value="cet6">六级作文</option>
-                <option value="ielts">雅思写作</option>
-              </select>
-            </div>
-            <form class="writing-form" @submit.prevent="reviewEssay">
-              <input
-                v-model.trim="state.writing.title"
-                placeholder="作文标题"
-              />
-              <textarea
-                v-model.trim="state.writing.essayText"
-                rows="10"
-                placeholder="Paste your English essay here..."
-              ></textarea>
-              <div class="settings-row">
-                <input
-                  v-model.trim="state.writing.targetLevel"
-                  placeholder="目标水平，如 B1"
-                />
-                <button
-                  class="quiz-primary"
-                  type="submit"
-                  :disabled="state.writingBusy"
-                >
-                  {{ state.writingBusy ? "批改中..." : "提交批改" }}
-                </button>
-              </div>
-            </form>
-          </section>
-          <section
-            class="panel writing-feedback-panel"
-            :class="{ 'is-empty': !state.writingResult }"
-          >
-            <h2>批改结果</h2>
-            <div v-if="state.writingResult" class="writing-result">
-              <div class="score-grid">
-                <div>
-                  <strong>{{ state.writingResult.totalScore }}</strong
-                  ><span>总分</span>
-                </div>
-                <div>
-                  <strong>{{ state.writingResult.grammarScore }}</strong
-                  ><span>语法</span>
-                </div>
-                <div>
-                  <strong>{{ state.writingResult.vocabularyScore }}</strong
-                  ><span>词汇</span>
-                </div>
-                <div>
-                  <strong>{{ state.writingResult.structureScore }}</strong
-                  ><span>结构</span>
-                </div>
-              </div>
-              <p>{{ state.writingResult.summary }}</p>
-              <h3>句子建议</h3>
-              <article
-                v-for="item in state.writingResult.feedback || []"
-                :key="item.originalSentence"
-                class="feedback-item"
-              >
-                <strong>{{ item.category }}</strong>
-                <p>{{ item.originalSentence }}</p>
-                <small>{{ item.suggestion }}</small>
-              </article>
-              <h3>润色版本</h3>
-              <p>{{ state.writingResult.polishedText }}</p>
-            </div>
-            <div v-else class="empty-state writing-empty">
-              <AppIcon name="writing" />
-              <h3>让每一次表达，更进一步。</h3>
-              <p>提交后查看评分与修改建议。</p>
-            </div>
-          </section>
-        </div>
+        <WritingStudio v-if="state.currentUser" :user-id="state.currentUser.id" @reviewed="writingReviewed" @settings="openSettings" />
       </section>
 
       <section
@@ -999,6 +918,7 @@
             <div class="reader-tools">
               <span class="reader-hint"><AppIcon name="spark" />点选单词，即时查词</span>
               <div class="reader-toolbar">
+                <button class="reader-discuss" type="button" :disabled="!state.currentArticle || state.chatBusy || state.articleBusy" @click="discussArticle"><AppIcon name="chat" />和 AI 讨论</button>
                 <button
                   ref="newsLibraryButtonRef"
                   class="reading-library-toggle settings-secondary"
@@ -1032,6 +952,7 @@
                     class="reader-word"
                     :class="{ 'is-looked-up': state.tooltip.visible && state.tooltip.lookupKey === normalizeLookupWord(token.text) }"
                     tabindex="0"
+                    :data-sentence="token.sentence"
                     @focus="showTooltip(token.text, $event)"
                     @blur="scheduleHideTooltip"
                     @click="showTooltip(token.text, $event)"
@@ -1281,6 +1202,7 @@
           <span>模型地址</span>
           <input
             v-model="state.ai.baseUrl"
+            :disabled="state.aiBusy"
             autocomplete="off"
             placeholder="https://api.openai.com/v1"
           />
@@ -1289,6 +1211,7 @@
           <span>API 密钥</span>
           <input
             v-model="state.ai.apiKey"
+            :disabled="state.aiBusy"
             type="password"
             autocomplete="off"
             placeholder="留空则沿用已保存密钥"
@@ -1307,20 +1230,10 @@
         </div>
         <label class="settings-field">
           <span>模型名</span>
-          <select
-            v-model="state.ai.chatModel"
-            :disabled="!state.ai.models.length"
-          >
-            <option
-              v-for="model in state.ai.models"
-              :key="model"
-              :value="model"
-            >
-              {{ model }}
-            </option>
-          </select>
+          <input v-model.trim="state.ai.chatModel" list="available-ai-models" placeholder="输入模型名，或获取模型后选择" :disabled="state.aiBusy" /><datalist id="available-ai-models"><option v-for="model in state.ai.models" :key="model" :value="model" /></datalist>
         </label>
         <div class="settings-actions">
+          <button class="settings-secondary" type="button" :disabled="state.aiBusy || !state.ai.chatModel" @click="testAiConnection">{{ state.aiTesting ? '检测中…' : '测试连接' }}</button>
           <button
             class="settings-primary"
             type="button"
@@ -1535,6 +1448,7 @@
       </div>
     </aside>
 
+    <LearningEvidence :open="evidenceOpen" :evidence="state.report.evidence || {}" @close="evidenceOpen = false" @practice="goSection('review')" />
     <div
       v-if="state.tooltip.visible"
       ref="tooltipRef"
@@ -1563,8 +1477,11 @@
           state.tooltip.data.partOfSpeech
         }}</span>
       </div>
-      <p>{{ state.tooltip.data.meaningCn || "暂无释义" }}</p>
-      <small v-if="state.tooltip.data.exampleEn">{{
+      <section v-if="state.tooltip.context" class="tooltip-context"><span>{{ state.tooltip.context.source === 'model' ? '本文中的意思 · AI' : '通用词典释义' }}</span><p>{{ state.tooltip.context.meaning }}</p><small>{{ state.tooltip.context.explanation }}</small><div v-if="state.tooltip.context.phrase" class="tooltip-phrase"><b>{{ state.tooltip.context.phrase }}</b><span>{{ state.tooltip.context.phraseMeaning }}</span></div></section>
+      <p v-else>{{ state.tooltip.data.meaningCn || "暂无释义" }}</p>
+      <blockquote v-if="state.tooltip.sentence" class="tooltip-original-sentence">{{ state.tooltip.sentence }}</blockquote>
+      <button class="tooltip-explain" type="button" :disabled="state.tooltip.loading || state.tooltip.contextBusy || !state.tooltip.sentence" @click="explainReaderWord"><AppIcon name="spark" />{{ state.tooltip.contextBusy ? '正在解读语境…' : state.tooltip.context ? '重新解读语境' : 'AI 语境解读' }}</button>
+      <small v-if="!state.tooltip.sentence && state.tooltip.data.exampleEn">{{
         state.tooltip.data.exampleEn
       }}</small>
       <div class="tooltip-actions">
@@ -1575,6 +1492,7 @@
           {{ state.tooltip.loading ? "查询中…" : state.tooltip.saving ? "加入中…" : state.tooltip.data.savedInReviewBook ? "已加入待复习" : tooltipHasDefinition ? "加入待复习" : "暂无可保存词条" }}
         </button>
         <button v-if="state.tooltip.data.savedInReviewBook" type="button" class="tooltip-library-link" @click="openPendingLibrary">查看词库<AppIcon name="arrow" /></button>
+        <button v-if="state.tooltip.data.savedInReviewBook && state.tooltip.sentence && !state.tooltip.contextSaved" type="button" class="tooltip-library-link" :disabled="state.tooltip.saving" @click="saveReaderWord(state.tooltip.data.word)">保留本文原句<AppIcon name="arrow" /></button>
       </div>
     </div>
   </div>
@@ -1583,6 +1501,9 @@
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
 import ChatStudio from "@/components/ChatStudio.vue";
+import WritingStudio from "@/components/WritingStudio.vue";
+import LearningEvidence from "@/components/LearningEvidence.vue";
+import { readingTokens } from "@/reading-context";
 import LearningStudioArt from "@/components/LearningStudioArt.vue";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import UserAccountMenu from "@/components/UserAccountMenu.vue";
@@ -1620,6 +1541,7 @@ let quizMotionId = 0;
 let quizTransition = null;
 let quizAnimations = [];
 const dashboardExpanded = ref(false);
+const evidenceOpen = ref(false);
 const newsLibraryOpen = ref(false);
 const newsLibraryButtonRef = ref(null);
 const newsLibraryCloseRef = ref(null);
@@ -1809,6 +1731,7 @@ const state = reactive({
   chatBusy: false,
   chatMode: "practice",
   chatError: "",
+  chatReadingArticle: null,
   coachWords: [],
   words: [],
   quizCategory: "",
@@ -1819,6 +1742,7 @@ const state = reactive({
   quizCompleted: false,
   quizBusy: false,
   wordDetails: {},
+  reviewMode: "today",
   reviewWords: [],
   reviewIndex: 0,
   reviewTotal: 0,
@@ -1841,11 +1765,18 @@ const state = reactive({
   readerProgress: 0,
   progressTimer: null,
   lookupCache: {},
+  contextCache: {},
+  savedOriginals: {},
   tooltipTimer: null,
   tooltip: {
     visible: false,
     loading: false,
     saving: false,
+    contextBusy: false,
+    context: null,
+    sentence: "",
+    contextKey: "",
+    contextSaved: false,
     lookupKey: "",
     x: 0,
     y: 0,
@@ -1869,6 +1800,8 @@ const state = reactive({
   settingsOpen: false,
   ai: { baseUrl: "", apiKey: "", chatModel: "", models: [], status: "未连接" },
   aiBusy: false,
+  aiTesting: false,
+  aiSaved: { baseUrl: '', chatModel: '' },
   logoutBusy: false,
   aiSummary: { label: "个人配置", modelName: "", loaded: false, loading: false },
 });
@@ -2116,15 +2049,7 @@ function routeStepAriaLabel(step) {
   return `${step.title}，${step.landmark}，${step.detail}，${status}`;
 }
 
-const articleTokens = computed(() => {
-  const text = state.currentArticle?.content || "";
-  const parts = text.match(/[A-Za-z][A-Za-z'-]*|[^A-Za-z]+/g) || [];
-  return parts.map((text, index) => ({
-    key: `${index}-${text}`,
-    text,
-    word: /^[A-Za-z][A-Za-z'-]*$/.test(text),
-  }));
-});
+const articleTokens = computed(() => readingTokens(state.currentArticle?.content || ""));
 
 const articleWordCount = computed(() =>
   (state.currentArticle?.content?.match(/[A-Za-z][A-Za-z'-]*/g) || []).length,
@@ -2533,8 +2458,9 @@ async function toggleFavorite(word) {
   }
 }
 
+async function setReviewMode(mode) { if (state.reviewBusy || mode === state.reviewMode) return; state.reviewMode = mode; await loadReviews(); }
 async function loadReviews() {
-  state.reviewWords = await learningApi.reviews("today", 8);
+  state.reviewWords = await learningApi.reviews(state.reviewMode, 8);
   state.reviewIndex = 0;
   state.reviewTotal = state.reviewWords.length;
   state.reviewMistakes = 0;
@@ -2563,15 +2489,7 @@ async function submitReview() {
     state.reviewPendingResult = true;
     await loadReport();
   } catch (error) {
-    state.lastReviewResult = {
-      correct: false,
-      spellingCorrect: false,
-      meaningCorrect: false,
-      expectedWord: currentReviewWord.value.word,
-      expectedMeaning: error.message || "提交失败，请稍后重试",
-      nextReviewHint: "检查网络或稍后再试",
-    };
-    state.reviewPendingResult = true;
+    ElMessage.error(error.message || "提交失败，答案已保留，请重试");
   } finally {
     state.reviewBusy = false;
   }
@@ -2596,6 +2514,7 @@ function advanceReview() {
 }
 
 function quizExampleText(word, result = {}) {
+  if (word?.sourceSentence) return word.sourceSentence;
   return (
     result?.exampleEn ||
     word?.exampleEn ||
@@ -2604,6 +2523,7 @@ function quizExampleText(word, result = {}) {
 }
 
 function quizExampleCn(word, result = {}) {
+  if (word?.sourceSentence) return "";
   return (
     result?.exampleCn || word?.exampleCn || "试着把这个单词放进一个完整句子里。"
   );
@@ -2630,20 +2550,11 @@ function strictReviewParts(result = {}) {
 }
 
 function reviewCloze(word) {
-  const example =
-    word?.exampleEn ||
-    `Use ${word?.word || "this word"} in a complete sentence.`;
-  if (!word?.word) return escapeHtml(example);
-  const pieces = String(example).split(
-    new RegExp(`(${escapeRegExp(word.word)})`, "gi"),
-  );
-  return pieces
-    .map((piece) =>
-      piece.toLowerCase() === String(word.word).toLowerCase()
-        ? `<mark class="review-blank">_____</mark>`
-        : escapeHtml(piece),
-    )
-    .join("");
+  const example = word?.sourceSentence || word?.exampleEn || `Use ${word?.word || "this word"} in a complete sentence.`;
+  const term = word?.sourceWord || word?.word;
+  if (!term) return escapeHtml(example);
+  return String(example).split(new RegExp(`(\\b${escapeRegExp(term)}\\b)`, "gi"))
+    .map(piece => piece.toLowerCase() === term.toLowerCase() ? '<mark class="review-blank">_____</mark>' : escapeHtml(piece)).join('');
 }
 
 function highlightTerm(text, term) {
@@ -2682,6 +2593,7 @@ async function loadConversations() {
 }
 
 async function openConversation(id) {
+  state.chatReadingArticle = null;
   state.conversationId = id;
   const conversation = state.conversations.find(
     (item) => Number(item.id) === Number(id),
@@ -2711,6 +2623,7 @@ function newConversation() {
   state.messages = [];
   state.trace = [];
   state.chatInput = "";
+  state.chatReadingArticle = null;
 }
 
 function sendChatPrompt(prompt) {
@@ -2729,7 +2642,8 @@ async function sendChat() {
   const message = state.chatInput.trim();
   state.chatError = "";
   state.chatInput = "";
-  state.messages.push({ role: "user", content: message });
+  const readingArticle = state.chatReadingArticle;
+  state.messages.push({ role: "user", content: message, readingArticle });
   state.chatBusy = true;
   try {
     const result = await learningApi.chat({
@@ -2737,9 +2651,12 @@ async function sendChat() {
       scene: state.chatScene,
       mode: state.chatMode,
       message,
+      readingArticleId: readingArticle?.id,
     });
     state.conversationId = result.conversationId;
+    state.chatReadingArticle = null;
     state.messages.push(learningMessageFromResponse(result));
+    if (result.coaching?.source === 'model') state.aiSummary.label = '连接正常';
     state.trace = result.trace || [];
     await Promise.allSettled([loadConversations(), loadReport()]);
   } catch (error) {
@@ -2751,16 +2668,7 @@ async function sendChat() {
   }
 }
 
-async function reviewEssay() {
-  state.writingBusy = true;
-  try {
-    state.writingResult = await learningApi.writingReview({ ...state.writing });
-    state.trace = state.writingResult.trace || state.trace;
-    await loadReport();
-  } finally {
-    state.writingBusy = false;
-  }
-}
+async function writingReviewed(result) { state.writingResult = result; if (result.reviewSource === 'AI批改') state.aiSummary.label = '连接正常'; await loadReport(); }
 
 async function loadNewsTopics() {
   state.newsTopics = await learningApi.newsTopics();
@@ -2955,6 +2863,13 @@ async function showTooltip(word, event) {
   if (!normalized || lookupStopWords.has(normalized)) return;
   cancelTooltipHide();
   placeTooltip(event);
+  const sentence = event?.currentTarget?.dataset?.sentence || "";
+  const contextKey = `${state.currentArticle?.id}:${normalized}:${sentence}`;
+  state.tooltip.contextKey = contextKey;
+  state.tooltip.contextSaved = Boolean(state.savedOriginals[contextKey]);
+  state.tooltip.sentence = sentence;
+  state.tooltip.context = state.contextCache[contextKey] || null;
+  state.tooltip.contextBusy = false;
   state.tooltip.visible = true;
   state.tooltip.lookupKey = normalized;
   state.tooltip.loading = !state.lookupCache[normalized];
@@ -3000,7 +2915,7 @@ async function focusLookupActions(word, event) {
 
 function scheduleHideTooltip() {
   clearTimeout(state.tooltipTimer);
-  if (state.tooltip.saving || tooltipRef.value?.matches(':hover') || tooltipRef.value?.contains(document.activeElement)) return;
+  if (state.tooltip.contextBusy || state.tooltip.saving || tooltipRef.value?.matches(':hover') || tooltipRef.value?.contains(document.activeElement)) return;
   state.tooltipTimer = setTimeout(() => {
     state.tooltip.visible = false;
   }, 240);
@@ -3020,18 +2935,21 @@ function openPendingLibrary() {
 }
 
 async function saveReaderWord(word) {
-  if (!word || state.tooltip.loading || state.tooltip.saving || state.tooltip.data.savedInReviewBook || !tooltipHasDefinition.value) return;
+  if (!word || state.tooltip.loading || state.tooltip.saving || !tooltipHasDefinition.value) return;
+  if (state.tooltip.data.savedInReviewBook && (!state.tooltip.sentence || state.tooltip.contextSaved)) return;
   const normalized = normalizeLookupWord(word);
   const lookupKey = state.tooltip.lookupKey;
   state.tooltip.saving = true;
   try {
-    const result = await learningApi.saveDictionaryWord(word);
+    const result = state.currentArticle?.id && state.tooltip.sentence
+      ? await learningApi.saveReadingWord(state.currentArticle.id, { word: state.tooltip.lookupKey, sentence: state.tooltip.sentence })
+      : await learningApi.saveDictionaryWord(word);
     for (const [key, cached] of Object.entries(state.lookupCache)) {
       if (normalizeLookupWord(cached.word) === normalized) state.lookupCache[key] = result;
     }
     state.lookupCache[normalized] = result;
-    if (state.tooltip.lookupKey === lookupKey) state.tooltip.data = result;
-    ElMessage.success("已加入待复习");
+    if (state.tooltip.lookupKey === lookupKey) { state.tooltip.data = result; if (state.tooltip.sentence) { state.savedOriginals[state.tooltip.contextKey] = true; state.tooltip.contextSaved = true; } }
+    ElMessage.success(state.tooltip.sentence ? "已保留原句，加入待复习" : "已加入待复习");
     await Promise.allSettled([loadReport(), loadWordBankStats()]);
   } catch (error) {
     ElMessage.error(error.message || "加入待复习失败，请重试");
@@ -3041,6 +2959,30 @@ async function saveReaderWord(word) {
     placeTooltip();
   }
 }
+
+async function explainReaderWord() {
+  if (state.tooltip.contextBusy || !state.tooltip.sentence || !state.currentArticle) return;
+  const key = state.tooltip.contextKey;
+  state.tooltip.contextBusy = true;
+  cancelTooltipHide();
+  try {
+    const result = await learningApi.explainReadingWord(state.currentArticle.id, { word: state.tooltip.lookupKey, sentence: state.tooltip.sentence });
+    state.contextCache[key] = result;
+    if (state.tooltip.contextKey === key) state.tooltip.context = result;
+  } catch (error) { ElMessage.error(error.message || "语境解读失败，请重试"); }
+  finally { if (state.tooltip.contextKey === key) { state.tooltip.contextBusy = false; await nextTick(); placeTooltip(); } }
+}
+
+async function discussArticle() {
+  if (!state.currentArticle || state.chatBusy) return;
+  const article = state.currentArticle;
+  newConversation(); state.chatMode = 'practice'; state.chatScene = 'reading';
+  state.chatReadingArticle = { id: article.id, title: article.title };
+  state.tooltip.visible = false;
+  await router.push('/chat');
+  await sendChatPrompt('我读完了这篇文章，想用英语聊聊其中的观点。');
+}
+async function returnToArticle(id) { if (!id) return; await router.push('/news'); await loadArticle(id); }
 
 let wordBankSearchTimer;
 let wordBankRequestId = 0;
@@ -3132,7 +3074,7 @@ function scheduleWordBankSearch() {
 }
 
 function updateAiSummary(settings) {
-  state.aiSummary.label = settings.hasApiKey && settings.chatModel ? "已配置" : "未配置";
+  state.aiSummary.label = settings.chatModel ? "未检测" : "未配置";
   state.aiSummary.modelName = settings.chatModel || "";
   state.aiSummary.loaded = true;
 }
@@ -3155,6 +3097,7 @@ async function openSettings(returnTarget) {
     state.ai.apiKey = "";
     state.ai.models = settings.chatModel ? [settings.chatModel] : [];
     state.ai.status = settings.hasApiKey ? "已保存密钥" : "未保存密钥";
+    state.aiSaved = { baseUrl: settings.baseUrl || '', chatModel: settings.chatModel || '' };
     updateAiSummary(settings);
   } catch (error) {
     state.ai.status = error.message || "加载设置失败";
@@ -3176,9 +3119,23 @@ async function fetchModels() {
     state.ai.status = state.ai.models.length
       ? `已获取 ${state.ai.models.length} 个模型`
       : "没有找到可用模型";
+  } catch (error) {
+    state.ai.status = error.message || "获取模型失败，可以直接输入模型名后测试连接";
   } finally {
     state.aiBusy = false;
   }
+}
+
+async function testAiConnection() {
+  if (state.aiBusy) return;
+  state.aiBusy = true; state.aiTesting = true;
+  state.ai.status = '正在发送实际模型请求…';
+  try {
+    const result = await aiApi.test({ baseUrl: state.ai.baseUrl, apiKey: state.ai.apiKey, chatModel: state.ai.chatModel });
+    state.ai.status = `${result.modelName} 连接正常 · ${result.latencyMs} ms（当前表单）`;
+    if (!state.ai.apiKey && state.ai.baseUrl === state.aiSaved.baseUrl && state.ai.chatModel === state.aiSaved.chatModel) state.aiSummary.label = '连接正常';
+  } catch (error) { state.ai.status = error.message || '连接失败，请检查配置后重试'; }
+  finally { state.aiBusy = false; state.aiTesting = false; }
 }
 
 async function saveAiSettings() {
@@ -3194,7 +3151,10 @@ async function saveAiSettings() {
     state.ai.chatModel = settings.chatModel || state.ai.chatModel;
     state.ai.status = `已应用 ${state.ai.chatModel || "当前模型"}`;
     updateAiSummary(settings);
+    state.aiSaved = { baseUrl: settings.baseUrl || '', chatModel: settings.chatModel || '' };
     ElMessage.success("AI 设置已保存");
+  } catch (error) {
+    state.ai.status = error.message || "保存失败，输入内容已保留，请重试";
   } finally {
     state.aiBusy = false;
   }
@@ -3230,6 +3190,10 @@ watch(newsLibraryOpen, async (open) => {
   (open ? newsLibraryCloseRef.value : newsLibraryButtonRef.value)?.focus();
 });
 
+watch(() => [state.ai.baseUrl, state.ai.apiKey, state.ai.chatModel], () => {
+  if (!state.aiBusy && state.ai.status.includes('连接正常')) state.ai.status = '配置已修改，请重新测试连接';
+});
+
 watch(
   () => state.settingsOpen || wordDialogVisible.value,
   async (open) => {
@@ -3257,6 +3221,7 @@ watch([activeSection, () => route.query.scope], async ([section]) => {
   document.title = sectionTitle.value + " · LinguaMate";
   state.tooltip.visible = false;
   if (section === "news") state.lookupCache = {};
+  if (section === "review" && !state.loading && !state.reviewBusy) await loadReviews();
   if (section === "wordbank" && !state.loading) await loadWordBank();
   if (section === "chat" && !state.loading) await loadCoachContext();
 });

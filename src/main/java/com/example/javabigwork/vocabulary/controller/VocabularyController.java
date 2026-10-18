@@ -74,6 +74,11 @@ public class VocabularyController {
         return ApiResponse.ok(reviewScheduleService.favoriteWords(limit));
     }
 
+    @GetMapping("/reviews/mistakes")
+    public ApiResponse<List<WordCardView>> mistakeReviews(@RequestParam(defaultValue = "8") int limit) {
+        return ApiResponse.ok(reviewScheduleService.mistakeWords(limit));
+    }
+
     @GetMapping("/reviews/mastered")
     public ApiResponse<List<WordCardView>> masteredReviews(@RequestParam(defaultValue = "20") int limit) {
         return ApiResponse.ok(reviewScheduleService.masteredWords(limit));

@@ -19,6 +19,8 @@ import "./styles/theme.css";
 import "./styles/dashboard-studio.css";
 import "./styles/workspace-shell.css";
 import "./styles/chat-studio.css";
+import "./styles/writing-studio.css";
+import "./styles/learning-refinements.css";
 
 initializeTheme();
 createApp(App).use(router).use(ElementPlus).mount("#app");

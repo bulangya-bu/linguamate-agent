@@ -9,6 +9,8 @@ public record LearningReportView(
         long essayCount,
         long readingCount,
         List<String> weakPoints,
-        List<String> nextActions
+        List<String> nextActions,
+        long dueWords,
+        LearningEvidence evidence
 ) {
 }

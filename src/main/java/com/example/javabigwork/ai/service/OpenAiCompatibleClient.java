@@ -8,7 +8,9 @@ import com.example.javabigwork.ai.dto.OpenAiChatMessage;
 import com.example.javabigwork.ai.dto.OpenAiModelListResponse;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.Duration;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
@@ -63,7 +65,10 @@ public class OpenAiCompatibleClient {
 
     private RestClient restClient(AiRuntimeSettings settings) {
         String baseUrl = normalizeBaseUrl(settings.baseUrl());
-        RestClient.Builder builder = RestClient.builder().baseUrl(baseUrl);
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(Duration.ofSeconds(45));
+        RestClient.Builder builder = RestClient.builder().requestFactory(factory).baseUrl(baseUrl);
         if (StringUtils.hasText(settings.apiKey())) {
             builder.defaultHeader("Authorization", "Bearer " + settings.apiKey().trim());
             builder.defaultHeader("api-key", settings.apiKey().trim());

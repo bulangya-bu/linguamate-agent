@@ -228,10 +228,10 @@ class JavaBigWorkApplicationTests {
     }
 
     @Test
-    void todayReviewsReturnWrongWordsOnlyAndRemovePassedWord() throws Exception {
+    void mistakePracticeIncludesFutureWordsAndRemovesPassedWord() throws Exception {
         ReviewWord reviewWord = seedWrongReviewWord();
 
-        MvcResult before = mockMvc.perform(get("/api/reviews/today")
+        MvcResult before = mockMvc.perform(get("/api/reviews/mistakes")
                         .param("limit", "8")
                         .session(reviewWord.session()))
                 .andExpect(status().isOk())
@@ -246,7 +246,7 @@ class JavaBigWorkApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.correct").value(true));
 
-        MvcResult after = mockMvc.perform(get("/api/reviews/today")
+        MvcResult after = mockMvc.perform(get("/api/reviews/mistakes")
                         .param("limit", "8")
                         .session(reviewWord.session()))
                 .andExpect(status().isOk())
@@ -925,8 +925,12 @@ class JavaBigWorkApplicationTests {
 
     @Test
     void aiSettingsAreStoredPerUser() throws Exception {
-        MockHttpSession student = studentSession();
-        MockHttpSession admin = adminSession();
+        String firstName = "settingsA" + System.nanoTime();
+        String secondName = "settingsB" + System.nanoTime();
+        registerUser(firstName, "Settings A");
+        registerUser(secondName, "Settings B");
+        MockHttpSession student = login(firstName, "userpass123");
+        MockHttpSession admin = login(secondName, "userpass123");
 
         mockMvc.perform(put("/api/ai/settings")
                         .session(student)

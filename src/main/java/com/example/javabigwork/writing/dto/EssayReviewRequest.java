@@ -12,6 +12,10 @@ public record EssayReviewRequest(
         String targetLevel,
         @NotBlank(message = "请输入作文内容")
         @Size(max = 8000, message = "作文内容不能超过 8000 个字符")
-        String essayText
+        String essayText,
+        Long revisionOfId
 ) {
+    public EssayReviewRequest(String title, String examType, String targetLevel, String essayText) {
+        this(title, examType, targetLevel, essayText, null);
+    }
 }

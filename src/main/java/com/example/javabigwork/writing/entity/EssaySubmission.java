@@ -15,5 +15,9 @@ public class EssaySubmission {
     public String originalText;
     public String polishedText;
     public Double totalScore;
+    public Long revisionOfId;
+    public String reviewSource;
+    public String modelName;
+    public String targetLevel;
     public LocalDateTime createdAt;
 }

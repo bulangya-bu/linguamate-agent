@@ -7,6 +7,10 @@ import java.time.LocalDateTime;
 
 @TableName("user_word_progress")
 public class UserWordProgress {
+    public String sourceSentence;
+    public String sourceTitle;
+    public String sourceWord;
+    public Long sourceArticleId;
     @TableId(type = IdType.AUTO)
     public Long id;
     public Long userId;

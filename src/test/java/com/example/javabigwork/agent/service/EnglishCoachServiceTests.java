@@ -35,14 +35,14 @@ class EnglishCoachServiceTests {
         coach = new EnglishCoachService(settings, client, new AgentPromptFactory(mock(RagRuntimeOptions.class)),
                 new AgentTraceRecorder(), planner, words, retrieval, new ObjectMapper());
         when(settings.resolveCurrent()).thenReturn(new AiRuntimeSettings("openai-compatible", "http://localhost:9/v1", "test-only", "my-coach-model"));
-        when(planner.planToday(3)).thenReturn(List.of());
+        when(planner.planMistakes(3)).thenReturn(List.of());
         when(retrieval.search(anyString(), eq(2))).thenReturn(List.of());
     }
 
     @Test void oneModelCallUsesRealWeakWordsAndReturnsSeparateFeedback() {
         UserWordProgress progress = new UserWordProgress(); progress.wordId = 42L;
         Word word = new Word(); word.id = 42L; word.word = "challenge"; word.meaningCn = "挑战";
-        when(planner.planToday(3)).thenReturn(List.of(progress));
+        when(planner.planMistakes(3)).thenReturn(List.of(progress));
         when(words.selectById(42L)).thenReturn(word);
         when(client.chat(any(), anyString(), anyList())).thenReturn("""
                 ```json
