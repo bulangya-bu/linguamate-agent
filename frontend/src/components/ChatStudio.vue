@@ -20,7 +20,7 @@
     <div class="studio-chat-columns">
       <section class="studio-dialogue" aria-label="英语对话">
         <header class="studio-dialogue-heading">
-          <div><span class="studio-live-dot" :class="{ connected: mode === 'practice' && latestFeedback?.source === 'model' }"></span>
+          <div><span class="studio-live-dot" :class="{ connected: !busy && (mode === 'practice' ? latestFeedback?.source === 'model' : assistantUsesModel) }"></span>
             <strong>{{ mode === 'practice' ? currentScene.label : '你的学习助手' }}</strong>
             <span>{{ mode === 'practice' ? 'CONVERSATION LAB' : 'LEARNING ASSISTANT' }}</span>
           </div>
@@ -51,9 +51,11 @@
             <div class="studio-message-body">
               <div class="studio-message-byline"><strong>{{ message.role === 'user' ? '你' : 'LinguaMate' }}</strong>
                 <span v-if="message.coaching">{{ message.coaching.source === 'model' ? 'AI 对话教练' : '本地场景练习' }}</span>
+                <span v-else-if="message.role === 'assistant' && message.trace?.some(step => step.title === '调用在线模型')">AI 学习助手</span>
+                <span v-else-if="message.role === 'assistant' && message.trace?.some(step => step.title === '使用本地兜底')">本地学习建议</span>
               </div>
               <div v-if="message.role === 'user' && message.readingArticle" class="studio-reading-attachment"><AppIcon name="news" /><span>阅读讨论<strong>{{ message.readingArticle.title }}</strong></span></div>
-              <p>{{ message.content }}</p>
+              <p><template v-for="(part, partIndex) in messageTextParts(message)" :key="partIndex"><strong v-if="part.emphasis">{{ part.text }}</strong><template v-else>{{ part.text }}</template></template></p>
               <slot name="message-extra" :message="message" :index="index" />
               <button v-if="message.coaching" class="studio-feedback-link" :class="{ selected: selectedIndex === index }" type="button"
                 :aria-pressed="selectedIndex === index" @click="selectedIndex = index"><AppIcon name="spark" />查看本轮反馈<AppIcon name="arrow" /></button>
@@ -77,7 +79,7 @@
 
       <aside class="studio-coach" aria-label="AI 教练反馈">
         <header class="studio-coach-heading"><span class="studio-coach-mark"><AppIcon name="spark" /></span><div><h2>{{ mode === 'practice' ? '你的 AI 教练' : '学习连接站' }}</h2><p>{{ mode === 'practice' ? '每一轮，都有一点进步' : '从对话走向实际练习' }}</p></div><span class="studio-coach-number">{{ String(userTurns).padStart(2, '0') }}</span></header>
-        <div class="studio-model-line"><span :class="{ ready: mode === 'practice' && feedback?.source === 'model' }"></span><b>{{ mode === 'practice' ? feedback?.modelName || modelName || '等待配置模型' : modelName || '本地学习工具' }}</b><small>{{ mode === 'assistant' ? '按任务调用' : feedback ? feedback.source === 'model' ? '本轮已调用' : '本轮本地练习' : '练习时连接' }}</small></div>
+        <div class="studio-model-line"><span :class="{ ready: !busy && (mode === 'practice' ? feedback?.source === 'model' : assistantUsesModel) }"></span><b>{{ mode === 'practice' ? feedback?.modelName || modelName || '等待配置模型' : modelName || '本地学习工具' }}</b><small>{{ mode === 'assistant' ? assistantStatus : feedback ? feedback.source === 'model' ? '本轮已调用' : '本轮本地练习' : '练习时连接' }}</small></div>
         <div class="studio-coach-scroll">
           <template v-if="mode === 'practice'">
             <div v-if="busy" class="studio-feedback-pending"><AppIcon name="ai" /><p>正在准备本轮反馈</p><small>完成后会和回复一起呈现</small></div>
@@ -132,6 +134,10 @@ const currentScene = computed(() => scenes.find(item => item.id === props.scene)
 const userTurns = computed(() => props.messages.filter(item => item.role === 'user').length);
 const selectedIndex = ref(-1);
 const latestFeedback = computed(() => [...props.messages].reverse().find(item => item.coaching)?.coaching);
+const latestAssistant = computed(() => props.messages.findLast(item => item.role === 'assistant'));
+const assistantUsesModel = computed(() => !latestAssistant.value?.coaching && latestAssistant.value?.trace?.some(step => step.title === '调用在线模型'));
+const assistantStatus = computed(() => props.busy ? '等待本轮回复' : assistantUsesModel.value ? '本轮已调用'
+  : latestAssistant.value?.trace?.some(step => step.title === '使用本地兜底') ? '本轮本地建议' : '问答时连接');
 const feedback = computed(() => props.messages[selectedIndex.value]?.coaching);
 const targetWords = computed(() => feedback.value?.targetWords || props.contextWords);
 const displayedTrace = computed(() => props.mode === 'practice' ? props.messages[selectedIndex.value]?.trace || props.trace : props.trace);
@@ -142,6 +148,12 @@ let waitTimer;
 watch(() => props.busy, busy => { clearInterval(waitTimer); if (busy) { elapsed.value=0; waitTimer=setInterval(()=>elapsed.value++,1000); } });
 onBeforeUnmount(()=>clearInterval(waitTimer));
 function focusInput() { input.value?.focus(); }
+function messageTextParts(message) {
+  if (message.role === 'user') return [{ text: message.content, emphasis: false }];
+  // Interpolate text nodes rather than HTML, including when a model emits Markdown emphasis.
+  return String(message.content || '').split(/\*\*([^*\n]+)\*\*/g)
+    .map((text, index) => ({ text, emphasis: index % 2 === 1 }));
+}
 const lastArtPrompt=ref('');
 async function suggestFromArt(prompt) { if(props.busy)return;const existing=props.draft;const next=!existing.trim() ? prompt : lastArtPrompt.value && existing.endsWith(lastArtPrompt.value) ? existing.slice(0,-lastArtPrompt.value.length)+prompt : `${existing}\n${prompt}`;emit('update:draft',next.slice(0,2000));lastArtPrompt.value=prompt;await nextTick();focusInput(); }
 function submitPrompt(prompt) { if (!props.busy) emit('prompt', prompt); }

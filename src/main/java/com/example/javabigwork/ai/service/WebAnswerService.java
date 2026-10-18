@@ -39,6 +39,13 @@ public class WebAnswerService {
             List<Message> history,
             List<KnowledgeSearchResult> ragSnippets
     ) {
+        return answer(scene, message, history, ragSnippets, "{}");
+    }
+
+    public Optional<String> answer(
+            String scene, String message, List<Message> history,
+            List<KnowledgeSearchResult> ragSnippets, String learningEvidence
+    ) {
         AiRuntimeSettings settings = settingsService.resolveCurrent();
         if (!StringUtils.hasText(settings.baseUrl()) || !StringUtils.hasText(settings.chatModel())) {
             log.warn("LLM not configured: baseUrl={}, model={}", settings.baseUrl(), settings.chatModel());
@@ -48,12 +55,13 @@ public class WebAnswerService {
             List<com.example.javabigwork.ai.dto.OpenAiChatMessage> messages = new ArrayList<>();
             if (history != null) {
                 history.stream()
-                        .filter(item -> StringUtils.hasText(item.role) && StringUtils.hasText(item.content))
+                        .filter(item -> ("user".equals(item.role) || "assistant".equals(item.role))
+                                && StringUtils.hasText(item.content))
                         .forEach(item -> messages.add(new com.example.javabigwork.ai.dto.OpenAiChatMessage(item.role, item.content)));
             }
             messages.add(new com.example.javabigwork.ai.dto.OpenAiChatMessage("user", message));
             log.info("Calling LLM: scene={}, model={}, messageLen={}", scene, settings.chatModel(), message.length());
-            String reply = client.chat(settings, promptFactory.systemPrompt(scene, ragSnippets), messages);
+            String reply = client.chat(settings, promptFactory.learningAssistantPrompt(scene, ragSnippets, learningEvidence), messages);
             return Optional.of(reply);
         } catch (Exception exception) {
             log.error("LLM call failed: scene={}, baseUrl={}, model={}, error={}",

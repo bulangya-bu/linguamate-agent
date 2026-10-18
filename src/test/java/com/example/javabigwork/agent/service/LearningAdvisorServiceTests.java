@@ -164,6 +164,29 @@ class LearningAdvisorServiceTests {
         assertEquals(3, view.learningCard().items().size());
     }
 
+    @Test
+    void unfamiliarWordsWithoutDueOrMistakeRecordsLeadToVocabularyPractice() {
+        seedProgress("newly-learned", 1, 0);
+        LearningAdvisorView view = service.vocabularySummary("unfamiliar", 0, 10);
+        assertEquals("/vocabulary", view.actions().get(0).route());
+        assertTrue(view.actions().get(0).query().isEmpty());
+    }
+
+    @Test
+    void snapshotIsBoundedAndDistinguishesMasteredDueAndMistakeWords() {
+        seedProgress("mastered", 4, 0);
+        for (int index = 0; index < 14; index++) seedProgress("weak-" + index, 1, index + 1);
+        var snapshot = service.assistantSnapshot();
+        assertEquals(15, snapshot.trackedWords());
+        assertEquals(1, snapshot.masteredWords());
+        assertEquals(14, snapshot.unfamiliarWords());
+        assertEquals(14, snapshot.mistakeWords());
+        assertEquals(0, snapshot.dueWords());
+        assertEquals(12, snapshot.priorityWords().size());
+        assertEquals(14, snapshot.priorityWords().get(0).wrongCount());
+        assertTrue(snapshot.priorityWords().stream().noneMatch(word -> word.due()));
+    }
+
     private void insertMessage(Long conversationId, String role, LocalDateTime createdAt) {
         Message message = new Message();
         message.conversationId = conversationId;

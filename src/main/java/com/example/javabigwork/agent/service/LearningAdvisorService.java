@@ -5,6 +5,9 @@ import com.example.javabigwork.agent.dto.ChatAction;
 import com.example.javabigwork.agent.dto.LearningAdvisorView;
 import com.example.javabigwork.agent.dto.LearningCard;
 import com.example.javabigwork.agent.dto.LearningCardItem;
+import com.example.javabigwork.agent.dto.LearningAssistantSnapshot;
+import com.example.javabigwork.agent.dto.LearningAssistantSnapshot.WordEvidence;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.chat.entity.Conversation;
 import com.example.javabigwork.chat.entity.Message;
@@ -40,6 +43,7 @@ public class LearningAdvisorService {
     private final WordMapper wordMapper;
     private final EssaySubmissionMapper essaySubmissionMapper;
     private final ReadingRecordMapper readingRecordMapper;
+    private final ObjectMapper json;
 
     public LearningAdvisorService(
             UserContext userContext,
@@ -49,7 +53,8 @@ public class LearningAdvisorService {
             UserWordProgressMapper userWordProgressMapper,
             WordMapper wordMapper,
             EssaySubmissionMapper essaySubmissionMapper,
-            ReadingRecordMapper readingRecordMapper) {
+            ReadingRecordMapper readingRecordMapper,
+            ObjectMapper json) {
         this.userContext = userContext;
         this.conversationMapper = conversationMapper;
         this.messageMapper = messageMapper;
@@ -58,6 +63,48 @@ public class LearningAdvisorService {
         this.wordMapper = wordMapper;
         this.essaySubmissionMapper = essaySubmissionMapper;
         this.readingRecordMapper = readingRecordMapper;
+        this.json = json;
+    }
+
+    public LearningAssistantSnapshot assistantSnapshot() {
+        LocalDateTime now = LocalDateTime.now();
+        List<UserWordProgress> progresses = userWordProgressMapper.selectList(
+                new QueryWrapper<UserWordProgress>().eq("user_id", userContext.userId()));
+        List<UserWordProgress> priorities = progresses.stream()
+                .filter(progress -> unfamiliar(progress) || due(progress, now))
+                .sorted(priorityOrder(now))
+                .limit(12).toList();
+        Map<Long, Word> words = new HashMap<>();
+        if (!priorities.isEmpty()) {
+            wordMapper.selectBatchIds(priorities.stream().map(progress -> progress.wordId).toList())
+                    .forEach(word -> words.put(word.id, word));
+        }
+        List<WordEvidence> evidence = priorities.stream().filter(progress -> words.containsKey(progress.wordId))
+                .map(progress -> new WordEvidence(words.get(progress.wordId).word,
+                        words.get(progress.wordId).meaningCn, value(progress.familiarity), value(progress.wrongCount),
+                        value(progress.reviewCount), due(progress, now), progress.lastReviewAt, progress.nextReviewAt))
+                .toList();
+        long unfamiliarCount = progresses.stream().filter(this::unfamiliar).count();
+        return new LearningAssistantSnapshot(now.toLocalDate().toString(), dailyRoute(false).learningCard(),
+                progresses.size(), unfamiliarCount, progresses.size() - unfamiliarCount,
+                progresses.stream().filter(progress -> value(progress.wrongCount) > 0).count(),
+                progresses.stream().filter(progress -> due(progress, now)).count(), evidence);
+    }
+
+    private boolean unfamiliar(UserWordProgress progress) {
+        return value(progress.familiarity) < 3 || value(progress.wrongCount) > 0;
+    }
+
+    private boolean due(UserWordProgress progress, LocalDateTime now) {
+        return progress.nextReviewAt != null && !progress.nextReviewAt.isAfter(now);
+    }
+
+    private Comparator<UserWordProgress> priorityOrder(LocalDateTime now) {
+        return Comparator.<UserWordProgress>comparingInt(progress -> value(progress.wrongCount)).reversed()
+                .thenComparing(progress -> !due(progress, now))
+                .thenComparingInt(progress -> value(progress.familiarity))
+                .thenComparing(progress -> progress.lastReviewAt, Comparator.nullsFirst(Comparator.naturalOrder()))
+                .thenComparing(progress -> progress.wordId);
     }
 
     public LearningAdvisorView dailyRoute(boolean includeCurrentExchange) {
@@ -94,7 +141,7 @@ public class LearningAdvisorService {
         List<ChatAction> actions = new ArrayList<>();
         addAction(actions, items.get(0), "开始对话", "/chat", Map.of());
         addAction(actions, items.get(1), "学习单词", "/vocabulary", Map.of());
-        addAction(actions, items.get(2), "复习错词", "/review", Map.of("mode", "today"));
+        addAction(actions, items.get(2), "复习错词", "/review", Map.of("mode", "mistakes"));
         addAction(actions, items.get(3), "开始写作", "/writing", Map.of());
         addAction(actions, items.get(4), "阅读新闻", "/news", Map.of());
 
@@ -132,8 +179,10 @@ public class LearningAdvisorService {
         }
         List<LearningCardItem> allItems = selected.stream()
                 .filter(progress -> words.containsKey(progress.wordId))
+                .sorted("mastered".equals(group)
+                        ? Comparator.comparing(progress -> words.get(progress.wordId).word, String.CASE_INSENSITIVE_ORDER)
+                        : priorityOrder(LocalDateTime.now()))
                 .map(progress -> wordItem(words.get(progress.wordId), progress, group))
-                .sorted(Comparator.comparing(LearningCardItem::label, String.CASE_INSENSITIVE_ORDER))
                 .toList();
 
         int totalPages = allItems.isEmpty() ? 0 : (allItems.size() + size - 1) / size;
@@ -146,12 +195,16 @@ public class LearningAdvisorService {
         String summary = mastered
                 ? "词库中有 " + allItems.size() + " 个已掌握单词。"
                 : "词库中有 " + allItems.size() + " 个需要继续巩固的单词。";
+        boolean hasMistakes = selected.stream().anyMatch(progress -> value(progress.wrongCount) > 0);
+        boolean hasDue = selected.stream().anyMatch(progress -> due(progress, LocalDateTime.now()));
+        String route = mastered ? "/wordbank" : hasMistakes || hasDue ? "/review" : "/vocabulary";
         ChatAction action = new ChatAction(
                 "open-" + group,
-                mastered ? "查看已掌握" : "开始复习",
-                mastered ? "wordbank" : "review",
-                mastered ? "/wordbank" : "/review",
-                mastered ? Map.of("scope", "mastered") : Map.of("mode", "today"));
+                mastered ? "查看已掌握" : hasMistakes ? "复习错词" : hasDue ? "到期复习" : "继续练词",
+                route.substring(1),
+                route,
+                mastered ? Map.of("scope", "mastered") : hasMistakes || hasDue
+                        ? Map.of("mode", hasMistakes ? "mistakes" : "today") : Map.of());
         return new LearningAdvisorView(
                 summary,
                 new LearningCard("vocabulary-summary", title, summary, group, List.copyOf(items), page,
@@ -166,17 +219,25 @@ public class LearningAdvisorService {
         if (conversationIds.isEmpty()) {
             return false;
         }
-        long userMessages = messageMapper.selectCount(new QueryWrapper<Message>()
+        List<Message> messages = messageMapper.selectList(new QueryWrapper<Message>()
                 .in("conversation_id", conversationIds)
-                .eq("role", "user")
                 .ge("created_at", start)
                 .lt("created_at", end));
-        long assistantMessages = messageMapper.selectCount(new QueryWrapper<Message>()
-                .in("conversation_id", conversationIds)
-                .eq("role", "assistant")
-                .ge("created_at", start)
-                .lt("created_at", end));
-        return userMessages > 0 && assistantMessages > 0;
+        return messages.stream().filter(message -> "user".equals(message.role) && practiceMessage(message))
+                .anyMatch(user -> messages.stream().anyMatch(answer -> user.conversationId.equals(answer.conversationId)
+                        && "assistant".equals(answer.role) && practiceMessage(answer)));
+    }
+
+    private boolean practiceMessage(Message message) {
+        // Pre-mode legacy conversations had no metadata and remain valid learning evidence.
+        if (message.metadata == null || message.metadata.isBlank()) return true;
+        try {
+            var metadata = json.readTree(message.metadata);
+            if ("user".equals(message.role)) return "practice".equals(metadata.path("mode").asText());
+            return metadata.hasNonNull("coaching");
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private LearningCardItem item(String key, String label, String detail, boolean complete) {
