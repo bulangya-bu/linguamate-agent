@@ -182,16 +182,19 @@
           stroke="var(--studio-paper-stroke, #d6e7e4)"
         />
         <path
+          class="book-ribbon art-loop"
           d="M280 295L280 329L294 315L308 319L308 279"
           fill="var(--blue)"
           opacity=".85"
         />
       </g>
       <path
+        class="book-spark art-loop"
         d="m425 72 3 10 10 3-10 3-3 10-3-10-10-3 10-3Z"
         fill="var(--studio-spark, #78b78a)"
       />
       <path
+        class="book-spark book-spark-small art-loop"
         d="m106 310 2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"
         fill="var(--blue)"
         opacity=".65"
@@ -294,11 +297,28 @@ onBeforeUnmount(() => timers.forEach(clearTimeout));
 .studio-book-spread {
   transform-origin: 270px 220px;
   filter: drop-shadow(0 15px 12px #254e4d14);
-  animation: studio-page-float 9s ease-in-out infinite;
+  animation: studio-page-float 6.8s ease-in-out infinite;
+  animation-delay: -1.1s;
 }
 .studio-book-orbits {
   transform-origin: 275px 216px;
-  animation: studio-orbit-breathe 14s ease-in-out infinite;
+  animation: studio-orbit-breathe 10s ease-in-out infinite;
+  animation-delay: -3s;
+}
+.studio-book-orbits path {
+  animation: studio-orbit-flow 12s linear infinite;
+}
+.book-ribbon {
+  transform-origin: 294px 288px;
+  animation: studio-ribbon-sway 4.6s ease-in-out infinite;
+}
+.book-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: studio-spark-bloom 3.6s ease-in-out infinite;
+}
+.book-spark-small {
+  animation-delay: -1.4s;
 }
 .studio-book-hint {
   position: absolute;
@@ -315,11 +335,14 @@ onBeforeUnmount(() => timers.forEach(clearTimeout));
 .studio-book:focus-visible .studio-book-hint {
   opacity: 1;
 }
-.studio-book:hover .studio-book-spread,
-.studio-book:focus-visible .studio-book-spread {
+.studio-book:hover .art-loop,
+.studio-book:focus-visible .art-loop,
+.studio-book:hover .studio-book-orbits path,
+.studio-book:focus-visible .studio-book-orbits path {
   animation-play-state: paused;
 }
-.studio-book.art-is-paused .art-loop {
+.studio-book.art-is-paused .art-loop,
+.studio-book.art-is-paused .studio-book-orbits path {
   animation-play-state: paused;
 }
 .book-turn-sheet {
@@ -369,24 +392,49 @@ onBeforeUnmount(() => timers.forEach(clearTimeout));
 @keyframes studio-page-float {
   0%,
   100% {
-    transform: translateY(1px) rotate(-8deg);
+    transform: translate(2px, 5px) rotate(-9deg);
   }
   50% {
-    transform: translateY(-10px) rotate(-4deg);
+    transform: translate(-3px, -16px) rotate(-3deg);
   }
 }
 @keyframes studio-orbit-breathe {
   0%,
   100% {
-    transform: rotate(-3deg) scale(0.97);
+    transform: rotate(-4deg) scale(0.96);
   }
   50% {
-    transform: rotate(3deg) scale(1.03);
+    transform: rotate(4deg) scale(1.04);
+  }
+}
+@keyframes studio-orbit-flow {
+  to {
+    stroke-dashoffset: -120;
+  }
+}
+@keyframes studio-ribbon-sway {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(8deg) translateY(2px);
+  }
+}
+@keyframes studio-spark-bloom {
+  0%,
+  100% {
+    transform: scale(0.8) rotate(-8deg);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.22) rotate(12deg);
+    opacity: 0.95;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .studio-book-spread,
-  .studio-book-orbits {
+  .studio-book .art-loop,
+  .studio-book-orbits path {
     animation: none;
   }
   .studio-book-spread {

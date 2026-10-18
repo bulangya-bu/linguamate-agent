@@ -59,6 +59,7 @@
         </g>
       </g>
       <path
+        class="art-spark art-loop"
         d="M218 40L220 47L227 49L220 51L218 58L216 51L209 49L216 47Z"
         fill="var(--art-green)"
         opacity=".6"
