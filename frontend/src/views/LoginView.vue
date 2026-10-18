@@ -1,9 +1,20 @@
 <template>
   <main
+    ref="pageRef"
     class="auth-page auth-page--garden"
-    :class="{ 'is-register': !isLogin }"
+    :class="{
+      'is-register': !isLogin,
+      'is-motion-paused': !sceneActive,
+      'is-form-active': formActive,
+    }"
   >
-    <section class="auth-story">
+    <section
+      class="auth-story"
+      @pointermove="move"
+      @pointerleave="reset"
+      @focusin="freeze"
+    >
+      <AuthAurora />
       <RouterLink class="brand" to="/login"
         ><img
           class="brand-mark"
@@ -17,9 +28,12 @@
       >
       <div class="auth-story-copy">
         <h1>
-          A little.<br /><em
-            >Every day.<svg viewBox="0 0 440 25" fill="none" aria-hidden="true">
+          <span class="auth-title-line">A little.</span><br /><em
+            ><span class="auth-title-line auth-title-line--accent"
+              >Every day.</span
+            ><svg viewBox="0 0 440 25" fill="none" aria-hidden="true">
               <path
+                pathLength="1"
                 d="M4 17C106 3 261 3 432 10M41 23C168 9 299 9 397 16"
               /></svg
           ></em>
@@ -29,7 +43,13 @@
       <AuthGarden />
       <WordAtmosphere />
     </section>
-    <section class="auth-form-side">
+    <section
+      class="auth-form-side"
+      @focusin="formActive = true"
+      @focusout="
+        formActive = $event.currentTarget.contains($event.relatedTarget)
+      "
+    >
       <ThemeToggle class="auth-theme-toggle" />
       <div class="auth-card">
         <div class="auth-card-head">
@@ -187,7 +207,10 @@
 import AppIcon from "@/components/AppIcon.vue";
 import ThemeToggle from "@/components/ThemeToggle.vue";
 import AuthGarden from "@/components/AuthGarden.vue";
+import AuthAurora from "@/components/AuthAurora.vue";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
+import { useArtMotion } from "@/composables/useArtMotion";
+import { useAuthParallax } from "@/composables/useAuthParallax";
 import {
   computed,
   onBeforeUnmount,
@@ -201,6 +224,11 @@ import { authApi } from "@/api/modules";
 
 const route = useRoute();
 const router = useRouter();
+const pageRef = ref(null);
+const formActive = ref(false);
+const { playing } = useArtMotion(pageRef);
+const sceneActive = computed(() => playing.value && !formActive.value);
+const { move, reset, freeze } = useAuthParallax(pageRef, sceneActive);
 const busy = ref(false);
 const showPassword = ref(false);
 const status = ref("");

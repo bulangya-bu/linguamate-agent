@@ -456,10 +456,12 @@
     transform-origin: 245px 171px;
     animation: auth-garden-sway 20s ease-in-out infinite;
   }
-  .auth-page--garden .auth-garden.is-paused *,
-  .auth-page--garden .auth-garden:hover *,
-  .auth-page--garden .auth-garden:focus-visible *,
-  .auth-page--garden:has(.auth-form-side:focus-within) .auth-garden * {
+  .auth-page--garden .auth-garden.is-paused .garden-loop,
+  .auth-page--garden .auth-garden:hover .garden-loop,
+  .auth-page--garden .auth-garden:focus-visible .garden-loop,
+  .auth-page--garden:has(.auth-form-side:focus-within)
+    .auth-garden
+    .garden-loop {
     animation-play-state: paused;
   }
   .auth-page--garden .auth-story-copy,

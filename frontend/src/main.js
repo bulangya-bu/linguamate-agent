@@ -22,6 +22,7 @@ import "./styles/chat-studio.css";
 import "./styles/writing-studio.css";
 import "./styles/learning-refinements.css";
 import "./styles/auth-studio.css";
+import "./styles/auth-motion.css";
 
 initializeTheme();
 createApp(App).use(router).use(ElementPlus).mount("#app");

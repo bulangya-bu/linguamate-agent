@@ -46,7 +46,7 @@
         fill="currentColor"
         opacity=".05"
       />
-      <g class="garden-orbit">
+      <g class="garden-orbit garden-loop">
         <ellipse
           cx="245"
           cy="171"
@@ -67,17 +67,21 @@
         <circle cx="82" cy="235" r="4" fill="var(--blue)" />
         <circle cx="409" cy="108" r="5" fill="var(--green)" />
       </g>
-      <g class="garden-flower">
-        <g class="garden-petals">
-          <path
+      <g class="garden-flower garden-loop">
+        <g class="garden-petals garden-loop">
+          <g
             v-for="(angle, index) in [0, 60, 120, 180, 240, 300]"
             :key="angle"
             :transform="`rotate(${angle} 245 171)`"
-            d="M245 171C163 148 150 69 191 50C238 28 274 109 245 171Z"
-            :fill="`url(#auth-petal-${index % 2 ? 'blue' : 'green'})`"
-            :stroke="index % 2 ? '#8fcadd' : '#9bc47e'"
-            stroke-opacity=".5"
-          />
+          >
+            <path
+              class="garden-petal"
+              d="M245 171C163 148 150 69 191 50C238 28 274 109 245 171Z"
+              :fill="`url(#auth-petal-${index % 2 ? 'blue' : 'green'})`"
+              :stroke="index % 2 ? '#8fcadd' : '#9bc47e'"
+              stroke-opacity=".5"
+            />
+          </g>
         </g>
         <circle
           cx="245"
@@ -97,6 +101,28 @@
         >
           Aa
         </text>
+      </g>
+      <g v-if="bloomCount" :key="bloomCount" class="garden-burst">
+        <circle
+          class="garden-burst-ring"
+          cx="245"
+          cy="171"
+          r="110"
+          stroke="var(--green)"
+        />
+        <circle
+          class="garden-burst-ring garden-burst-ring--second"
+          cx="245"
+          cy="171"
+          r="110"
+          stroke="var(--blue)"
+        />
+        <g class="garden-burst-stars" fill="currentColor">
+          <path d="m245 16 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" />
+          <path d="m388 171 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" />
+          <path d="m245 296 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" />
+          <path d="m90 171 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" />
+        </g>
       </g>
       <path
         class="garden-spark"
@@ -130,13 +156,19 @@
 </template>
 
 <script setup>
-import { ref, shallowRef } from "vue";
+import { onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import AppIcon from "./AppIcon.vue";
 import { shuffledWords } from "@/learning-art";
 import { useArtMotion } from "@/composables/useArtMotion";
 
 const root = ref(null);
-const { playing } = useArtMotion(root);
+const { playing, reducedMotion } = useArtMotion(root);
+const bloomCount = ref(0);
+let petalAnimations = [];
+function cancelBloom() {
+  petalAnimations.forEach((animation) => animation.cancel());
+  petalAnimations = [];
+}
 let deck = shuffledWords();
 const word = shallowRef(deck.shift());
 const announcement = ref("");
@@ -144,5 +176,32 @@ function nextWord() {
   if (!deck.length) deck = shuffledWords(word.value.en);
   word.value = deck.shift();
   announcement.value = `${word.value.en}，${word.value.cn}`;
+  cancelBloom();
+  if (reducedMotion.value) return;
+  bloomCount.value += 1;
+  petalAnimations = Array.from(
+    root.value.querySelectorAll(".garden-petal"),
+    (petal, index) =>
+      petal.animate(
+        [
+          { transform: "scale(1)" },
+          { transform: "scale(.86)", offset: 0.2 },
+          { transform: "scale(1.16)", offset: 0.56 },
+          { transform: "scale(1)" },
+        ],
+        {
+          duration: 1100,
+          delay: index * 35,
+          easing: "cubic-bezier(.22,1,.36,1)",
+        },
+      ),
+  );
 }
+watch(playing, (value) => {
+  if (!value) {
+    cancelBloom();
+    bloomCount.value = 0;
+  }
+});
+onBeforeUnmount(cancelBloom);
 </script>
