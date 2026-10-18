@@ -44,7 +44,7 @@ public class ReportService {
         Long userId = userContext.userId();
         long learnedWords = progressMapper.selectCount(Wrappers.<UserWordProgress>query()
                 .eq("user_id", userId)
-                .ge("familiarity", 3));
+                .ge("familiarity", 3).and(query->query.eq("wrong_count",0).or().isNull("wrong_count")));
         long reviewWords = progressMapper.selectCount(Wrappers.<UserWordProgress>query()
                 .eq("user_id", userId)
                 .gt("wrong_count", 0));

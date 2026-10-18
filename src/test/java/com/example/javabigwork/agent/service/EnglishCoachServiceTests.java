@@ -94,6 +94,16 @@ class EnglishCoachServiceTests {
         assertTrue(turn.reply().contains("read recently"));
     }
 
+    @Test void missionUsesItsCurrentGoalHintContextAndThemeWords() {
+        when(client.chat(any(),anyString(),anyList())).thenReturn("{\"reply\":\"How does it save water?\",\"revisionType\":\"none\"}");
+        var result=coach.practiceMission("We reduce water waste.",List.of(),"Current goal: explain the sensor. Hints shown: 2/3.",
+            List.of(new com.example.javabigwork.agent.dto.CoachFeedback.TargetWord(1L,"reduce","减少",false)));
+        assertEquals("model",result.coaching().source());assertTrue(result.coaching().targetWords().get(0).used());
+        ArgumentCaptor<String> prompt=ArgumentCaptor.forClass(String.class);verify(client).chat(any(),prompt.capture(),anyList());
+        assertTrue(prompt.getValue().contains("explain the sensor"));assertTrue(prompt.getValue().contains("Hints shown: 2/3"));
+        verify(planner,never()).planMistakes(anyInt());
+    }
+
     @Test void nextTurnIncludesPreviousLearningTaskEvenWhenRetrievalFails() {
         Message previous = new Message(); previous.role = "assistant"; previous.content = "What happened?";
         previous.metadata = "{\"coaching\":{\"nextChallenge\":\"Describe the result in the past tense.\"}}";

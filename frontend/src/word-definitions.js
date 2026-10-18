@@ -36,11 +36,20 @@ export function wordDefinitionGroups(word, detail) {
         meanings: [],
       });
     const group = groups.get(pos);
-    const key = meaning.replace(/[\s,，;；]+/g, "");
-    if (
-      !group.meanings.some((item) => item.replace(/[\s,，;；]+/g, "") === key)
-    )
-      group.meanings.push(meaning);
+    const senses = meaning
+      .split(/[,，;；]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const known = new Set(
+      group.meanings
+        .flatMap((item) => item.split(/[,，;；]+/))
+        .map((item) => item.replace(/\s/g, "")),
+    );
+    const added = senses.filter((item) => !known.has(item.replace(/\s/g, "")));
+    if (added.length)
+      group.meanings.push(
+        added.length === senses.length ? meaning : added.join("；"),
+      );
   }
   return [...groups.values()];
 }

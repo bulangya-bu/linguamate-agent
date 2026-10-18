@@ -87,7 +87,8 @@ public class WordBankService {
                 wordMapper.selectCount(scopeQuery("all")),
                 wordMapper.selectCount(scopeQuery("review")),
                 wordMapper.selectCount(scopeQuery("favorites")),
-                wordMapper.selectCount(scopeQuery("mastered"))
+                wordMapper.selectCount(scopeQuery("mastered")),
+                wordMapper.selectCount(scopeQuery("due"))
         );
     }
 
@@ -95,6 +96,8 @@ public class WordBankService {
         QueryWrapper<Word> wrapper = new QueryWrapper<>();
         switch (scope == null ? "all" : scope) {
             case "all" -> { }
+            case "due" -> wrapper.apply("id IN (SELECT word_id FROM user_word_progress WHERE user_id = {0} AND next_review_at <= {1})",
+                    userContext.userId(),java.time.LocalDateTime.now());
             case "review" -> wrapper.apply(
                     "id IN (SELECT word_id FROM user_word_progress WHERE user_id = {0} AND wrong_count > 0)",
                     userContext.userId());

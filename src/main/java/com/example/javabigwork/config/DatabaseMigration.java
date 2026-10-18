@@ -19,6 +19,21 @@ public class DatabaseMigration implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS learning_mission_session (
+                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    user_id BIGINT NOT NULL,
+                    mission_key VARCHAR(40) NOT NULL,
+                    study_date DATE NOT NULL,
+                    content_json LONGTEXT NOT NULL,
+                    status VARCHAR(20) NOT NULL,
+                    version INT NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP NOT NULL,
+                    updated_at TIMESTAMP NOT NULL,
+                    completed_at TIMESTAMP,
+                    UNIQUE KEY uk_mission_day (user_id, study_date, mission_key)
+                )
+                """);
+        jdbcTemplate.execute("""
                 CREATE TABLE IF NOT EXISTS user_login_day (
                     user_id BIGINT NOT NULL,
                     login_date DATE NOT NULL,

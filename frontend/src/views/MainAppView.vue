@@ -38,9 +38,12 @@
           class="nav-active-indicator"
           :style="{
             '--nav-index': navItems.findIndex(
-              (item) => item.id === activeSection,
+              (item) => item.id === navigationSection,
             ),
-            '--nav-section-offset': navItems.findIndex((item) => item.id === activeSection) >= 4 ? 1 : 0,
+            '--nav-section-offset':
+              navItems.findIndex((item) => item.id === navigationSection) >= 4
+                ? 1
+                : 0,
           }"
           aria-hidden="true"
         ></span>
@@ -48,12 +51,16 @@
           v-for="(item, index) in navItems"
           :key="item.id"
           class="nav-item"
-          :class="{ active: activeSection === item.id, 'nav-group-start': index === 4 }"
-          :aria-current="activeSection === item.id ? 'page' : undefined"
+          :class="{
+            active: navigationSection === item.id,
+            'nav-group-start': index === 4,
+          }"
+          :aria-current="navigationSection === item.id ? 'page' : undefined"
           type="button"
           @click="goSection(item.id)"
         >
-          <span class="nav-icon-wrap"><AppIcon :name="item.id" /></span><span>{{ item.label }}</span
+          <span class="nav-icon-wrap"><AppIcon :name="item.id" /></span
+          ><span>{{ item.label }}</span
           ><span
             v-if="item.id === 'review' && state.report.dueWords"
             class="nav-count"
@@ -85,7 +92,13 @@
           @click="openSettings($event.currentTarget)"
         >
           <span class="sidebar-model-icon"><AppIcon name="settings" /></span>
-          <span class="sidebar-model-copy"><strong>模型配置</strong><small :class="{ 'is-ready': state.aiSummary.label === '连接正常' }">{{ state.aiSummary.label }}</small></span>
+          <span class="sidebar-model-copy"
+            ><strong>模型配置</strong
+            ><small
+              :class="{ 'is-ready': state.aiSummary.label === '连接正常' }"
+              >{{ state.aiSummary.label }}</small
+            ></span
+          >
           <AppIcon class="sidebar-model-arrow" name="arrow" />
         </button>
         <RouterLink
@@ -105,7 +118,11 @@
             ><strong>{{ userName }}</strong></span
           ><AppIcon name="settings" />
         </button>
-        <button class="nav-logout-button desktop-account-legacy" type="button" @click="logout">
+        <button
+          class="nav-logout-button desktop-account-legacy"
+          type="button"
+          @click="logout"
+        >
           <AppIcon name="logout" />退出登录
         </button>
       </div>
@@ -118,11 +135,16 @@
     >
       <header class="workspace-bar">
         <div class="workspace-location">
-          <span class="workspace-location-icon" aria-hidden="true"><AppIcon :name="activeSection" /></span>
-          <span class="workspace-context"><span>学习空间</span><strong>{{ sectionTitle }}</strong></span>
+          <span class="workspace-location-icon" aria-hidden="true"
+            ><AppIcon :name="activeSection"
+          /></span>
+          <span class="workspace-context"
+            ><span>学习空间</span><strong>{{ sectionTitle }}</strong></span
+          >
         </div>
         <div class="workspace-tools">
-          <span class="today-date"><AppIcon name="calendar" />{{ todayLabel }}</span
+          <span class="today-date"
+            ><AppIcon name="calendar" />{{ todayLabel }}</span
           ><button
             type="button"
             class="connection-button desktop-account-legacy"
@@ -160,33 +182,84 @@
         <section class="focus-session" aria-labelledby="studio-focus-title">
           <div class="focus-copy">
             <span class="session-label"
-              ><span class="status-dot"></span>今日焦点</span
+              ><span class="status-dot"></span>今日主题 ·
+              {{ selectedMission?.lesson.level || "A2–B1" }}</span
             >
-            <h2 id="studio-focus-title">{{ routeDoneCount === journeySteps.length ? '这一路，' : '今天，从' }}<br /><span>{{ routeDoneCount === journeySteps.length ? '又前进了一点。' : (focusStep?.title || '记单词') + '开始。' }}</span></h2>
-            <p class="studio-focus-detail">{{ focusDescription }}</p>
+            <h2 id="studio-focus-title">
+              {{
+                selectedMission?.key === "welcome"
+                  ? "把校园，介绍给"
+                  : "让每一滴水，"
+              }}<br /><span>{{
+                selectedMission?.key === "welcome" ? "新朋友。" : "都有去处。"
+              }}</span>
+            </h2>
+            <p class="studio-focus-detail">
+              {{
+                selectedMission?.lesson.subtitle ||
+                "从一篇短文，到一次自己的英文表达。"
+              }}
+            </p>
+            <div
+              class="daily-theme-choices"
+              role="group"
+              aria-label="选择今日主题"
+            >
+              <button
+                v-for="item in dailyMissions"
+                :key="item.key"
+                type="button"
+                :class="{ active: item.key === selectedMission?.key }"
+                :aria-pressed="item.key === selectedMission?.key"
+                @click="selectedMissionKey = item.key"
+              >
+                <AppIcon :name="item.key === 'water' ? 'spark' : 'chat'" />{{
+                  item.key === "water" ? "校园节水讲解" : "迎新校园向导"
+                }}
+              </button>
+            </div>
             <div class="studio-focus-actions">
               <button
                 class="primary-button"
                 type="button"
-                @click="goSection(focusStep?.section || 'vocabulary')"
+                :disabled="!selectedMission"
+                @click="openMission()"
               >
-                {{ routeDoneCount === journeySteps.length ? '再练习一次' : '开始' + (focusStep?.title || '学习') }}<AppIcon name="arrow" />
+                {{
+                  selectedMission?.status === "COMPLETED"
+                    ? "回看今日收获"
+                    : selectedMission?.id
+                      ? "继续主题任务"
+                      : "开启今日主题"
+                }}<AppIcon name="arrow" />
               </button>
-              <button v-if="state.report.reviewWords && focusStep?.section !== 'review'" class="studio-review-link" type="button" @click="goSection('review')"><AppIcon name="review" />复习 {{ state.report.reviewWords }} 词</button>
+              <button
+                v-if="state.report.dueWords"
+                class="studio-review-link"
+                type="button"
+                @click="goSection('review')"
+              >
+                <AppIcon name="review" />{{ state.report.dueWords }} 词到期复习
+              </button>
             </div>
           </div>
           <div class="studio-art">
             <LearningStudioArt v-if="activeSection === 'dashboard'" />
-            <WordAtmosphere v-if="activeSection === 'dashboard'" variant="studio" />
+            <WordAtmosphere
+              v-if="activeSection === 'dashboard'"
+              variant="studio"
+            />
           </div>
-          <div class="studio-canvas-footer" aria-hidden="true"><span>LINGUAMATE</span><span>A little. Every day.</span></div>
+          <div class="studio-canvas-footer" aria-hidden="true">
+            <span>LINGUAMATE</span><span>A little. Every day.</span>
+          </div>
         </section>
         <div class="home-grid">
           <section class="duo-route-shell">
             <div class="duo-route-heading">
               <div>
                 <span class="studio-section-kicker">YOUR JOURNEY</span>
-                <h2>学习路线</h2>
+                <h2>今日主题路线</h2>
               </div>
               <div
                 class="duo-route-progress"
@@ -194,10 +267,22 @@
                   '学习路线完成 ' + routeDoneCount + '/' + journeySteps.length
                 "
               >
-                <strong>{{ routeDoneCount }}<small>/{{ journeySteps.length }}</small></strong><span>已完成</span>
+                <strong
+                  >{{ routeDoneCount
+                  }}<small>/{{ journeySteps.length }}</small></strong
+                ><span>已完成</span>
               </div>
             </div>
-            <div class="duo-route-progress-bar" role="progressbar" aria-label="学习路线进度" :aria-valuenow="routeProgressPercent" aria-valuemin="0" aria-valuemax="100"><i :style="{ width: routeProgressPercent + '%' }"></i></div>
+            <div
+              class="duo-route-progress-bar"
+              role="progressbar"
+              aria-label="学习路线进度"
+              :aria-valuenow="routeProgressPercent"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <i :style="{ width: routeProgressPercent + '%' }"></i>
+            </div>
             <div class="duo-route-track" role="list" aria-label="学习路线">
               <div
                 v-for="(step, index) in journeySteps"
@@ -217,19 +302,53 @@
                   }"
                   type="button"
                   :aria-label="routeStepAriaLabel(step)"
-                  @click="goSection(step.section)"
+                  :disabled="!selectedMission"
+                  @click="openMission()"
                 >
-                  <span class="studio-step-icon"><AppIcon :name="step.section" /></span>
-                  <span class="route-step-copy"><strong>{{ step.title }}</strong><small>{{ step.detail }}</small></span>
-                  <AppIcon v-if="step.done" class="studio-step-done" name="check" />
-                  <span v-else-if="step.recommended" class="studio-step-next">开始<AppIcon name="arrow" /></span>
+                  <span class="studio-step-icon"
+                    ><AppIcon :name="step.section"
+                  /></span>
+                  <span class="route-step-copy"
+                    ><strong>{{ step.title }}</strong
+                    ><small>{{ step.detail }}</small></span
+                  >
+                  <AppIcon
+                    v-if="step.done"
+                    class="studio-step-done"
+                    name="check"
+                  />
+                  <span v-else-if="step.recommended" class="studio-step-next"
+                    >开始<AppIcon name="arrow"
+                  /></span>
                   <span v-else class="route-step-number">0{{ index + 1 }}</span>
                 </button>
               </div>
             </div>
           </section>
-          <div class="studio-journey-note"><AppIcon name="spark" /><p>{{ state.report.nextActions?.[0] || '从推荐练习开始，找到适合自己的学习节奏。' }}</p></div>
-          <button class="studio-assistant-link" type="button" @click="openLearningAssistant"><AppIcon name="chat" /><span>和学习助手聊聊</span><AppIcon name="arrow" /></button>
+          <div class="studio-journey-note">
+            <AppIcon name="spark" />
+            <p>
+              {{
+                missionOverviewError ||
+                selectedMission?.reason ||
+                "正在载入今天的主题…"
+              }}<button
+                v-if="missionOverviewError"
+                type="button"
+                @click="loadDailyMissions"
+              >
+                重试
+              </button>
+            </p>
+          </div>
+          <button
+            class="studio-assistant-link"
+            type="button"
+            @click="openLearningAssistant"
+          >
+            <AppIcon name="chat" /><span>和学习助手聊聊</span
+            ><AppIcon name="arrow" />
+          </button>
         </div>
         <button
           class="dashboard-details-toggle"
@@ -276,120 +395,184 @@
         </section>
         <aside id="dashboard-footprints" class="daily-panel">
           <section class="duo-quest-panel">
-            <div class="panel-heading"><h2>学习足迹</h2><button class="evidence-open" type="button" @click="evidenceOpen = true">学习变化 ↗</button></div>
+            <div class="panel-heading">
+              <h2>学习足迹</h2>
+              <button
+                class="evidence-open"
+                type="button"
+                @click="openGrowth('missions')"
+              >
+                成长证据 ↗
+              </button>
+            </div>
             <div class="learning-stats">
-              <button type="button" @click="goSection('wordbank')"><strong>{{ state.report.learnedWords || 0 }}<small>词</small></strong><span>已掌握单词</span></button>
-              <button type="button" @click="goSection('review')"><strong>{{ state.report.dueWords || 0 }}<small>词</small></strong><span>到期复习</span></button>
-              <button type="button" @click="goSection('writing')"><strong>{{ state.report.essayCount || 0 }}<small>篇</small></strong><span>写作练习</span></button>
-              <button type="button" @click="goSection('news')"><strong>{{ state.report.readingCount || 0 }}<small>篇</small></strong><span>阅读记录</span></button>
+              <button type="button" @click="goSection('wordbank')">
+                <strong
+                  >{{ state.report.learnedWords || 0 }}<small>词</small></strong
+                ><span>已掌握单词</span>
+              </button>
+              <button type="button" @click="goSection('review')">
+                <strong
+                  >{{ state.report.dueWords || 0 }}<small>词</small></strong
+                ><span>到期复习</span>
+              </button>
+              <button type="button" @click="goSection('writing')">
+                <strong
+                  >{{ state.report.essayCount || 0 }}<small>篇</small></strong
+                ><span>写作练习</span>
+              </button>
+              <button type="button" @click="goSection('news')">
+                <strong
+                  >{{ state.report.readingCount || 0 }}<small>篇</small></strong
+                ><span>阅读记录</span>
+              </button>
             </div>
           </section>
         </aside>
       </section>
 
-      <section id="journal" class="section" :class="{ active: activeSection === 'journal' }"><LearningJournal v-if="activeSection === 'journal'" @navigate="navigateJournal" /></section>
+      <section
+        id="mission"
+        class="section"
+        :class="{ active: activeSection === 'mission' }"
+      >
+        <MissionWorkspace
+          v-if="activeSection === 'mission' && state.currentUser"
+          :user-id="state.currentUser.id"
+          @home="goSection('dashboard')"
+          @updated="missionUpdated"
+          @evidence="openGrowth('missions')"
+          @settings="openSettings"
+        />
+      </section>
+      <section
+        id="journal"
+        class="section"
+        :class="{ active: activeSection === 'journal' }"
+      >
+        <LearningJournal
+          v-if="activeSection === 'journal'"
+          @navigate="navigateJournal"
+          @evidence="openGrowth"
+        />
+      </section>
       <section
         id="chat"
         class="section chat-workspace"
         :class="{ active: activeSection === 'chat' }"
       >
         <ChatStudio
-          :messages="state.messages" :conversations="state.conversations" :conversation-id="state.conversationId"
-          :scene="state.chatScene" :mode="state.chatMode" v-model:draft="state.chatInput" :busy="state.chatBusy"
-          :error="state.chatError" :model-name="state.aiSummary.modelName" :context-words="state.coachWords" :trace="state.trace"
-          @send="sendChat" @prompt="sendChatPrompt" @mode="state.chatMode = $event" @scene="state.chatScene = $event"
-          @history="handleConversationSelect" @new="newConversation" @settings="openSettings"
-          @review="router.push({ path: '/wordbank', query: { scope: 'review' } })"
+          :messages="state.messages"
+          :conversations="state.conversations"
+          :conversation-id="state.conversationId"
+          :scene="state.chatScene"
+          :mode="state.chatMode"
+          v-model:draft="state.chatInput"
+          :busy="state.chatBusy"
+          :error="state.chatError"
+          :model-name="state.aiSummary.modelName"
+          :context-words="state.coachWords"
+          :trace="state.trace"
+          @send="sendChat"
+          @prompt="sendChatPrompt"
+          @mode="state.chatMode = $event"
+          @scene="state.chatScene = $event"
+          @history="handleConversationSelect"
+          @new="newConversation"
+          @settings="openSettings"
+          @review="
+            router.push({ path: '/wordbank', query: { scope: 'review' } })
+          "
         >
           <template #message-extra="{ message, index }">
-              <section
-                v-if="message.learningCard"
-                class="learning-advisor-card"
-                :class="`card-${message.learningCard.type}`"
-              >
-                <header>
-                  <div>
-                    <span>{{
-                      message.learningCard.type === "daily-route"
-                        ? "LEARNING ROUTE"
-                        : "VOCABULARY PROFILE"
-                    }}</span>
-                    <h3>{{ message.learningCard.title }}</h3>
-                  </div>
-                  <b v-if="message.learningCard.type === 'daily-route'">
-                    {{
-                      message.learningCard.items.filter(
-                        (item) => item.status === "complete",
-                      ).length
-                    }}/{{ message.learningCard.items.length }}
-                  </b>
-                  <b v-else>{{ message.learningCard.totalElements }}</b>
-                </header>
-                <div class="learning-card-items">
-                  <article
-                    v-for="item in message.learningCard.items"
-                    :key="item.key"
-                    :class="{ 'is-complete': item.status === 'complete' }"
-                  >
-                    <i>{{
-                      item.status === "complete"
-                        ? "✓"
-                        : message.learningCard.type === "daily-route"
-                          ? "○"
-                          : "Aa"
-                    }}</i>
-                    <div>
-                      <strong>{{ item.label }}</strong
-                      ><small>{{ item.detail }}</small>
-                    </div>
-                  </article>
-                  <p
-                    v-if="!message.learningCard.items.length"
-                    class="learning-card-empty"
-                  >
-                    这个分组暂时没有单词。
-                  </p>
+            <section
+              v-if="message.learningCard"
+              class="learning-advisor-card"
+              :class="`card-${message.learningCard.type}`"
+            >
+              <header>
+                <div>
+                  <span>{{
+                    message.learningCard.type === "daily-route"
+                      ? "LEARNING ROUTE"
+                      : "VOCABULARY PROFILE"
+                  }}</span>
+                  <h3>{{ message.learningCard.title }}</h3>
                 </div>
-                <footer
-                  v-if="
-                    message.learningCard.type === 'vocabulary-summary' &&
-                    message.learningCard.totalPages > 1
-                  "
-                  class="learning-card-pages"
+                <b v-if="message.learningCard.type === 'daily-route'">
+                  {{
+                    message.learningCard.items.filter(
+                      (item) => item.status === "complete",
+                    ).length
+                  }}/{{ message.learningCard.items.length }}
+                </b>
+                <b v-else>{{ message.learningCard.totalElements }}</b>
+              </header>
+              <div class="learning-card-items">
+                <article
+                  v-for="item in message.learningCard.items"
+                  :key="item.key"
+                  :class="{ 'is-complete': item.status === 'complete' }"
                 >
-                  <button
-                    type="button"
-                    :disabled="message.learningCard.page <= 0"
-                    @click="loadLearningCardPage(message, index, -1)"
-                  >
-                    上一页
-                  </button>
-                  <span
-                    >{{ message.learningCard.page + 1 }} /
-                    {{ message.learningCard.totalPages }}</span
-                  >
-                  <button
-                    type="button"
-                    :disabled="
-                      message.learningCard.page >=
-                      message.learningCard.totalPages - 1
-                    "
-                    @click="loadLearningCardPage(message, index, 1)"
-                  >
-                    下一页
-                  </button>
-                </footer>
-              </section>
-              <div v-if="message.actions?.length" class="learning-card-actions">
-                <button
-                  v-for="action in message.actions"
-                  :key="action.id"
-                  type="button"
-                  @click="handleLearningAction(action)"
+                  <i>{{
+                    item.status === "complete"
+                      ? "✓"
+                      : message.learningCard.type === "daily-route"
+                        ? "○"
+                        : "Aa"
+                  }}</i>
+                  <div>
+                    <strong>{{ item.label }}</strong
+                    ><small>{{ item.detail }}</small>
+                  </div>
+                </article>
+                <p
+                  v-if="!message.learningCard.items.length"
+                  class="learning-card-empty"
                 >
-                  {{ action.label }}<span>→</span>
-                </button>
+                  这个分组暂时没有单词。
+                </p>
               </div>
+              <footer
+                v-if="
+                  message.learningCard.type === 'vocabulary-summary' &&
+                  message.learningCard.totalPages > 1
+                "
+                class="learning-card-pages"
+              >
+                <button
+                  type="button"
+                  :disabled="message.learningCard.page <= 0"
+                  @click="loadLearningCardPage(message, index, -1)"
+                >
+                  上一页
+                </button>
+                <span
+                  >{{ message.learningCard.page + 1 }} /
+                  {{ message.learningCard.totalPages }}</span
+                >
+                <button
+                  type="button"
+                  :disabled="
+                    message.learningCard.page >=
+                    message.learningCard.totalPages - 1
+                  "
+                  @click="loadLearningCardPage(message, index, 1)"
+                >
+                  下一页
+                </button>
+              </footer>
+            </section>
+            <div v-if="message.actions?.length" class="learning-card-actions">
+              <button
+                v-for="action in message.actions"
+                :key="action.id"
+                type="button"
+                @click="handleLearningAction(action)"
+              >
+                {{ action.label }}<span>→</span>
+              </button>
+            </div>
           </template>
         </ChatStudio>
       </section>
@@ -494,14 +677,16 @@
                     </button>
                   </div>
                   <div
-                    class="quiz-example-slot"
-                    :class="{ 'is-visible': quizResultForCurrent }"
-                    :tabindex="quizResultForCurrent ? 0 : -1"
-                    :aria-hidden="!quizResultForCurrent"
+                    class="quiz-example-slot is-visible"
+                    tabindex="0"
                     aria-label="完整词性释义与例句"
                   >
-                    <div v-if="quizResultForCurrent" class="quiz-example-panel">
-                      <dl class="quiz-definitions" aria-label="完整词性与释义">
+                    <div class="quiz-example-panel">
+                      <dl
+                        v-if="quizResultForCurrent"
+                        class="quiz-definitions"
+                        aria-label="完整词性与释义"
+                      >
                         <div
                           v-for="group in quizDefinitionGroups"
                           :key="group.partOfSpeech"
@@ -516,6 +701,10 @@
                         </div>
                       </dl>
                       <p
+                        v-if="
+                          meaningfulExample(currentQuizWord) ||
+                          quizResultForCurrent?.exampleEn
+                        "
                         class="quiz-example-en"
                         v-html="
                           highlightTerm(
@@ -527,7 +716,7 @@
                           )
                         "
                       ></p>
-                      <p class="quiz-example-cn">
+                      <p v-if="quizResultForCurrent" class="quiz-example-cn">
                         {{
                           quizExampleCn(currentQuizWord, quizResultForCurrent)
                         }}
@@ -607,8 +796,30 @@
       >
         <section class="panel">
           <div class="panel-heading">
-            <div class="review-mode-switch" role="group" aria-label="复习类型"><button type="button" :class="{ active: state.reviewMode === 'today' }" :disabled="state.reviewBusy" @click="setReviewMode('today')">今日到期<span>{{ state.report.dueWords || 0 }}</span></button><button type="button" :class="{ active: state.reviewMode === 'mistakes' }" :disabled="state.reviewBusy" @click="setReviewMode('mistakes')">错词强化<span>{{ state.report.reviewWords || 0 }}</span></button></div>
-            <button class="evidence-open" type="button" @click="evidenceOpen = true">学习变化<AppIcon name="arrow" /></button>
+            <div class="review-mode-switch" role="group" aria-label="复习类型">
+              <button
+                type="button"
+                :class="{ active: state.reviewMode === 'today' }"
+                :disabled="state.reviewBusy"
+                @click="setReviewMode('today')"
+              >
+                今日到期<span>{{ state.report.dueWords || 0 }}</span></button
+              ><button
+                type="button"
+                :class="{ active: state.reviewMode === 'mistakes' }"
+                :disabled="state.reviewBusy"
+                @click="setReviewMode('mistakes')"
+              >
+                错词强化<span>{{ state.report.reviewWords || 0 }}</span>
+              </button>
+            </div>
+            <button
+              class="evidence-open"
+              type="button"
+              @click="evidenceOpen = true"
+            >
+              学习变化<AppIcon name="arrow" />
+            </button>
           </div>
           <div class="review-workspace">
             <div
@@ -660,7 +871,15 @@
                   </div>
                 </div>
                 <div class="review-prompt">
-                  <button v-if="currentReviewWord.sourceTitle" class="review-source" type="button" @click="returnToArticle(currentReviewWord.sourceArticleId)"><AppIcon name="news" />来自阅读 · {{ currentReviewWord.sourceTitle }}<AppIcon name="arrow" /></button>
+                  <button
+                    v-if="currentReviewWord.sourceTitle"
+                    class="review-source"
+                    type="button"
+                    @click="returnToArticle(currentReviewWord.sourceArticleId)"
+                  >
+                    <AppIcon name="news" />来自阅读 ·
+                    {{ currentReviewWord.sourceTitle }}<AppIcon name="arrow" />
+                  </button>
                   <div class="review-prompt-meta">
                     <span v-if="phonetic(currentReviewWord)">{{
                       phonetic(currentReviewWord)
@@ -683,7 +902,8 @@
                             currentReviewWord,
                             state.lastReviewResult,
                           ),
-                          currentReviewWord.sourceWord || state.lastReviewResult?.expectedWord ||
+                          currentReviewWord.sourceWord ||
+                            state.lastReviewResult?.expectedWord ||
                             currentReviewWord.word,
                         )
                       "
@@ -726,7 +946,13 @@
                 >
                   <div class="review-input-grid">
                     <label>
-                      <span>{{ currentReviewWord.sourceWord && currentReviewWord.sourceWord.toLowerCase() !== currentReviewWord.word.toLowerCase() ? '英文拼写（单词原形）' : '英文拼写' }}</span>
+                      <span>{{
+                        currentReviewWord.sourceWord &&
+                        currentReviewWord.sourceWord.toLowerCase() !==
+                          currentReviewWord.word.toLowerCase()
+                          ? "英文拼写（单词原形）"
+                          : "英文拼写"
+                      }}</span>
                       <input
                         v-model.trim="state.reviewForm.spellingAnswer"
                         autocomplete="off"
@@ -772,7 +998,28 @@
             </div>
             <div v-else class="review-empty-state">
               <AppIcon name="check" />
-              <h3>{{ state.reviewMode === 'today' ? '当前到期任务已完成' : '当前没有待强化的错词' }}</h3><p class="review-empty-note">{{ state.reviewMode === 'today' ? '到复习时间后，单词会再次出现在这里。' : '单词练习中的错词会自动加入这里。' }}</p><button v-if="state.reviewMode === 'today' && state.report.reviewWords" class="settings-secondary" type="button" @click="setReviewMode('mistakes')">提前练习错词</button>
+              <h3>
+                {{
+                  state.reviewMode === "today"
+                    ? "当前到期任务已完成"
+                    : "当前没有待强化的错词"
+                }}
+              </h3>
+              <p class="review-empty-note">
+                {{
+                  state.reviewMode === "today"
+                    ? "到复习时间后，单词会再次出现在这里。"
+                    : "单词练习中的错词会自动加入这里。"
+                }}
+              </p>
+              <button
+                v-if="state.reviewMode === 'today' && state.report.reviewWords"
+                class="settings-secondary"
+                type="button"
+                @click="setReviewMode('mistakes')"
+              >
+                提前练习错词
+              </button>
               <button
                 class="quiz-primary"
                 type="button"
@@ -790,7 +1037,12 @@
         class="section"
         :class="{ active: activeSection === 'writing' }"
       >
-        <WritingStudio v-if="state.currentUser" :user-id="state.currentUser.id" @reviewed="writingReviewed" @settings="openSettings" />
+        <WritingStudio
+          v-if="state.currentUser"
+          :user-id="state.currentUser.id"
+          @reviewed="writingReviewed"
+          @settings="openSettings"
+        />
       </section>
 
       <section
@@ -805,7 +1057,9 @@
           <section id="news-library" class="panel news-library">
             <div class="panel-heading news-heading">
               <h2><AppIcon name="news" /> 阅读推荐</h2>
-              <span class="news-library-count">{{ state.newsList.length }} 篇</span>
+              <span class="news-library-count"
+                >{{ state.newsList.length }} 篇</span
+              >
               <button
                 ref="newsLibraryCloseRef"
                 class="reading-library-close text-button"
@@ -876,15 +1130,26 @@
                 @click="loadArticle(article.id)"
               >
                 <div class="news-item-topline">
-                  <span>{{ newsTopicLabel(splitArticleTopics(article.topicTags)[0]) || '精选' }}</span>
-                  <span v-if="article.finished" class="news-item-finished"><AppIcon name="check" />已读</span>
+                  <span>{{
+                    newsTopicLabel(splitArticleTopics(article.topicTags)[0]) ||
+                    "精选"
+                  }}</span>
+                  <span v-if="article.finished" class="news-item-finished"
+                    ><AppIcon name="check" />已读</span
+                  >
                   <span v-else>{{ articleReadingTime(article) }} 分钟</span>
                 </div>
                 <strong>{{ article.title }}</strong>
                 <p>{{ article.summary }}</p>
                 <div class="news-item-bottomline">
-                  <span class="news-level" :data-level="article.difficulty">{{ difficultyLabel(article.difficulty) }}</span>
-                  <span v-if="article.readProgress && !article.finished" class="news-item-progress">已读 {{ article.readProgress }}%</span>
+                  <span class="news-level" :data-level="article.difficulty">{{
+                    difficultyLabel(article.difficulty)
+                  }}</span>
+                  <span
+                    v-if="article.readProgress && !article.finished"
+                    class="news-item-progress"
+                    >已读 {{ article.readProgress }}%</span
+                  >
                   <AppIcon name="arrow" />
                 </div>
               </article>
@@ -893,29 +1158,69 @@
               </p>
             </div>
           </section>
-          <section class="panel reader-panel" :class="{'is-reading-focus':readerFocus}" :aria-busy="state.articleBusy">
+          <section
+            class="panel reader-panel"
+            :class="{ 'is-reading-focus': readerFocus }"
+            :aria-busy="state.articleBusy"
+          >
             <header class="reader-cover">
               <div class="reader-cover-meta">
-                <span class="reader-source">{{ state.currentArticle?.sourceName || "LinguaMate Reader" }}</span>
-                <span v-if="state.currentArticle" class="reader-topic">{{ articleTopicText(state.currentArticle.topicTags) }}</span>
+                <span class="reader-source">{{
+                  state.currentArticle?.sourceName || "LinguaMate Reader"
+                }}</span>
+                <span v-if="state.currentArticle" class="reader-topic">{{
+                  articleTopicText(state.currentArticle.topicTags)
+                }}</span>
               </div>
               <div class="reader-cover-title">
                 <div>
-                  <h2 :key="state.currentArticle?.id">{{ state.currentArticle?.title || "从一个感兴趣的主题开始" }}</h2>
-                  <p v-if="state.currentArticle?.summary" class="reader-deck">{{ state.currentArticle.summary }}</p>
+                  <h2 :key="state.currentArticle?.id">
+                    {{
+                      state.currentArticle?.title || "从一个感兴趣的主题开始"
+                    }}
+                  </h2>
+                  <p v-if="state.currentArticle?.summary" class="reader-deck">
+                    {{ state.currentArticle.summary }}
+                  </p>
                   <div v-if="state.currentArticle" class="reader-byline">
-                    <span class="news-level" :data-level="state.currentArticle.difficulty">{{ difficultyLabel(state.currentArticle.difficulty) }}</span>
+                    <span
+                      class="news-level"
+                      :data-level="state.currentArticle.difficulty"
+                      >{{
+                        difficultyLabel(state.currentArticle.difficulty)
+                      }}</span
+                    >
                     <span>{{ articleWordCount }} 词</span>
-                    <span>约 {{ articleReadingTime(state.currentArticle) }} 分钟</span>
+                    <span
+                      >约
+                      {{ articleReadingTime(state.currentArticle) }} 分钟</span
+                    >
                   </div>
                 </div>
-                <div class="reader-cover-art"><ReadingArt :active="readerFocus" :disabled="!state.currentArticle || state.articleBusy" @toggle="toggleReaderFocus" /></div>
+                <div class="reader-cover-art">
+                  <ReadingArt
+                    :active="readerFocus"
+                    :disabled="!state.currentArticle || state.articleBusy"
+                    @toggle="toggleReaderFocus"
+                  />
+                </div>
               </div>
             </header>
             <div class="reader-tools">
-              <span class="reader-hint"><AppIcon name="spark" />点选单词，即时查词</span>
+              <span class="reader-hint"
+                ><AppIcon name="spark" />点选单词，即时查词</span
+              >
               <div class="reader-toolbar">
-                <button class="reader-discuss" type="button" :disabled="!state.currentArticle || state.chatBusy || state.articleBusy" @click="discussArticle"><AppIcon name="chat" />和 AI 讨论</button>
+                <button
+                  class="reader-discuss"
+                  type="button"
+                  :disabled="
+                    !state.currentArticle || state.chatBusy || state.articleBusy
+                  "
+                  @click="discussArticle"
+                >
+                  <AppIcon name="chat" />和 AI 讨论
+                </button>
                 <button
                   ref="newsLibraryButtonRef"
                   class="reading-library-toggle settings-secondary"
@@ -929,11 +1234,23 @@
                 <button
                   class="translate-btn"
                   type="button"
-                  :disabled="!state.currentArticle || state.translateBusy || state.articleBusy"
+                  :disabled="
+                    !state.currentArticle ||
+                    state.translateBusy ||
+                    state.articleBusy
+                  "
                   @click="translateArticle"
                 >
-                  <span class="reader-translate-symbol" aria-hidden="true">译</span>
-                  {{ state.translateBusy ? "翻译中…" : state.translation.contentCn || state.translation.titleCn ? "收起译文" : "全文翻译" }}
+                  <span class="reader-translate-symbol" aria-hidden="true"
+                    >译</span
+                  >
+                  {{
+                    state.translateBusy
+                      ? "翻译中…"
+                      : state.translation.contentCn || state.translation.titleCn
+                        ? "收起译文"
+                        : "全文翻译"
+                  }}
                 </button>
               </div>
             </div>
@@ -942,26 +1259,54 @@
               class="reader-scroll-area"
               @scroll="handleReaderScroll"
             >
-              <article :key="state.currentArticle?.id" class="reader-content" aria-label="英文正文">
-                <template v-for="token in articleTokens" :key="token.key">
-                  <span
-                    v-if="token.word"
-                    class="reader-word"
-                    :class="{ 'is-looked-up': state.tooltip.visible && state.tooltip.lookupKey === normalizeLookupWord(token.text), 'reader-art-dim':dimReaderToken(token) }"
-                    tabindex="0"
-                    :data-sentence="token.sentence"
-                    @focus="focusReaderWord(token, $event)"
-                    @blur="scheduleHideTooltip"
-                    @click="showTooltip(token.text, $event)"
-                    @keydown.enter.prevent="focusLookupActions(token.text, $event)"
-                    @mouseenter="focusReaderWord(token, $event)"
-                    @mouseleave="scheduleHideTooltip"
-                    >{{ token.text }}</span
-                  >
-                  <span v-else :class="{'reader-art-dim':dimReaderToken(token)}">{{ token.text }}</span>
-                </template>
+              <article
+                :key="state.currentArticle?.id"
+                class="reader-content"
+                aria-label="英文正文"
+              >
+                <p
+                  v-for="(paragraph, index) in articleParagraphs"
+                  :key="index"
+                  class="reader-paragraph"
+                >
+                  <template v-for="token in paragraph" :key="token.key">
+                    <span
+                      v-if="token.word"
+                      class="reader-word"
+                      :class="{
+                        'is-looked-up':
+                          state.tooltip.visible &&
+                          state.tooltip.lookupKey ===
+                            normalizeLookupWord(token.text),
+                        'reader-art-dim': dimReaderToken(token),
+                      }"
+                      tabindex="0"
+                      :data-sentence="token.sentence"
+                      @focus="focusReaderWord(token, $event)"
+                      @blur="scheduleHideTooltip"
+                      @click="showTooltip(token.text, $event)"
+                      @keydown.enter.prevent="
+                        focusLookupActions(token.text, $event)
+                      "
+                      @mouseenter="focusReaderWord(token, $event)"
+                      @mouseleave="scheduleHideTooltip"
+                      >{{ token.text }}</span
+                    >
+                    <span
+                      v-else
+                      :class="{ 'reader-art-dim': dimReaderToken(token) }"
+                      >{{ token.text }}</span
+                    >
+                  </template>
+                </p>
               </article>
-              <div v-if="state.currentArticle" class="reader-endmark" aria-hidden="true"><span></span>✦<span></span></div>
+              <div
+                v-if="state.currentArticle"
+                class="reader-endmark"
+                aria-hidden="true"
+              >
+                <span></span>✦<span></span>
+              </div>
               <div
                 v-if="state.translation.titleCn || state.translation.contentCn"
                 class="translation-area"
@@ -971,13 +1316,38 @@
               </div>
             </div>
             <footer class="reader-progress">
-              <span class="reader-progress-label">{{ state.currentArticle?.finished ? "本篇已读完" : "阅读进度" }}</span>
-              <div class="reader-progress-track" role="progressbar" aria-label="阅读进度" :aria-valuenow="readerProgress" aria-valuemin="0" aria-valuemax="100">
+              <span class="reader-progress-label">{{
+                state.currentArticle?.finished ? "本篇已读完" : "阅读进度"
+              }}</span>
+              <div
+                class="reader-progress-track"
+                role="progressbar"
+                aria-label="阅读进度"
+                :aria-valuenow="readerProgress"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
                 <span :style="{ width: readerProgress + '%' }"></span>
               </div>
               <span>{{ readerProgress }}%</span>
-              <button class="reader-finish-btn" type="button" :disabled="!state.currentArticle || state.readingBusy || state.articleBusy || state.currentArticle.finished" @click="finishReading">
-                <AppIcon name="check" />{{ state.readingBusy ? "保存中…" : state.currentArticle?.finished ? "已完成" : "完成阅读" }}
+              <button
+                class="reader-finish-btn"
+                type="button"
+                :disabled="
+                  !state.currentArticle ||
+                  state.readingBusy ||
+                  state.articleBusy ||
+                  state.currentArticle.finished
+                "
+                @click="finishReading"
+              >
+                <AppIcon name="check" />{{
+                  state.readingBusy
+                    ? "保存中…"
+                    : state.currentArticle?.finished
+                      ? "已完成"
+                      : "完成阅读"
+                }}
               </button>
             </footer>
           </section>
@@ -1001,15 +1371,32 @@
                 aria-controls="wordbank-results"
                 @click="setWordBankScope(scope.id)"
               >
-                {{ scope.label }}<span class="wordbank-scope-count">{{ state.wordBank.stats[scope.id] ?? '—' }}</span>
+                {{ scope.label
+                }}<span class="wordbank-scope-count">{{
+                  state.wordBank.stats[scope.id] ?? "—"
+                }}</span>
               </button>
             </div>
             <div class="wordbank-heading-actions">
-              <button v-if="state.wordBank.scope === 'review' && state.wordBank.stats.review" type="button" class="wordbank-start-review" @click="router.push('/review')">开始复习<AppIcon name="arrow" /></button>
+              <button
+                v-if="
+                  ['due', 'review'].includes(state.wordBank.scope) &&
+                  state.wordBank.total
+                "
+                type="button"
+                class="wordbank-start-review"
+                @click="openLibraryReview"
+              >
+                {{
+                  state.wordBank.scope === "due"
+                    ? "开始到期复习"
+                    : "开始错词强化"
+                }}<AppIcon name="arrow" />
+              </button>
               <span class="energy-pill">{{
-              state.wordBank.loading
-                ? "正在加载"
-                : state.wordBank.total + " 个单词"
+                state.wordBank.loading
+                  ? "正在加载"
+                  : state.wordBank.total + " 个单词"
               }}</span>
             </div>
           </div>
@@ -1094,7 +1481,7 @@
                 </button>
               </div>
               <p>{{ word.meaningCn }}</p>
-              <div class="word-card-example">
+              <div v-if="meaningfulExample(word)" class="word-card-example">
                 <p>{{ wordCardExampleEn(word) }}</p>
                 <span>{{ wordCardExampleCn(word) }}</span>
               </div>
@@ -1227,10 +1614,28 @@
         </div>
         <label class="settings-field">
           <span>模型名</span>
-          <input v-model.trim="state.ai.chatModel" list="available-ai-models" placeholder="输入模型名，或获取模型后选择" :disabled="state.aiBusy" /><datalist id="available-ai-models"><option v-for="model in state.ai.models" :key="model" :value="model" /></datalist>
+          <input
+            v-model.trim="state.ai.chatModel"
+            list="available-ai-models"
+            placeholder="输入模型名，或获取模型后选择"
+            :disabled="state.aiBusy"
+          /><datalist id="available-ai-models">
+            <option
+              v-for="model in state.ai.models"
+              :key="model"
+              :value="model"
+            />
+          </datalist>
         </label>
         <div class="settings-actions">
-          <button class="settings-secondary" type="button" :disabled="state.aiBusy || !state.ai.chatModel" @click="testAiConnection">{{ state.aiTesting ? '检测中…' : '测试连接' }}</button>
+          <button
+            class="settings-secondary"
+            type="button"
+            :disabled="state.aiBusy || !state.ai.chatModel"
+            @click="testAiConnection"
+          >
+            {{ state.aiTesting ? "检测中…" : "测试连接" }}
+          </button>
           <button
             class="settings-primary"
             type="button"
@@ -1445,7 +1850,19 @@
       </div>
     </aside>
 
-    <LearningEvidence :open="evidenceOpen" :evidence="state.report.evidence || {}" @close="evidenceOpen = false" @practice="goSection('review')" />
+    <LearningEvidence
+      :open="evidenceOpen"
+      :evidence="state.report.evidence || {}"
+      @close="evidenceOpen = false"
+      @practice="goSection('review')"
+    />
+    <GrowthEvidence
+      :open="growthOpen"
+      :initial-tab="growthTab"
+      @close="growthOpen = false"
+      @navigate="growthNavigate"
+      @mission="openMission($event)"
+    />
     <div
       v-if="state.tooltip.visible"
       ref="tooltipRef"
@@ -1474,22 +1891,96 @@
           state.tooltip.data.partOfSpeech
         }}</span>
       </div>
-      <section v-if="state.tooltip.context" class="tooltip-context"><span>{{ state.tooltip.context.source === 'model' ? '本文中的意思 · AI' : '通用词典释义' }}</span><p>{{ state.tooltip.context.meaning }}</p><small>{{ state.tooltip.context.explanation }}</small><div v-if="state.tooltip.context.phrase" class="tooltip-phrase"><b>{{ state.tooltip.context.phrase }}</b><span>{{ state.tooltip.context.phraseMeaning }}</span></div></section>
+      <section v-if="state.tooltip.context" class="tooltip-context">
+        <span>{{
+          state.tooltip.context.source === "model"
+            ? "本文中的意思 · AI"
+            : "通用词典释义"
+        }}</span>
+        <p>{{ state.tooltip.context.meaning }}</p>
+        <small>{{ state.tooltip.context.explanation }}</small>
+        <div v-if="state.tooltip.context.phrase" class="tooltip-phrase">
+          <b>{{ state.tooltip.context.phrase }}</b
+          ><span>{{ state.tooltip.context.phraseMeaning }}</span>
+        </div>
+      </section>
       <p v-else>{{ state.tooltip.data.meaningCn || "暂无释义" }}</p>
-      <blockquote v-if="state.tooltip.sentence" class="tooltip-original-sentence">{{ state.tooltip.sentence }}</blockquote>
-      <button class="tooltip-explain" type="button" :disabled="state.tooltip.loading || state.tooltip.contextBusy || !state.tooltip.sentence" @click="explainReaderWord"><AppIcon name="spark" />{{ state.tooltip.contextBusy ? '正在解读语境…' : state.tooltip.context ? '重新解读语境' : 'AI 语境解读' }}</button>
+      <blockquote
+        v-if="state.tooltip.sentence"
+        class="tooltip-original-sentence"
+      >
+        {{ state.tooltip.sentence }}
+      </blockquote>
+      <button
+        class="tooltip-explain"
+        type="button"
+        :disabled="
+          state.tooltip.loading ||
+          state.tooltip.contextBusy ||
+          !state.tooltip.sentence
+        "
+        @click="explainReaderWord"
+      >
+        <AppIcon name="spark" />{{
+          state.tooltip.contextBusy
+            ? "正在解读语境…"
+            : state.tooltip.context
+              ? "重新解读语境"
+              : "AI 语境解读"
+        }}
+      </button>
       <small v-if="!state.tooltip.sentence && state.tooltip.data.exampleEn">{{
         state.tooltip.data.exampleEn
       }}</small>
       <div class="tooltip-actions">
-        <button class="tooltip-save-word" type="button" :class="{ 'is-saved': state.tooltip.data.savedInReviewBook }"
-          :disabled="state.tooltip.loading || state.tooltip.saving || state.tooltip.data.savedInReviewBook || !tooltipHasDefinition"
-          @click="saveReaderWord(state.tooltip.data.word)">
-          <AppIcon :name="state.tooltip.data.savedInReviewBook ? 'check' : 'review'" />
-          {{ state.tooltip.loading ? "查询中…" : state.tooltip.saving ? "加入中…" : state.tooltip.data.savedInReviewBook ? "已加入待复习" : tooltipHasDefinition ? "加入待复习" : "暂无可保存词条" }}
+        <button
+          class="tooltip-save-word"
+          type="button"
+          :class="{ 'is-saved': state.tooltip.data.savedInReviewBook }"
+          :disabled="
+            state.tooltip.loading ||
+            state.tooltip.saving ||
+            state.tooltip.data.savedInReviewBook ||
+            !tooltipHasDefinition
+          "
+          @click="saveReaderWord(state.tooltip.data.word)"
+        >
+          <AppIcon
+            :name="state.tooltip.data.savedInReviewBook ? 'check' : 'review'"
+          />
+          {{
+            state.tooltip.loading
+              ? "查询中…"
+              : state.tooltip.saving
+                ? "加入中…"
+                : state.tooltip.data.savedInReviewBook
+                  ? "已加入待复习"
+                  : tooltipHasDefinition
+                    ? "加入待复习"
+                    : "暂无可保存词条"
+          }}
         </button>
-        <button v-if="state.tooltip.data.savedInReviewBook" type="button" class="tooltip-library-link" @click="openPendingLibrary">查看词库<AppIcon name="arrow" /></button>
-        <button v-if="state.tooltip.data.savedInReviewBook && state.tooltip.sentence && !state.tooltip.contextSaved" type="button" class="tooltip-library-link" :disabled="state.tooltip.saving" @click="saveReaderWord(state.tooltip.data.word)">保留本文原句<AppIcon name="arrow" /></button>
+        <button
+          v-if="state.tooltip.data.savedInReviewBook"
+          type="button"
+          class="tooltip-library-link"
+          @click="openPendingLibrary"
+        >
+          查看词库<AppIcon name="arrow" />
+        </button>
+        <button
+          v-if="
+            state.tooltip.data.savedInReviewBook &&
+            state.tooltip.sentence &&
+            !state.tooltip.contextSaved
+          "
+          type="button"
+          class="tooltip-library-link"
+          :disabled="state.tooltip.saving"
+          @click="saveReaderWord(state.tooltip.data.word)"
+        >
+          保留本文原句<AppIcon name="arrow" />
+        </button>
       </div>
     </div>
   </div>
@@ -1498,11 +1989,20 @@
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
 import { defineAsyncComponent } from "vue";
-const LearningJournal = defineAsyncComponent(() => import("@/components/LearningJournal.vue"));
+const LearningJournal = defineAsyncComponent(
+  () => import("@/components/LearningJournal.vue"),
+);
 import ChatStudio from "@/components/ChatStudio.vue";
 import WritingStudio from "@/components/WritingStudio.vue";
 import LearningEvidence from "@/components/LearningEvidence.vue";
-import { readingTokens } from "@/reading-context";
+import { readingTokens, readingParagraphs } from "@/reading-context";
+import { missionProgress, missionStages } from "@/mission-progress";
+const MissionWorkspace = defineAsyncComponent(
+  () => import("@/components/MissionWorkspace.vue"),
+);
+const GrowthEvidence = defineAsyncComponent(
+  () => import("@/components/GrowthEvidence.vue"),
+);
 import LearningStudioArt from "@/components/LearningStudioArt.vue";
 import ReadingArt from "@/components/ReadingArt.vue";
 import "@/styles/module-illustrations.css";
@@ -1522,7 +2022,7 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { aiApi, authApi, learningApi } from "@/api/modules";
+import { aiApi, authApi, learningApi, missionApi } from "@/api/modules";
 import { formatDate, normalizeModelList } from "@/api/client";
 import {
   learningMessageFromResponse,
@@ -1543,12 +2043,56 @@ let quizTransition = null;
 let quizAnimations = [];
 const dashboardExpanded = ref(false);
 const evidenceOpen = ref(false);
+const growthOpen = ref(false),
+  growthTab = ref("missions"),
+  dailyMissions = ref([]),
+  selectedMissionKey = ref("water"),
+  missionOverviewError = ref("");
+const selectedMission = computed(() =>
+  dailyMissions.value.find((item) => item.key === selectedMissionKey.value),
+);
+function openGrowth(tab = "missions") {
+  growthTab.value = tab;
+  growthOpen.value = true;
+}
+function growthNavigate(section) {
+  if (section === "mission") openMission();
+  else goSection(section);
+}
+function openMission(id) {
+  router.push({
+    path: "/mission",
+    query: id
+      ? { session: id }
+      : { key: selectedMission.value?.key || "water" },
+  });
+}
+async function loadDailyMissions() {
+  try {
+    dailyMissions.value = await missionApi.today();
+    missionOverviewError.value = "";
+  } catch (e) {
+    missionOverviewError.value = e.message || "主题任务暂时无法载入";
+  }
+}
+function missionUpdated() {
+  loadDailyMissions();
+  loadReport();
+}
+async function openLibraryReview() {
+  state.reviewMode = state.wordBank.scope === "review" ? "mistakes" : "today";
+  await router.push("/review");
+}
 const newsLibraryOpen = ref(false);
 const newsLibraryButtonRef = ref(null);
 const newsLibraryCloseRef = ref(null);
 const showAllNewsTopics = ref(false);
 const settingsPanelRef = ref(null);
-function navigateJournal(section) { if(section==='mastered') router.push({path:'/wordbank',query:{scope:'mastered'}}); else goSection(section); }
+function navigateJournal(section) {
+  if (section === "mastered")
+    router.push({ path: "/wordbank", query: { scope: "mastered" } });
+  else goSection(section);
+}
 const wordDialogRef = ref(null);
 let previousFocus;
 let settingsReturnFocus;
@@ -1618,7 +2162,8 @@ const navItems = [
 
 const wordBankScopes = [
   { id: "all", label: "全部单词" },
-  { id: "review", label: "待复习" },
+  { id: "due", label: "待复习" },
+  { id: "review", label: "错词" },
   { id: "favorites", label: "收藏词" },
   { id: "mastered", label: "已掌握" },
 ];
@@ -1711,6 +2256,7 @@ const newsTopicLabelMap = {
 };
 
 const sectionMeta = {
+  mission: "每日主题任务",
   dashboard: "学习概览",
   chat: "对话练习",
   vocabulary: "单词练习",
@@ -1805,12 +2351,20 @@ const state = reactive({
   ai: { baseUrl: "", apiKey: "", chatModel: "", models: [], status: "未连接" },
   aiBusy: false,
   aiTesting: false,
-  aiSaved: { baseUrl: '', chatModel: '' },
+  aiSaved: { baseUrl: "", chatModel: "" },
   logoutBusy: false,
-  aiSummary: { label: "个人配置", modelName: "", loaded: false, loading: false },
+  aiSummary: {
+    label: "个人配置",
+    modelName: "",
+    loaded: false,
+    loading: false,
+  },
 });
 
 const activeSection = computed(() => route.meta.section || "dashboard");
+const navigationSection = computed(() =>
+  activeSection.value === "mission" ? "dashboard" : activeSection.value,
+);
 const tooltipHasDefinition = computed(() => {
   const meaning = state.tooltip.data.meaningCn || "";
   return Boolean(meaning.trim()) && !/未收录|查询中|查询失败/.test(meaning);
@@ -1850,25 +2404,6 @@ const routeProgressPercent = computed(() =>
     (routeDoneCount.value / Math.max(1, journeySteps.value.length)) * 100,
   ),
 );
-const journeyEnergy = computed(() =>
-  Math.max(
-    levelPercent.value,
-    Math.round((routeDoneCount.value / journeySteps.value.length) * 100),
-  ),
-);
-const focusStep = computed(
-  () => journeySteps.value.find((step) => !step.done) || journeySteps.value[0],
-);
-const focusDescription = computed(() => {
-  if (routeDoneCount.value === journeySteps.value.length) return "继续探索，或再练习一次喜欢的内容。";
-  return {
-    chat: "选一个生活场景，用英语聊起来。",
-    vocabulary: `${state.words.length} 个单词，在语境中建立记忆。`,
-    review: `${state.report.reviewWords || 0} 个待复习单词，巩固容易忘记的表达。`,
-    writing: "写下一段英文，把想法表达得更清楚。",
-    news: "读一篇文章，在真实内容里发现新表达。",
-  }[focusStep.value?.section] || "选择一项练习，开始今天的学习。";
-});
 const currentQuizWord = computed(() => state.words[state.quizIndex]);
 const quizResultForCurrent = computed(() =>
   currentQuizWord.value ? state.quizAnswers[currentQuizWord.value.id] : null,
@@ -1912,7 +2447,8 @@ const wordBankEmptyText = computed(() => {
     return "没有符合筛选的单词";
   if (state.wordBank.scope === "favorites") return "还没有收藏词";
   if (state.wordBank.scope === "mastered") return "还没有已掌握的单词";
-  if (state.wordBank.scope === "review") return "暂时没有待复习的单词";
+  if (state.wordBank.scope === "review") return "暂时没有需要强化的错词";
+  if (state.wordBank.scope === "due") return "当前没有到期复习的单词";
   return "词库暂时为空";
 });
 const newsTopicOptions = computed(() => {
@@ -1948,100 +2484,20 @@ const wordDialogVisible = computed({
 });
 
 const journeySteps = computed(() => {
-  const report = state.report || {};
-  const answeredWords = Object.keys(state.quizAnswers || {}).length;
-  const reviewDone =
-    Number(report.reviewWords || 0) === 0 || state.reviewWords.length === 0;
-  const steps = [
-    [
-      "chat",
-      "chat",
-      "开口练",
-      "会话营地",
-      "说",
-      "green",
-      16,
-      63,
-      state.messages.some((item) => item.role === "user"),
-      "完成一次问答",
-    ],
-    [
-      "vocabulary",
-      "vocabulary",
-      "记单词",
-      "词汇森林",
-      "词",
-      "blue",
-      34,
-      31,
-      answeredWords >= Math.min(6, state.words.length || 6),
-      `${answeredWords} 个已作答`,
-    ],
-    [
-      "review",
-      "review",
-      "复习错词",
-      "复习山口",
-      "复",
-      "amber",
-      53,
-      56,
-      reviewDone,
-      `${report.reviewWords || 0} 个待复习`,
-    ],
-    [
-      "writing",
-      "writing",
-      "改作文",
-      "写作工坊",
-      "写",
-      "coral",
-      72,
-      78,
-      Number(report.essayCount || 0) > 0 || Boolean(state.writingResult),
-      `${report.essayCount || 0} 篇已批改`,
-    ],
-    [
-      "news",
-      "news",
-      "读文章",
-      "阅读灯塔",
-      "读",
-      "violet",
-      82,
-      25,
-      Number(report.readingCount || 0) > 0 ||
-        Boolean(state.currentArticle?.finished),
-      `${report.readingCount || 0} 篇记录`,
-    ],
-  ];
-  const firstPending = steps.find((item) => !item[8])?.[0];
-  return steps.map(
-    ([
-      id,
-      section,
-      title,
-      landmark,
-      symbol,
-      tone,
-      mapX,
-      mapY,
-      done,
-      detail,
-    ]) => ({
-      id,
-      section,
-      title,
-      landmark,
-      symbol,
-      tone,
-      mapX,
-      mapY,
-      done,
-      detail,
-      recommended: id === firstPending,
-    }),
-  );
+  const progress = missionProgress(selectedMission.value);
+  const firstPending = progress.done.findIndex((done) => !done);
+  return missionStages.map((step, index) => ({
+    ...step,
+    landmark: step.title,
+    done: progress.done[index],
+    recommended: index === firstPending,
+    detail: [
+      progress.done[0] ? "已阅读主题材料" : "一篇原创短文",
+      `${selectedMission.value?.progress.words.length || 0} / 3 个主题词`,
+      `${progress.practiced} / 3 轮表达已提交`,
+      progress.done[3] ? "收获与表达已保存" : "记录自己的收获",
+    ][index],
+  }));
 });
 
 function routeStepAriaLabel(step) {
@@ -2053,19 +2509,49 @@ function routeStepAriaLabel(step) {
   return `${step.title}，${step.landmark}，${step.detail}，${status}`;
 }
 
-const articleTokens = computed(() => readingTokens(state.currentArticle?.content || ""));
-const readerFocus = ref(false), focusedSentence = ref('');
-function toggleReaderFocus() { readerFocus.value=!readerFocus.value;focusedSentence.value=readerFocus.value ? articleTokens.value.find(token=>token.word)?.sentence || '' : ''; }
-function dimReaderToken(token) { return Boolean(readerFocus.value && focusedSentence.value && token.sentence && token.sentence!==focusedSentence.value); }
-function focusReaderWord(token,event) { if(readerFocus.value)focusedSentence.value=token.sentence;showTooltip(token.text,event); }
-watch(()=>state.currentArticle?.id,()=>{focusedSentence.value='';});
+const articleTokens = computed(() =>
+  readingTokens(state.currentArticle?.content || ""),
+);
+const articleParagraphs = computed(() =>
+  readingParagraphs(state.currentArticle?.content || ""),
+);
+const readerFocus = ref(false),
+  focusedSentence = ref("");
+function toggleReaderFocus() {
+  readerFocus.value = !readerFocus.value;
+  focusedSentence.value = readerFocus.value
+    ? articleTokens.value.find((token) => token.word)?.sentence || ""
+    : "";
+}
+function dimReaderToken(token) {
+  return Boolean(
+    readerFocus.value &&
+      focusedSentence.value &&
+      token.sentence &&
+      token.sentence !== focusedSentence.value,
+  );
+}
+function focusReaderWord(token, event) {
+  if (readerFocus.value) focusedSentence.value = token.sentence;
+  showTooltip(token.text, event);
+}
+watch(
+  () => state.currentArticle?.id,
+  () => {
+    focusedSentence.value = "";
+  },
+);
 
-const articleWordCount = computed(() =>
-  (state.currentArticle?.content?.match(/[A-Za-z][A-Za-z'-]*/g) || []).length,
+const articleWordCount = computed(
+  () =>
+    (state.currentArticle?.content?.match(/[A-Za-z][A-Za-z'-]*/g) || []).length,
 );
 
 function articleReadingTime(article) {
-  const words = (article?.content || article?.summary || "").match(/[A-Za-z][A-Za-z'-]*/g) || [];
+  const words =
+    (article?.content || article?.summary || "").match(
+      /[A-Za-z][A-Za-z'-]*/g,
+    ) || [];
   return Math.max(1, Math.ceil(words.length / 180));
 }
 
@@ -2461,13 +2947,20 @@ async function toggleFavorite(word) {
     applyFavoriteUpdate(updated);
     await loadReport();
     if (activeSection.value === "wordbank")
-      await Promise.all([loadWordBankStats(), loadWordBankWords(state.wordBank.page)]);
+      await Promise.all([
+        loadWordBankStats(),
+        loadWordBankWords(state.wordBank.page),
+      ]);
   } catch (error) {
     ElMessage.error(error.message || "收藏失败");
   }
 }
 
-async function setReviewMode(mode) { if (state.reviewBusy || mode === state.reviewMode) return; state.reviewMode = mode; await loadReviews(); }
+async function setReviewMode(mode) {
+  if (state.reviewBusy || mode === state.reviewMode) return;
+  state.reviewMode = mode;
+  await loadReviews();
+}
 async function loadReviews() {
   state.reviewWords = await learningApi.reviews(state.reviewMode, 8);
   state.reviewIndex = 0;
@@ -2544,6 +3037,14 @@ function wordCardExampleEn(word) {
     `The word "${word?.word || "this word"}" is useful in English practice.`
   );
 }
+function meaningfulExample(word) {
+  return (
+    Boolean(word?.exampleEn?.trim()) &&
+    !/^The word ["“].+["”] is useful in English practice\.$/.test(
+      word.exampleEn.trim(),
+    )
+  );
+}
 
 function wordCardExampleCn(word) {
   return (
@@ -2559,11 +3060,20 @@ function strictReviewParts(result = {}) {
 }
 
 function reviewCloze(word) {
-  const example = word?.sourceSentence || word?.exampleEn || `Use ${word?.word || "this word"} in a complete sentence.`;
+  const example =
+    word?.sourceSentence ||
+    word?.exampleEn ||
+    `Use ${word?.word || "this word"} in a complete sentence.`;
   const term = word?.sourceWord || word?.word;
   if (!term) return escapeHtml(example);
-  return String(example).split(new RegExp(`(\\b${escapeRegExp(term)}\\b)`, "gi"))
-    .map(piece => piece.toLowerCase() === term.toLowerCase() ? '<mark class="review-blank">_____</mark>' : escapeHtml(piece)).join('');
+  return String(example)
+    .split(new RegExp(`(\\b${escapeRegExp(term)}\\b)`, "gi"))
+    .map((piece) =>
+      piece.toLowerCase() === term.toLowerCase()
+        ? '<mark class="review-blank">_____</mark>'
+        : escapeHtml(piece),
+    )
+    .join("");
 }
 
 function highlightTerm(text, term) {
@@ -2609,8 +3119,10 @@ async function openConversation(id) {
   );
   if (conversation?.scene) state.chatScene = conversation.scene;
   state.chatError = "";
-  state.messages = (await learningApi.messages(id)).map(learningMessageFromHistory);
-  const latest = state.messages.findLast(item => item.role === "assistant");
+  state.messages = (await learningApi.messages(id)).map(
+    learningMessageFromHistory,
+  );
+  const latest = state.messages.findLast((item) => item.role === "assistant");
   state.trace = latest?.trace || [];
   state.chatMode = latest?.coaching ? "practice" : "assistant";
 }
@@ -2642,8 +3154,11 @@ function sendChatPrompt(prompt) {
 }
 
 async function loadCoachContext() {
-  try { state.coachWords = await learningApi.practiceContext(); }
-  catch { state.coachWords = []; }
+  try {
+    state.coachWords = await learningApi.practiceContext();
+  } catch {
+    state.coachWords = [];
+  }
 }
 
 async function sendChat() {
@@ -2665,7 +3180,7 @@ async function sendChat() {
     state.conversationId = result.conversationId;
     state.chatReadingArticle = null;
     state.messages.push(learningMessageFromResponse(result));
-    if (result.coaching?.source === 'model') state.aiSummary.label = '连接正常';
+    if (result.coaching?.source === "model") state.aiSummary.label = "连接正常";
     state.trace = result.trace || [];
     await Promise.allSettled([loadConversations(), loadReport()]);
   } catch (error) {
@@ -2677,7 +3192,11 @@ async function sendChat() {
   }
 }
 
-async function writingReviewed(result) { state.writingResult = result; if (result.reviewSource === 'AI批改') state.aiSummary.label = '连接正常'; await loadReport(); }
+async function writingReviewed(result) {
+  state.writingResult = result;
+  if (result.reviewSource === "AI批改") state.aiSummary.label = "连接正常";
+  await loadReport();
+}
 
 async function loadNewsTopics() {
   state.newsTopics = await learningApi.newsTopics();
@@ -2726,7 +3245,8 @@ async function loadArticle(id) {
     await nextTick();
     if (readerRef.value) readerRef.value.scrollTop = 0;
   } catch (error) {
-    if (requestId === articleRequestId) ElMessage.error(error.message || "文章加载失败，请重试");
+    if (requestId === articleRequestId)
+      ElMessage.error(error.message || "文章加载失败，请重试");
   } finally {
     if (requestId === articleRequestId) state.articleBusy = false;
   }
@@ -2749,10 +3269,17 @@ function handleReaderScroll() {
   state.readerProgress = nextProgress;
   clearTimeout(state.progressTimer);
   const articleId = state.currentArticle.id;
-  state.progressTimer = setTimeout(() => updateReadingProgress(nextProgress, false, articleId).catch(() => {}), 500);
+  state.progressTimer = setTimeout(
+    () => updateReadingProgress(nextProgress, false, articleId).catch(() => {}),
+    500,
+  );
 }
 
-async function updateReadingProgress(progress, finished, articleId = state.currentArticle?.id) {
+async function updateReadingProgress(
+  progress,
+  finished,
+  articleId = state.currentArticle?.id,
+) {
   if (!articleId) return;
   const result = await learningApi.articleProgress(articleId, {
     readProgress: progress,
@@ -2764,7 +3291,11 @@ async function updateReadingProgress(progress, finished, articleId = state.curre
     state.readerProgress = result.readProgress;
   }
   const listed = state.newsList.find((article) => article.id === articleId);
-  if (listed) Object.assign(listed, { readProgress: result.readProgress, finished: result.finished });
+  if (listed)
+    Object.assign(listed, {
+      readProgress: result.readProgress,
+      finished: result.finished,
+    });
   await loadReport();
 }
 
@@ -2798,10 +3329,13 @@ async function translateArticle() {
     if (state.currentArticle?.id === articleId) {
       state.translation = translation;
       await nextTick();
-      readerRef.value?.querySelector('.translation-area')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      readerRef.value
+        ?.querySelector(".translation-area")
+        ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   } catch (error) {
-    if (state.currentArticle?.id === articleId) ElMessage.error(error.message || "翻译失败，请稍后重试");
+    if (state.currentArticle?.id === articleId)
+      ElMessage.error(error.message || "翻译失败，请稍后重试");
   } finally {
     state.translateBusy = false;
   }
@@ -2845,7 +3379,11 @@ function normalizeLookupWord(word) {
 function placeTooltip(event) {
   if (event?.currentTarget) {
     const rect = event.currentTarget.getBoundingClientRect();
-    state.tooltip.anchor = { left: rect.left, top: rect.top, bottom: rect.bottom };
+    state.tooltip.anchor = {
+      left: rect.left,
+      top: rect.top,
+      bottom: rect.bottom,
+    };
   }
   const rect = state.tooltip.anchor;
   if (!rect) return;
@@ -2853,9 +3391,10 @@ function placeTooltip(event) {
   const height = tooltipRef.value?.offsetHeight || 260;
   const margin = 14;
   const x = rect.left - 20;
-  const y = rect.bottom + height + margin > window.innerHeight
-    ? rect.top - height - 10
-    : rect.bottom + 10;
+  const y =
+    rect.bottom + height + margin > window.innerHeight
+      ? rect.top - height - 10
+      : rect.bottom + 10;
   state.tooltip.x = Math.max(
     margin,
     Math.min(x, window.innerWidth - width - margin),
@@ -2919,12 +3458,18 @@ async function focusLookupActions(word, event) {
   if (lookupStopWords.has(normalizeLookupWord(word))) return;
   await showTooltip(word, event);
   await nextTick();
-  tooltipRef.value?.querySelector('button:not(:disabled)')?.focus();
+  tooltipRef.value?.querySelector("button:not(:disabled)")?.focus();
 }
 
 function scheduleHideTooltip() {
   clearTimeout(state.tooltipTimer);
-  if (state.tooltip.contextBusy || state.tooltip.saving || tooltipRef.value?.matches(':hover') || tooltipRef.value?.contains(document.activeElement)) return;
+  if (
+    state.tooltip.contextBusy ||
+    state.tooltip.saving ||
+    tooltipRef.value?.matches(":hover") ||
+    tooltipRef.value?.contains(document.activeElement)
+  )
+    return;
   state.tooltipTimer = setTimeout(() => {
     state.tooltip.visible = false;
   }, 240);
@@ -2940,25 +3485,48 @@ function handleTooltipFocusOut(event) {
 
 function openPendingLibrary() {
   state.tooltip.visible = false;
-  router.push({ path: '/wordbank', query: { scope: 'review' } });
+  router.push({ path: "/wordbank", query: { scope: "review" } });
 }
 
 async function saveReaderWord(word) {
-  if (!word || state.tooltip.loading || state.tooltip.saving || !tooltipHasDefinition.value) return;
-  if (state.tooltip.data.savedInReviewBook && (!state.tooltip.sentence || state.tooltip.contextSaved)) return;
+  if (
+    !word ||
+    state.tooltip.loading ||
+    state.tooltip.saving ||
+    !tooltipHasDefinition.value
+  )
+    return;
+  if (
+    state.tooltip.data.savedInReviewBook &&
+    (!state.tooltip.sentence || state.tooltip.contextSaved)
+  )
+    return;
   const normalized = normalizeLookupWord(word);
   const lookupKey = state.tooltip.lookupKey;
   state.tooltip.saving = true;
   try {
-    const result = state.currentArticle?.id && state.tooltip.sentence
-      ? await learningApi.saveReadingWord(state.currentArticle.id, { word: state.tooltip.lookupKey, sentence: state.tooltip.sentence })
-      : await learningApi.saveDictionaryWord(word);
+    const result =
+      state.currentArticle?.id && state.tooltip.sentence
+        ? await learningApi.saveReadingWord(state.currentArticle.id, {
+            word: state.tooltip.lookupKey,
+            sentence: state.tooltip.sentence,
+          })
+        : await learningApi.saveDictionaryWord(word);
     for (const [key, cached] of Object.entries(state.lookupCache)) {
-      if (normalizeLookupWord(cached.word) === normalized) state.lookupCache[key] = result;
+      if (normalizeLookupWord(cached.word) === normalized)
+        state.lookupCache[key] = result;
     }
     state.lookupCache[normalized] = result;
-    if (state.tooltip.lookupKey === lookupKey) { state.tooltip.data = result; if (state.tooltip.sentence) { state.savedOriginals[state.tooltip.contextKey] = true; state.tooltip.contextSaved = true; } }
-    ElMessage.success(state.tooltip.sentence ? "已保留原句，加入待复习" : "已加入待复习");
+    if (state.tooltip.lookupKey === lookupKey) {
+      state.tooltip.data = result;
+      if (state.tooltip.sentence) {
+        state.savedOriginals[state.tooltip.contextKey] = true;
+        state.tooltip.contextSaved = true;
+      }
+    }
+    ElMessage.success(
+      state.tooltip.sentence ? "已保留原句，加入待复习" : "已加入待复习",
+    );
     await Promise.allSettled([loadReport(), loadWordBankStats()]);
   } catch (error) {
     ElMessage.error(error.message || "加入待复习失败，请重试");
@@ -2970,28 +3538,49 @@ async function saveReaderWord(word) {
 }
 
 async function explainReaderWord() {
-  if (state.tooltip.contextBusy || !state.tooltip.sentence || !state.currentArticle) return;
+  if (
+    state.tooltip.contextBusy ||
+    !state.tooltip.sentence ||
+    !state.currentArticle
+  )
+    return;
   const key = state.tooltip.contextKey;
   state.tooltip.contextBusy = true;
   cancelTooltipHide();
   try {
-    const result = await learningApi.explainReadingWord(state.currentArticle.id, { word: state.tooltip.lookupKey, sentence: state.tooltip.sentence });
+    const result = await learningApi.explainReadingWord(
+      state.currentArticle.id,
+      { word: state.tooltip.lookupKey, sentence: state.tooltip.sentence },
+    );
     state.contextCache[key] = result;
     if (state.tooltip.contextKey === key) state.tooltip.context = result;
-  } catch (error) { ElMessage.error(error.message || "语境解读失败，请重试"); }
-  finally { if (state.tooltip.contextKey === key) { state.tooltip.contextBusy = false; await nextTick(); placeTooltip(); } }
+  } catch (error) {
+    ElMessage.error(error.message || "语境解读失败，请重试");
+  } finally {
+    if (state.tooltip.contextKey === key) {
+      state.tooltip.contextBusy = false;
+      await nextTick();
+      placeTooltip();
+    }
+  }
 }
 
 async function discussArticle() {
   if (!state.currentArticle || state.chatBusy) return;
   const article = state.currentArticle;
-  newConversation(); state.chatMode = 'practice'; state.chatScene = 'reading';
+  newConversation();
+  state.chatMode = "practice";
+  state.chatScene = "reading";
   state.chatReadingArticle = { id: article.id, title: article.title };
   state.tooltip.visible = false;
-  await router.push('/chat');
-  await sendChatPrompt('我读完了这篇文章，想用英语聊聊其中的观点。');
+  await router.push("/chat");
+  await sendChatPrompt("我读完了这篇文章，想用英语聊聊其中的观点。");
 }
-async function returnToArticle(id) { if (!id) return; await router.push('/news'); await loadArticle(id); }
+async function returnToArticle(id) {
+  if (!id) return;
+  await router.push("/news");
+  await loadArticle(id);
+}
 
 let wordBankSearchTimer;
 let wordBankRequestId = 0;
@@ -3004,7 +3593,11 @@ async function loadWordBank() {
   state.wordBank.scope = scope;
   await Promise.all([
     loadWordBankStats(),
-    !state.wordBank.categories.length ? learningApi.wordBankCategories().then((categories) => { state.wordBank.categories = categories; }) : Promise.resolve(),
+    !state.wordBank.categories.length
+      ? learningApi.wordBankCategories().then((categories) => {
+          state.wordBank.categories = categories;
+        })
+      : Promise.resolve(),
   ]);
   await loadWordBankWords(page);
 }
@@ -3091,13 +3684,18 @@ function updateAiSummary(settings) {
 async function loadAiSummary() {
   if (state.aiSummary.loaded || state.aiSummary.loading) return;
   state.aiSummary.loading = true;
-  try { updateAiSummary(await aiApi.settings()); }
-  catch { state.aiSummary.label = "查看配置"; }
-  finally { state.aiSummary.loading = false; }
+  try {
+    updateAiSummary(await aiApi.settings());
+  } catch {
+    state.aiSummary.label = "查看配置";
+  } finally {
+    state.aiSummary.loading = false;
+  }
 }
 
 async function openSettings(returnTarget) {
-  settingsReturnFocus = returnTarget instanceof HTMLElement ? returnTarget : null;
+  settingsReturnFocus =
+    returnTarget instanceof HTMLElement ? returnTarget : null;
   state.settingsOpen = true;
   try {
     const settings = await aiApi.settings();
@@ -3106,7 +3704,10 @@ async function openSettings(returnTarget) {
     state.ai.apiKey = "";
     state.ai.models = settings.chatModel ? [settings.chatModel] : [];
     state.ai.status = settings.hasApiKey ? "已保存密钥" : "未保存密钥";
-    state.aiSaved = { baseUrl: settings.baseUrl || '', chatModel: settings.chatModel || '' };
+    state.aiSaved = {
+      baseUrl: settings.baseUrl || "",
+      chatModel: settings.chatModel || "",
+    };
     updateAiSummary(settings);
   } catch (error) {
     state.ai.status = error.message || "加载设置失败";
@@ -3129,7 +3730,8 @@ async function fetchModels() {
       ? `已获取 ${state.ai.models.length} 个模型`
       : "没有找到可用模型";
   } catch (error) {
-    state.ai.status = error.message || "获取模型失败，可以直接输入模型名后测试连接";
+    state.ai.status =
+      error.message || "获取模型失败，可以直接输入模型名后测试连接";
   } finally {
     state.aiBusy = false;
   }
@@ -3137,14 +3739,28 @@ async function fetchModels() {
 
 async function testAiConnection() {
   if (state.aiBusy) return;
-  state.aiBusy = true; state.aiTesting = true;
-  state.ai.status = '正在发送实际模型请求…';
+  state.aiBusy = true;
+  state.aiTesting = true;
+  state.ai.status = "正在发送实际模型请求…";
   try {
-    const result = await aiApi.test({ baseUrl: state.ai.baseUrl, apiKey: state.ai.apiKey, chatModel: state.ai.chatModel });
+    const result = await aiApi.test({
+      baseUrl: state.ai.baseUrl,
+      apiKey: state.ai.apiKey,
+      chatModel: state.ai.chatModel,
+    });
     state.ai.status = `${result.modelName} 连接正常 · ${result.latencyMs} ms（当前表单）`;
-    if (!state.ai.apiKey && state.ai.baseUrl === state.aiSaved.baseUrl && state.ai.chatModel === state.aiSaved.chatModel) state.aiSummary.label = '连接正常';
-  } catch (error) { state.ai.status = error.message || '连接失败，请检查配置后重试'; }
-  finally { state.aiBusy = false; state.aiTesting = false; }
+    if (
+      !state.ai.apiKey &&
+      state.ai.baseUrl === state.aiSaved.baseUrl &&
+      state.ai.chatModel === state.aiSaved.chatModel
+    )
+      state.aiSummary.label = "连接正常";
+  } catch (error) {
+    state.ai.status = error.message || "连接失败，请检查配置后重试";
+  } finally {
+    state.aiBusy = false;
+    state.aiTesting = false;
+  }
 }
 
 async function saveAiSettings() {
@@ -3160,7 +3776,10 @@ async function saveAiSettings() {
     state.ai.chatModel = settings.chatModel || state.ai.chatModel;
     state.ai.status = `已应用 ${state.ai.chatModel || "当前模型"}`;
     updateAiSummary(settings);
-    state.aiSaved = { baseUrl: settings.baseUrl || '', chatModel: settings.chatModel || '' };
+    state.aiSaved = {
+      baseUrl: settings.baseUrl || "",
+      chatModel: settings.chatModel || "",
+    };
     ElMessage.success("AI 设置已保存");
   } catch (error) {
     state.ai.status = error.message || "保存失败，输入内容已保留，请重试";
@@ -3173,6 +3792,7 @@ async function boot() {
   document.body.className = "";
   state.currentUser = await authApi.me();
   await Promise.all([
+    loadDailyMissions(),
     loadReport(),
     loadQuizCategories().then(() => loadWords(false)),
     loadReviews(),
@@ -3199,15 +3819,22 @@ watch(newsLibraryOpen, async (open) => {
   (open ? newsLibraryCloseRef.value : newsLibraryButtonRef.value)?.focus();
 });
 
-watch(() => [state.ai.baseUrl, state.ai.apiKey, state.ai.chatModel], () => {
-  if (!state.aiBusy && state.ai.status.includes('连接正常')) state.ai.status = '配置已修改，请重新测试连接';
-});
+watch(
+  () => [state.ai.baseUrl, state.ai.apiKey, state.ai.chatModel],
+  () => {
+    if (!state.aiBusy && state.ai.status.includes("连接正常"))
+      state.ai.status = "配置已修改，请重新测试连接";
+  },
+);
 
 watch(
   () => state.settingsOpen || wordDialogVisible.value,
   async (open) => {
     if (open) {
-      previousFocus = state.settingsOpen && settingsReturnFocus ? settingsReturnFocus : document.activeElement;
+      previousFocus =
+        state.settingsOpen && settingsReturnFocus
+          ? settingsReturnFocus
+          : document.activeElement;
       document.body.style.overflow = "hidden";
       await nextTick();
       const dialog = state.settingsOpen
@@ -3230,9 +3857,11 @@ watch([activeSection, () => route.query.scope], async ([section]) => {
   document.title = sectionTitle.value + " · LinguaMate";
   state.tooltip.visible = false;
   if (section === "news") state.lookupCache = {};
-  if (section === "review" && !state.loading && !state.reviewBusy) await loadReviews();
+  if (section === "review" && !state.loading && !state.reviewBusy)
+    await loadReviews();
   if (section === "wordbank" && !state.loading) await loadWordBank();
   if (section === "chat" && !state.loading) await loadCoachContext();
+  if (section === "dashboard" && !state.loading) await loadDailyMissions();
 });
 
 onMounted(() => {
@@ -3256,7 +3885,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.sidebar-model-config { display: none; }
+.sidebar-model-config {
+  display: none;
+}
 @media (min-width: 981px) {
   .sidebar-model-config {
     display: flex;
@@ -3271,17 +3902,44 @@ onBeforeUnmount(() => {
     color: #476174;
     text-align: left;
     font-size: 13px;
-    transition: background 200ms ease, border-color 200ms ease;
+    transition:
+      background 200ms ease,
+      border-color 200ms ease;
   }
-  .sidebar-model-config:hover { border-color: #c5dfed; background: #f0f8fd; }
-  .sidebar-model-icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: #eaf2f8; color: #6993ad; }
-  .sidebar-model-icon > svg { width: 19px; height: 19px; transition: transform 240ms var(--ease); }
-  .sidebar-model-config:hover .sidebar-model-icon > svg { transform: rotate(20deg); }
-  .sidebar-model-config > small { margin-left: auto; color: #8b9eab; font-size: 10px; }
-  .sidebar-model-config > small.is-ready { color: #638a49; }
+  .sidebar-model-config:hover {
+    border-color: #c5dfed;
+    background: #f0f8fd;
+  }
+  .sidebar-model-icon {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: #eaf2f8;
+    color: #6993ad;
+  }
+  .sidebar-model-icon > svg {
+    width: 19px;
+    height: 19px;
+    transition: transform 240ms var(--ease);
+  }
+  .sidebar-model-config:hover .sidebar-model-icon > svg {
+    transform: rotate(20deg);
+  }
+  .sidebar-model-config > small {
+    margin-left: auto;
+    color: #8b9eab;
+    font-size: 10px;
+  }
+  .sidebar-model-config > small.is-ready {
+    color: #638a49;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .sidebar-model-config,
-  .sidebar-model-icon > svg { transition: none; }
+  .sidebar-model-icon > svg {
+    transition: none;
+  }
 }
 </style>

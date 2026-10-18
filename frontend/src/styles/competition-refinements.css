@@ -1,0 +1,295 @@
+:root {
+  --blue-soft: #edf7fc;
+  --green-soft: #eef8e4;
+}
+:root[data-theme="dark"] {
+  --blue-soft: #203746;
+  --green-soft: #263b29;
+}
+@media (min-width: 981px) {
+  .daily-theme-choices {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 22px 0 4px;
+  }
+  .daily-theme-choices > button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: color-mix(in srgb, var(--surface) 65%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px 10px;
+    color: var(--muted);
+    font-size: 10px;
+    transition:
+      background 0.2s,
+      border-color 0.2s,
+      color 0.2s;
+  }
+  .daily-theme-choices > button.active {
+    border-color: color-mix(in srgb, var(--green) 40%, var(--line));
+    background: var(--green-soft);
+    color: var(--green-ink);
+  }
+  .daily-theme-choices svg {
+    width: 13px;
+    height: 13px;
+  }
+  .studio-journey-note button {
+    color: var(--blue-ink);
+    background: transparent;
+    margin-left: 8px;
+  }
+  .studio-focus-actions .primary-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  #dashboard .focus-copy h2 {
+    font-size: clamp(31px, 3.1vw, 56px);
+    line-height: 1.35;
+    letter-spacing: -1.5px;
+  }
+  .page-dashboard .studio-focus-detail {
+    max-width: 30ch;
+  }
+  #dashboard .studio-focus-actions {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .page-dashboard .duo-route-track {
+    gap: 7px;
+  }
+  #dashboard .duo-step-button {
+    min-height: 66px;
+  }
+  .page-mission .workspace > .topbar {
+    display: none;
+  }
+  .page-mission .workspace {
+    gap: 18px;
+  }
+  .page-mission .workspace-bar {
+    flex-shrink: 0;
+  }
+  .page-mission .section.active {
+    margin-top: 0;
+  }
+  .app-shell .quiz-study-stage {
+    grid-template-rows: auto minmax(80px, 1fr);
+    flex: 0 1 365px;
+    align-content: center;
+    gap: 22px;
+    margin: auto 0 12px;
+    padding-top: 15px;
+  }
+  .app-shell .quiz-workbench:not(.shows-insight) {
+    max-height: 620px;
+    margin-block: auto;
+  }
+  .app-shell .quiz-word-shell {
+    justify-content: center;
+  }
+  .app-shell .quiz-example-slot {
+    align-self: center;
+    max-height: 240px;
+  }
+  .app-shell .word-quiz-card > .quiz-options {
+    margin-top: 0;
+  }
+  .app-shell .word-quiz-card {
+    gap: 14px;
+    justify-content: center;
+  }
+  .app-shell .word-quiz-card > .quiz-progress {
+    margin-bottom: auto;
+  }
+  .app-shell .word-quiz-card > .quiz-feedback {
+    margin-top: 0;
+  }
+  .quiz-definitions {
+    margin-bottom: 16px;
+  }
+  .review-workspace .review-challenge-card {
+    flex: 0 1 auto;
+    align-self: center;
+    margin-block: auto;
+    padding-block: 20px;
+    max-width: 880px;
+  }
+  .review-workspace > .review-list {
+    align-items: center;
+    justify-content: center;
+  }
+  .review-workspace .review-prompt {
+    flex: 0 0 auto;
+    min-height: 190px;
+    padding: 35px 16px;
+  }
+  .review-workspace .review-challenge-form {
+    padding-top: 10px;
+  }
+  .review-workspace .review-prompt-meta {
+    margin-bottom: 20px;
+  }
+  .page-news .reader-cover {
+    padding-top: 20px;
+    padding-bottom: 18px;
+  }
+  .page-news .reader-cover-title {
+    margin-top: 12px;
+    grid-template-columns: minmax(0, 1fr) 100px;
+    gap: 18px;
+  }
+  .page-news .reader-cover h2 {
+    font-size: clamp(25px, 2vw, 35px);
+    max-width: 30ch;
+  }
+  .page-news .reader-cover-art {
+    height: 100px;
+  }
+  .page-news .reader-deck {
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.65;
+    max-width: 72ch;
+  }
+  .page-news .reader-byline {
+    margin-top: 12px;
+  }
+  .page-news .reader-content {
+    padding-top: 15px;
+    font-size: clamp(19px, 1.35vw, 23px);
+    line-height: 1.9;
+  }
+  .reader-paragraph {
+    margin: 0 0 1.15em;
+    white-space: pre-wrap;
+  }
+  .reader-paragraph:last-child {
+    margin-bottom: 0;
+  }
+  .app-shell #journal .journal-observations {
+    display: grid;
+    grid-template-rows: minmax(210px, 1fr) auto;
+    gap: 20px;
+    overflow: auto;
+    scrollbar-width: thin;
+    overscroll-behavior: contain;
+  }
+  .app-shell #journal .journal-trend {
+    min-height: 210px;
+  }
+  .app-shell #journal .journal-chart-wrap {
+    min-height: 65px;
+  }
+  .app-shell #journal .journal-trend-footer {
+    flex-shrink: 0;
+    margin-top: 10px;
+  }
+  .app-shell #journal .journal-calendar {
+    min-height: 0;
+  }
+  .app-shell #journal .journal-body {
+    padding-top: 20px;
+    gap: 24px;
+  }
+  .app-shell #journal .journal-metrics {
+    padding-top: 21px;
+    padding-bottom: 20px;
+  }
+  .app-shell #journal .journal-growth {
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+  .app-shell #journal .journal-tree {
+    min-height: 190px;
+    flex: 1;
+  }
+  .app-shell #journal .journal-heading-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .journal-date-stamp {
+    font-size: 11px;
+  }
+}
+@media (min-width: 981px) and (max-height: 800px) {
+  .daily-theme-choices {
+    margin-top: 13px;
+  }
+  #dashboard .focus-copy h2 {
+    font-size: clamp(29px, 3vw, 45px);
+  }
+  #dashboard .studio-focus-actions {
+    margin-top: 18px;
+  }
+  #dashboard .duo-step-button {
+    min-height: 58px;
+  }
+  .app-shell .quiz-study-stage {
+    flex-basis: 280px;
+    gap: 14px;
+    padding-top: 5px;
+  }
+  .app-shell .quiz-example-slot {
+    max-height: 175px;
+  }
+  .review-workspace .review-prompt {
+    min-height: 155px;
+    padding-block: 23px;
+  }
+  .review-workspace .review-challenge-card {
+    padding-block: 10px;
+  }
+  .page-news .reader-cover {
+    padding-top: 15px;
+    padding-bottom: 13px;
+  }
+  .page-news .reader-cover-art {
+    height: 82px;
+  }
+  .page-news .reader-deck {
+    display: none;
+  }
+  .page-news .reader-cover h2 {
+    font-size: 27px;
+  }
+  .app-shell #journal .journal-observations {
+    grid-template-rows: minmax(190px, 1fr) auto;
+    gap: 15px;
+  }
+  .app-shell #journal .journal-trend {
+    min-height: 190px;
+  }
+  .app-shell #journal .journal-chart-wrap {
+    min-height: 60px;
+  }
+  .app-shell #journal .journal-tree {
+    min-height: 155px;
+  }
+  .app-shell #journal .journal-metrics {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+  .app-shell #journal .journal-metrics strong {
+    font-size: 35px;
+  }
+  .app-shell #journal .learning-journal {
+    padding-top: 20px;
+    padding-bottom: 18px;
+  }
+  .app-shell #journal .journal-heading-actions .journal-date-stamp {
+    display: none;
+  }
+  .page-mission .workspace {
+    gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .growth-evidence[open] {
+    animation: none;
+  }
+}

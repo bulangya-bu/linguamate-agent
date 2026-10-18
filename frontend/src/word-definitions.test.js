@@ -1,6 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { wordDefinitionGroups } from "./word-definitions.js";
+test("overlapping senses add only new meanings within the same part of speech", () => {
+  assert.deepEqual(
+    wordDefinitionGroups({
+      word: "territory",
+      partOfSpeech: "n",
+      meaningCn: "领土；版图；领域",
+      definitions: [
+        { partOfSpeech: "n.", meaningCn: "领土，版图，领域，范围" },
+        { partOfSpeech: "n", meaningCn: "范围；领土" },
+      ],
+    }),
+    [{ partOfSpeech: "n.", meanings: ["领土；版图；领域", "范围"] }],
+  );
+});
 
 test("keeps every local-bank part of speech and meaning, without repeating the primary answer", () => {
   assert.deepEqual(

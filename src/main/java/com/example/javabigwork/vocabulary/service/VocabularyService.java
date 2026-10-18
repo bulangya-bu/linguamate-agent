@@ -116,6 +116,17 @@ public class VocabularyService {
             throw new IllegalArgumentException("单词不存在");
         }
         boolean correct = isCorrect(word, request.answer());
+        return recordQuiz(word,request.answer(),correct);
+    }
+
+    public WordQuizResult submitMissionQuiz(Long wordId,String answer,boolean correct) {
+        Word word=wordMapper.selectById(wordId);
+        if(word==null)throw new IllegalArgumentException("单词不存在");
+        return recordQuiz(word,answer,correct);
+    }
+
+    private WordQuizResult recordQuiz(Word word,String answer,boolean correct) {
+        Long wordId=word.id;
         UserWordProgress progress = findOrCreateProgress(wordId);
         progress.reviewCount = value(progress.reviewCount) + 1;
         progress.lastReviewAt = LocalDateTime.now();
@@ -132,7 +143,7 @@ public class VocabularyService {
         WordReviewLog log = new WordReviewLog();
         log.userId = userContext.userId();
         log.wordId = wordId;
-        log.answer = request.answer();
+        log.answer = answer;
         log.correct = correct;
         log.reviewType = "QUIZ";
         log.createdAt = LocalDateTime.now();

@@ -838,7 +838,8 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.modelName").value("local-rules"))
                 .andExpect(jsonPath("$.data.examples.length()", greaterThan(0)))
-                .andExpect(jsonPath("$.data.usageNotes.length()", greaterThan(0)));
+                .andExpect(jsonPath("$.data.usageNotes.length()").value(0))
+                .andExpect(jsonPath("$.data.collocations.length()").value(0));
     }
 
     @Test

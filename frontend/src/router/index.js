@@ -4,6 +4,12 @@ import MainAppView from "@/views/MainAppView.vue";
 
 const routes = [
   {
+    path: "/mission",
+    name: "mission",
+    component: MainAppView,
+    meta: { section: "mission" },
+  },
+  {
     path: "/login",
     name: "login",
     component: LoginView,
@@ -15,7 +21,11 @@ const routes = [
     component: LoginView,
     meta: { mode: "register" },
   },
-  { path: "/admin", name: "admin", component: () => import("@/views/AdminView.vue") },
+  {
+    path: "/admin",
+    name: "admin",
+    component: () => import("@/views/AdminView.vue"),
+  },
   {
     path: "/",
     name: "dashboard",

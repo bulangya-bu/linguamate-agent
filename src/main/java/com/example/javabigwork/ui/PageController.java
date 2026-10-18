@@ -9,6 +9,7 @@ public class PageController {
     @GetMapping({
             "/",
             "/chat",
+            "/mission",
             "/vocabulary",
             "/review",
             "/writing",
