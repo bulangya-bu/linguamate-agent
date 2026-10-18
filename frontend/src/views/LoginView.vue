@@ -1,5 +1,8 @@
 <template>
-  <main class="auth-page">
+  <main
+    class="auth-page auth-page--garden"
+    :class="{ 'is-register': !isLogin }"
+  >
     <section class="auth-story">
       <RouterLink class="brand" to="/login"
         ><img
@@ -13,21 +16,37 @@
         </div></RouterLink
       >
       <div class="auth-story-copy">
-        <h1>A little.<br /><em>Every day.</em></h1>
+        <h1>
+          A little.<br /><em
+            >Every day.<svg viewBox="0 0 440 25" fill="none" aria-hidden="true">
+              <path
+                d="M4 17C106 3 261 3 432 10M41 23C168 9 299 9 397 16"
+              /></svg
+          ></em>
+        </h1>
         <p>每一次开口，每一个新词。<br />慢慢来，也能走很远。</p>
       </div>
-      <div class="auth-bloom-wrap">
-        <LearningBloom />
-      </div>
+      <AuthGarden />
       <WordAtmosphere />
     </section>
     <section class="auth-form-side">
       <ThemeToggle class="auth-theme-toggle" />
       <div class="auth-card">
         <div class="auth-card-head">
-          <h2>{{ isLogin ? "欢迎回来。" : "从这里开始。" }}</h2>
+          <div class="auth-entry-mark" aria-hidden="true">
+            <AppIcon name="spark" /><span></span>
+          </div>
+          <h2>{{ isLogin ? "欢迎回来" : "从这里开始" }}<span>。</span></h2>
+          <p>
+            {{
+              isLogin
+                ? "新的一天，和英语再近一点。"
+                : "让每一次小小的进步，都被记住。"
+            }}
+          </p>
         </div>
         <div class="auth-mode-switch" aria-label="账号入口">
+          <span class="auth-mode-indicator" aria-hidden="true"></span>
           <RouterLink
             class="auth-mode-pill"
             :class="{ 'is-active': isLogin }"
@@ -42,96 +61,124 @@
             >创建账号</RouterLink
           >
         </div>
-        <form v-if="isLogin" class="auth-form" @submit.prevent="submitLogin">
-          <label class="auth-field"
-            ><span>用户名</span
-            ><input
-              v-model.trim="loginForm.username"
-              required
-              autocomplete="username"
-              placeholder="输入用户名"
-          /></label>
-          <label class="auth-field"
-            ><span>密码</span
-            ><span class="password-field"
-              ><input
-                v-model="loginForm.password"
-                required
-                :type="showPassword ? 'text' : 'password'"
-                autocomplete="current-password"
-                placeholder="输入密码"
-              /><button
-                type="button"
-                :aria-label="showPassword ? '隐藏密码' : '显示密码'"
-                :aria-pressed="showPassword"
-                @click="showPassword = !showPassword"
-              >
-                {{ showPassword ? "隐藏" : "显示" }}
-              </button></span
-            ></label
-          >
-          <button class="auth-primary" type="submit" :disabled="busy">
-            {{ busy ? "正在进入..." : "进入学习空间"
-            }}<AppIcon v-if="!busy" name="arrow" /><span
+        <div class="auth-form-stage">
+          <Transition name="auth-form-swap" mode="out-in">
+            <form
+              v-if="isLogin"
+              key="login"
+              class="auth-form"
+              :aria-busy="busy"
+              @submit.prevent="submitLogin"
+            >
+              <label class="auth-field"
+                ><span>用户名</span
+                ><span class="auth-control"
+                  ><AppIcon class="auth-field-icon" name="person" /><input
+                    v-model.trim="loginForm.username"
+                    required
+                    autocomplete="username"
+                    :disabled="busy"
+                    spellcheck="false"
+                    autocapitalize="none"
+                    placeholder="输入用户名" /></span
+              ></label>
+              <label class="auth-field"
+                ><span>密码</span
+                ><span class="password-field auth-control"
+                  ><AppIcon class="auth-field-icon" name="lock" /><input
+                    v-model="loginForm.password"
+                    required
+                    :type="showPassword ? 'text' : 'password'"
+                    autocomplete="current-password"
+                    :disabled="busy"
+                    placeholder="输入密码" /><button
+                    type="button"
+                    :disabled="busy"
+                    :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                    :aria-pressed="showPassword"
+                    @click="showPassword = !showPassword"
+                  >
+                    <AppIcon
+                      :name="showPassword ? 'eye-off' : 'eye'"
+                    /></button></span
+              ></label>
+              <button class="auth-primary" type="submit" :disabled="busy">
+                {{ busy ? "正在进入..." : "进入学习空间"
+                }}<AppIcon v-if="!busy" name="arrow" /><span
+                  v-else
+                  class="quiz-ai-spinner"
+                ></span>
+              </button>
+            </form>
+            <form
               v-else
-              class="quiz-ai-spinner"
-            ></span>
-          </button>
-        </form>
-        <form v-else class="auth-form" @submit.prevent="submitRegister">
-          <label class="auth-field"
-            ><span>用户名</span
-            ><input
-              v-model.trim="registerForm.username"
-              required
-              minlength="3"
-              maxlength="32"
-              autocomplete="username"
-              placeholder="3–32 位，作为登录账号"
-          /></label>
-          <label class="auth-field"
-            ><span>昵称</span
-            ><input
-              v-model.trim="registerForm.nickname"
-              autocomplete="nickname"
-              placeholder="希望我们怎么称呼你"
-          /></label>
-          <label class="auth-field"
-            ><span>密码</span
-            ><span class="password-field"
-              ><input
-                v-model="registerForm.password"
-                required
-                minlength="6"
-                :type="showPassword ? 'text' : 'password'"
-                autocomplete="new-password"
-                placeholder="至少 6 位"
-              /><button
-                type="button"
-                :aria-label="showPassword ? '隐藏密码' : '显示密码'"
-                :aria-pressed="showPassword"
-                @click="showPassword = !showPassword"
-              >
-                {{ showPassword ? "隐藏" : "显示" }}
-              </button></span
-            ></label
+              key="register"
+              class="auth-form"
+              :aria-busy="busy"
+              @submit.prevent="submitRegister"
+            >
+              <label class="auth-field"
+                ><span>用户名</span
+                ><span class="auth-control"
+                  ><AppIcon class="auth-field-icon" name="person" /><input
+                    v-model.trim="registerForm.username"
+                    required
+                    minlength="3"
+                    maxlength="32"
+                    autocomplete="username"
+                    :disabled="busy"
+                    spellcheck="false"
+                    autocapitalize="none"
+                    placeholder="3–32 位，作为登录账号" /></span
+              ></label>
+              <label class="auth-field"
+                ><span>昵称<small>选填</small></span
+                ><span class="auth-control"
+                  ><AppIcon class="auth-field-icon" name="smile" /><input
+                    v-model.trim="registerForm.nickname"
+                    autocomplete="nickname"
+                    :disabled="busy"
+                    placeholder="希望我们怎么称呼你" /></span
+              ></label>
+              <label class="auth-field"
+                ><span>密码</span
+                ><span class="password-field auth-control"
+                  ><AppIcon class="auth-field-icon" name="lock" /><input
+                    v-model="registerForm.password"
+                    required
+                    minlength="6"
+                    :type="showPassword ? 'text' : 'password'"
+                    autocomplete="new-password"
+                    :disabled="busy"
+                    placeholder="至少 6 位" /><button
+                    type="button"
+                    :disabled="busy"
+                    :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                    :aria-pressed="showPassword"
+                    @click="showPassword = !showPassword"
+                  >
+                    <AppIcon
+                      :name="showPassword ? 'eye-off' : 'eye'"
+                    /></button></span
+              ></label>
+              <button class="auth-primary" type="submit" :disabled="busy">
+                {{ busy ? "正在创建..." : "开启我的学习旅程"
+                }}<AppIcon v-if="!busy" name="arrow" /><span
+                  v-else
+                  class="quiz-ai-spinner"
+                ></span>
+              </button>
+            </form>
+          </Transition>
+          <p
+            class="settings-status auth-status"
+            role="status"
+            aria-live="polite"
+            :class="{ 'vue-error': statusType === 'error' }"
           >
-          <button class="auth-primary" type="submit" :disabled="busy">
-            {{ busy ? "正在创建..." : "开启我的学习旅程"
-            }}<AppIcon v-if="!busy" name="arrow" /><span
-              v-else
-              class="quiz-ai-spinner"
-            ></span>
-          </button>
-        </form>
-        <p
-          class="settings-status auth-status"
-          role="status"
-          aria-live="polite"
-          :class="{ 'vue-error': statusType === 'error' }"
-        >
-          {{ status }}
-        </p>
+            {{ status }}
+          </p>
+        </div>
       </div>
     </section>
   </main>
@@ -139,7 +186,7 @@
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
 import ThemeToggle from "@/components/ThemeToggle.vue";
-import LearningBloom from "@/components/LearningBloom.vue";
+import AuthGarden from "@/components/AuthGarden.vue";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import {
   computed,
@@ -186,6 +233,7 @@ async function checkExistingSession() {
 }
 
 async function submitLogin() {
+  if (busy.value) return;
   busy.value = true;
   status.value = "正在登录...";
   statusType.value = "";
@@ -201,6 +249,7 @@ async function submitLogin() {
 }
 
 async function submitRegister() {
+  if (busy.value) return;
   busy.value = true;
   status.value = "正在创建账号...";
   statusType.value = "";

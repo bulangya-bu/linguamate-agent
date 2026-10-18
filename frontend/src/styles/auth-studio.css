@@ -1,0 +1,714 @@
+/* Authentication shares the learning workspace's green, blue and paper. */
+.auth-page--garden .auth-control {
+  position: relative;
+  display: block;
+}
+.auth-page--garden .auth-control input {
+  padding-left: 46px;
+}
+.auth-page--garden .auth-field-icon {
+  position: absolute;
+  z-index: 1;
+  left: 16px;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  opacity: 0.65;
+  transition:
+    color 220ms,
+    opacity 220ms;
+  pointer-events: none;
+}
+.auth-page--garden .auth-control:focus-within .auth-field-icon {
+  color: var(--green-ink);
+  opacity: 1;
+}
+.auth-page--garden .password-field > button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  right: 10px;
+  top: 50%;
+  padding: 0;
+  transform: translateY(-50%);
+  border-radius: 8px;
+}
+.auth-page--garden .password-field > button:hover {
+  background: var(--page);
+  color: var(--ink);
+}
+.auth-page--garden .password-field > button svg {
+  width: 18px;
+  height: 18px;
+}
+.auth-page--garden .auth-field > span:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.auth-page--garden .auth-field small {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.auth-page--garden .auth-entry-mark {
+  display: none;
+}
+.auth-page--garden .auth-card-head h2 > span {
+  color: var(--green-ink);
+}
+.auth-page--garden .auth-story-copy h1 em {
+  position: relative;
+  display: inline-block;
+}
+.auth-page--garden .auth-story-copy h1 em > svg {
+  position: absolute;
+  left: 1%;
+  bottom: -14px;
+  width: 95%;
+  height: 24px;
+  stroke: #8cc96a;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.6;
+}
+.auth-page--garden .auth-garden {
+  display: none;
+}
+.auth-page--garden .auth-garden .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (min-width: 981px) {
+  .auth-page--garden {
+    --auth-paper: #f3fafb;
+    --auth-field: #f7fafb;
+    --auth-seam: #e0ebea;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+    min-height: 100dvh;
+    background: var(--surface);
+    isolation: isolate;
+  }
+  .auth-page--garden .auth-story {
+    min-height: 100dvh;
+    padding: clamp(30px, 4.5vh, 52px) clamp(40px, 5.2vw, 100px);
+    border-right: 1px solid var(--auth-seam);
+    background:
+      radial-gradient(ellipse at 12% 12%, #ffffffb0, transparent 65%),
+      linear-gradient(145deg, #f3fbfc, #eaf6fa 68%, #eef7ec);
+  }
+  .auth-page--garden .auth-story::before {
+    position: absolute;
+    inset: 0;
+    content: "";
+    pointer-events: none;
+    background-image:
+      linear-gradient(#74a5b20a 1px, transparent 1px),
+      linear-gradient(90deg, #74a5b20a 1px, transparent 1px);
+    background-size: 58px 58px;
+    mask-image: linear-gradient(transparent 5%, #000 85%);
+  }
+  .auth-page--garden .auth-story .brand {
+    z-index: 4;
+    gap: 13px;
+  }
+  .auth-page--garden .brand .brand-mark {
+    width: 41px;
+    height: 46px;
+  }
+  .auth-page--garden .brand strong {
+    font-size: 23px;
+    letter-spacing: -0.9px;
+  }
+  .auth-page--garden .brand > div > span {
+    margin-top: 4px;
+    font-size: 11px;
+    letter-spacing: 0.8px;
+  }
+  .auth-page--garden .auth-story-copy {
+    margin-top: clamp(68px, 12vh, 135px);
+    z-index: 2;
+  }
+  .auth-page--garden .auth-story-copy h1 {
+    margin: 0 0 36px;
+    font-size: clamp(76px, 6.3vw, 122px);
+    line-height: 1.02;
+    letter-spacing: -5px;
+  }
+  .auth-page--garden .auth-story-copy h1 em {
+    margin-top: 6px;
+    color: #3f7934;
+  }
+  .auth-page--garden .auth-story-copy > p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.95;
+    letter-spacing: 0.6px;
+  }
+  .auth-page--garden .auth-form-side {
+    padding: 80px 48px 60px;
+    overflow: hidden;
+    align-content: center;
+    background: var(--surface);
+  }
+  .auth-page--garden .auth-form-side::before {
+    position: absolute;
+    top: 10%;
+    right: -160px;
+    width: 380px;
+    height: 380px;
+    border: 1px solid var(--auth-seam);
+    border-radius: 50%;
+    content: "";
+    opacity: 0.45;
+    pointer-events: none;
+  }
+  .auth-page--garden .auth-form-side::after {
+    position: absolute;
+    right: -80px;
+    top: calc(10% + 80px);
+    width: 220px;
+    height: 220px;
+    border: 1px solid var(--auth-seam);
+    border-radius: 50%;
+    content: "";
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .auth-page--garden .auth-theme-toggle {
+    top: 32px;
+    right: 36px;
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--surface);
+  }
+  .auth-page--garden .auth-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 388px;
+    padding: 0;
+  }
+  .auth-page--garden .auth-entry-mark {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 24px;
+    border: 1px solid #d5e8ca;
+    border-radius: 17px 17px 17px 5px;
+    background: #f0f8e9;
+    color: var(--green-ink);
+    transform: rotate(-6deg);
+  }
+  .auth-page--garden .auth-entry-mark > svg {
+    width: 26px;
+    height: 26px;
+    stroke-width: 1.4;
+  }
+  .auth-page--garden .auth-entry-mark > span {
+    position: absolute;
+    right: -6px;
+    bottom: -5px;
+    width: 16px;
+    height: 16px;
+    border: 4px solid var(--surface);
+    border-radius: 50%;
+    background: var(--blue);
+  }
+  .auth-page--garden .auth-card-head h2 {
+    margin: 0 0 10px;
+    font-size: 34px;
+    font-weight: 650;
+    line-height: 1.35;
+    letter-spacing: -1px;
+  }
+  .auth-page--garden .auth-card-head p {
+    font-size: 13px;
+    line-height: 1.8;
+    letter-spacing: 0.2px;
+    margin: 0;
+    color: var(--muted);
+  }
+  .auth-page--garden .auth-mode-switch {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin: 28px 0;
+    padding: 5px;
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    background: var(--auth-field);
+    isolation: isolate;
+  }
+  .auth-page--garden .auth-mode-indicator {
+    position: absolute;
+    z-index: -1;
+    top: 5px;
+    bottom: 5px;
+    left: 5px;
+    width: calc(50% - 5px);
+    border: 1px solid #dce7df;
+    border-radius: 9px;
+    background: var(--surface);
+    box-shadow: 0 2px 5px #32544706;
+    transition: transform 480ms var(--ease);
+  }
+  .auth-page--garden.is-register .auth-mode-indicator {
+    transform: translateX(100%);
+  }
+  .auth-page--garden .auth-mode-pill {
+    display: grid;
+    place-items: center;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: var(--muted);
+    transition: color 220ms;
+  }
+  .auth-page--garden .auth-mode-pill::after {
+    display: none;
+  }
+  .auth-page--garden .auth-mode-pill.is-active {
+    color: var(--green-ink);
+  }
+  .auth-page--garden .auth-mode-pill:hover {
+    color: var(--ink);
+  }
+  .auth-page--garden .auth-form-stage {
+    min-height: 400px;
+  }
+  .auth-page--garden .auth-form {
+    gap: 20px;
+  }
+  .auth-page--garden .auth-field {
+    gap: 9px;
+  }
+  .auth-page--garden .auth-field > span:first-child {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .auth-page--garden .auth-field input {
+    height: 53px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--auth-field);
+    font-size: 15px;
+    box-shadow: none;
+    transition:
+      border-color 220ms,
+      box-shadow 220ms,
+      background 220ms;
+  }
+  .auth-page--garden .auth-field input::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
+    font-size: 13px;
+  }
+  .auth-page--garden .auth-field input:hover {
+    border-color: #b7cdbd;
+  }
+  .auth-page--garden .auth-field input:focus {
+    border-color: #78b75c;
+    background: var(--surface);
+    box-shadow: 0 0 0 3px #83bc5f15;
+    outline: none;
+  }
+  .auth-page--garden .auth-primary {
+    min-height: 53px;
+    margin-top: 7px;
+    padding: 13px 19px 13px 22px;
+    border-radius: 11px;
+    font-size: 14px;
+    font-weight: 650;
+    box-shadow:
+      0 3px 0 var(--green-dark),
+      0 8px 18px #58cc0210;
+  }
+  .auth-page--garden .auth-primary > svg {
+    width: 18px;
+    height: 18px;
+    transition: transform 300ms var(--ease);
+  }
+  .auth-page--garden .auth-primary:hover:not(:disabled) > svg {
+    transform: translateX(4px);
+  }
+  .auth-page--garden .auth-status {
+    min-height: 23px;
+    margin: 12px 0 0;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .auth-page--garden .auth-status.vue-error {
+    color: #a74838;
+  }
+  .auth-page--garden .auth-garden {
+    position: absolute;
+    z-index: 3;
+    display: block;
+    right: 3%;
+    bottom: 5%;
+    width: min(420px, 29vw);
+    padding: 0;
+    color: #548b9f;
+    cursor: pointer;
+  }
+  .auth-page--garden .auth-garden-art {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .auth-page--garden .auth-garden-caption {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 68%;
+    min-height: 75px;
+    margin: -67px auto 0;
+    padding: 12px 15px 12px 23px;
+    border: 1px solid #ffffffdf;
+    border-radius: 18px 6px 18px 6px;
+    background: linear-gradient(120deg, #ffffffea, #ffffffe0 60%, #eef8e9d9);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 12px 40px #4577860a;
+    transform: rotate(-4deg);
+    transition:
+      border-color 250ms,
+      transform 450ms var(--ease),
+      box-shadow 250ms;
+  }
+  .auth-page--garden .auth-garden-word {
+    display: grid;
+    gap: 4px;
+    text-align: left;
+  }
+  .auth-page--garden .auth-garden-word strong {
+    font:
+      italic 28px/1.1 Georgia,
+      serif;
+    color: #3f7934;
+    letter-spacing: -0.4px;
+  }
+  .auth-page--garden .auth-garden-word > span {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #668273;
+    letter-spacing: 1px;
+  }
+  .auth-page--garden .auth-garden-next {
+    display: grid;
+    place-items: center;
+    width: 29px;
+    height: 29px;
+    border: 1px solid #d5e8cf;
+    border-radius: 50%;
+    color: #6a9b55;
+  }
+  .auth-page--garden .auth-garden-next > svg {
+    width: 15px;
+    height: 15px;
+  }
+  .auth-page--garden .auth-garden-hint {
+    display: block;
+    margin: 15px 0 0;
+    font-size: 11px;
+    letter-spacing: 1.1px;
+    color: var(--muted);
+    opacity: 0.7;
+  }
+  .auth-page--garden .auth-garden:hover .auth-garden-caption,
+  .auth-page--garden .auth-garden:focus-visible .auth-garden-caption {
+    border-color: #bedcb0;
+    transform: rotate(0) translateY(-4px);
+    box-shadow: 0 14px 40px #45778614;
+  }
+  .auth-page--garden .auth-garden:active {
+    transform: none;
+  }
+  .auth-page--garden .garden-petals {
+    transform-origin: 245px 171px;
+    animation: auth-garden-turn 80s linear infinite;
+  }
+  .auth-page--garden .garden-flower {
+    transform-origin: 245px 171px;
+    animation: auth-garden-breathe 8s ease-in-out infinite;
+  }
+  .auth-page--garden .garden-orbit {
+    transform-origin: 245px 171px;
+    animation: auth-garden-sway 20s ease-in-out infinite;
+  }
+  .auth-page--garden .auth-garden.is-paused *,
+  .auth-page--garden .auth-garden:hover *,
+  .auth-page--garden .auth-garden:focus-visible *,
+  .auth-page--garden:has(.auth-form-side:focus-within) .auth-garden * {
+    animation-play-state: paused;
+  }
+  .auth-page--garden .auth-story-copy,
+  .auth-page--garden .auth-card {
+    animation: auth-enter 900ms var(--ease) both;
+  }
+  .auth-page--garden .auth-card {
+    animation-delay: 100ms;
+  }
+  .auth-page--garden .auth-garden {
+    animation: auth-enter 1200ms 150ms var(--ease) both;
+  }
+  .auth-page--garden
+    .auth-story
+    .word-atmosphere--auth
+    .word-motion.word-motion--0 {
+    left: 68%;
+    top: 16%;
+  }
+  .auth-page--garden
+    .auth-story
+    .word-atmosphere--auth
+    .word-motion.word-motion--1 {
+    left: 13%;
+    top: 70%;
+  }
+  .auth-page--garden
+    .auth-story
+    .word-atmosphere--auth
+    .word-motion.word-motion--2 {
+    left: 8%;
+    top: 86%;
+  }
+  .auth-page--garden
+    .auth-story
+    .word-atmosphere--auth
+    .word-motion.word-motion--3 {
+    left: 53%;
+    top: 55%;
+  }
+  .auth-page--garden
+    .auth-story
+    .word-atmosphere.word-atmosphere--auth
+    .word-light-trail {
+    top: 50%;
+    left: -24%;
+    height: 39%;
+    opacity: 0.26;
+  }
+  .auth-page--garden .auth-story .word-atmosphere--auth .word-shard {
+    opacity: 0.57;
+  }
+  .auth-page--garden
+    .auth-story
+    .word-atmosphere--auth
+    .word-shard.is-revealed {
+    opacity: 1;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 820px) {
+  .auth-page--garden .auth-story {
+    padding-top: 30px;
+  }
+  .auth-page--garden .auth-story-copy {
+    margin-top: 65px;
+  }
+  .auth-page--garden .auth-story-copy h1 {
+    font-size: clamp(74px, 6.3vw, 102px);
+    margin-bottom: 29px;
+  }
+  .auth-page--garden .auth-story-copy > p {
+    font-size: 13px;
+  }
+  .auth-page--garden .auth-form-side {
+    padding-top: 66px;
+    padding-bottom: 34px;
+  }
+  .auth-page--garden .auth-entry-mark {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 18px;
+    border-radius: 14px 14px 14px 4px;
+  }
+  .auth-page--garden .auth-entry-mark > svg {
+    width: 23px;
+    height: 23px;
+  }
+  .auth-page--garden .auth-card-head h2 {
+    font-size: 30px;
+  }
+  .auth-page--garden .auth-mode-switch {
+    margin: 23px 0;
+  }
+  .auth-page--garden .auth-garden {
+    right: 1%;
+    bottom: 5%;
+    width: min(365px, 28vw);
+  }
+  .auth-page--garden
+    .auth-story
+    .word-atmosphere--auth
+    .word-motion.word-motion--0 {
+    top: 13%;
+  }
+  .auth-page--garden
+    .auth-story
+    .word-atmosphere--auth
+    .word-motion.word-motion--3 {
+    top: 42%;
+    left: 70%;
+  }
+  .auth-page--garden .auth-theme-toggle {
+    top: 24px;
+    right: 28px;
+  }
+}
+
+:root[data-theme="dark"] .auth-page--garden {
+  --auth-field: #15232d;
+  --auth-seam: #2a4147;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-story {
+  background:
+    radial-gradient(ellipse at 10% 5%, #243f474d, transparent 65%),
+    linear-gradient(150deg, #172c36, #152a35 70%, #1b302c);
+}
+:root[data-theme="dark"] .auth-page--garden .auth-story-copy h1 em {
+  color: #a0ca8c;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-story-copy h1 em > svg {
+  stroke: #739f5b;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-entry-mark {
+  color: var(--green-ink);
+  border-color: #3a513b;
+  background: #243c2b;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-mode-indicator {
+  border-color: #3c5146;
+  background: #263831;
+  box-shadow: 0 2px 5px #0001;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-mode-pill.is-active {
+  color: var(--green-ink);
+}
+:root[data-theme="dark"] .auth-page--garden .auth-field input {
+  background: var(--auth-field);
+  border-color: var(--line);
+}
+:root[data-theme="dark"] .auth-page--garden .auth-field input:focus {
+  background: var(--surface);
+  border-color: #78a266;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-garden {
+  color: #96bac5;
+}
+:root[data-theme="dark"] .auth-page--garden .garden-petals {
+  opacity: 0.72;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-garden-caption {
+  background: linear-gradient(120deg, #253d43ed, #213b38ee);
+  border-color: #4c676c;
+  box-shadow: 0 12px 40px #0001;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-garden-word strong {
+  color: #b1d49c;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-garden-word > span {
+  color: #abc0b2;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-garden-next {
+  border-color: #536f50;
+  color: #b1d49c;
+}
+:root[data-theme="dark"] .auth-page--garden .auth-status.vue-error {
+  color: #e9a08e;
+}
+
+.auth-form-swap-enter-active {
+  transition:
+    opacity 240ms ease,
+    transform 300ms var(--ease);
+}
+.auth-form-swap-leave-active {
+  transition:
+    opacity 130ms ease,
+    transform 160ms ease;
+}
+.auth-form-swap-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.auth-form-swap-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+.garden-word-enter-active,
+.garden-word-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 200ms var(--ease);
+}
+.garden-word-enter-from {
+  opacity: 0;
+  transform: translateY(5px);
+}
+.garden-word-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+@keyframes auth-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes auth-garden-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes auth-garden-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+@keyframes auth-garden-sway {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-page--garden *,
+  .auth-page--garden *::before,
+  .auth-page--garden *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
