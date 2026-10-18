@@ -4,6 +4,8 @@ import com.example.javabigwork.dictionary.dto.DictionaryApiEntry;
 import com.example.javabigwork.dictionary.dto.DictionaryLookupData;
 import java.util.List;
 import java.util.Optional;
+import java.time.Duration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
@@ -15,7 +17,10 @@ public class DictionaryApiService {
     private final RestClient restClient;
 
     public DictionaryApiService() {
-        this.restClient = RestClient.builder().baseUrl(BASE_URL).build();
+        SimpleClientHttpRequestFactory transport = new SimpleClientHttpRequestFactory();
+        transport.setConnectTimeout(Duration.ofSeconds(2));
+        transport.setReadTimeout(Duration.ofSeconds(3));
+        this.restClient = RestClient.builder().baseUrl(BASE_URL).requestFactory(transport).build();
     }
 
     public Optional<DictionaryLookupData> lookup(String normalizedWord) {

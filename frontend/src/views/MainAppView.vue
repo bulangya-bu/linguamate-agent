@@ -1569,10 +1569,10 @@
       }}</small>
       <div class="tooltip-actions">
         <button class="tooltip-save-word" type="button" :class="{ 'is-saved': state.tooltip.data.savedInReviewBook }"
-          :disabled="state.tooltip.loading || state.tooltip.saving || state.tooltip.data.savedInReviewBook"
+          :disabled="state.tooltip.loading || state.tooltip.saving || state.tooltip.data.savedInReviewBook || !tooltipHasDefinition"
           @click="saveReaderWord(state.tooltip.data.word)">
           <AppIcon :name="state.tooltip.data.savedInReviewBook ? 'check' : 'review'" />
-          {{ state.tooltip.saving ? "加入中…" : state.tooltip.data.savedInReviewBook ? "已加入待复习" : "加入待复习" }}
+          {{ state.tooltip.loading ? "查询中…" : state.tooltip.saving ? "加入中…" : state.tooltip.data.savedInReviewBook ? "已加入待复习" : tooltipHasDefinition ? "加入待复习" : "暂无可保存词条" }}
         </button>
         <button v-if="state.tooltip.data.savedInReviewBook" type="button" class="tooltip-library-link" @click="openPendingLibrary">查看词库<AppIcon name="arrow" /></button>
       </div>
@@ -1874,6 +1874,10 @@ const state = reactive({
 });
 
 const activeSection = computed(() => route.meta.section || "dashboard");
+const tooltipHasDefinition = computed(() => {
+  const meaning = state.tooltip.data.meaningCn || "";
+  return Boolean(meaning.trim()) && !/未收录|查询中|查询失败/.test(meaning);
+});
 const sectionTitle = computed(
   () => sectionMeta[activeSection.value] || sectionMeta.dashboard,
 );
@@ -3016,7 +3020,7 @@ function openPendingLibrary() {
 }
 
 async function saveReaderWord(word) {
-  if (!word || state.tooltip.loading || state.tooltip.saving || state.tooltip.data.savedInReviewBook) return;
+  if (!word || state.tooltip.loading || state.tooltip.saving || state.tooltip.data.savedInReviewBook || !tooltipHasDefinition.value) return;
   const normalized = normalizeLookupWord(word);
   const lookupKey = state.tooltip.lookupKey;
   state.tooltip.saving = true;

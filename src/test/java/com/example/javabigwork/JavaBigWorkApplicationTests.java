@@ -265,6 +265,31 @@ class JavaBigWorkApplicationTests {
     }
 
     @Test
+    void readingDictionaryCoversCommonWordsAndSavesTheirCanonicalForms() throws Exception {
+        String username = "dict" + System.nanoTime();
+        registerUser(username, "Dictionary Reader");
+        MockHttpSession session = login(username, "userpass123");
+        mockMvc.perform(get("/api/news/lookup").param("word", "language").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.meaningCn", containsString("语言")))
+                .andExpect(jsonPath("$.data.savedInReviewBook").value(false));
+        mockMvc.perform(get("/api/news/lookup").param("word", "scientists").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.word").value("scientist"))
+                .andExpect(jsonPath("$.data.meaningCn", containsString("科学家")));
+        mockMvc.perform(get("/api/news/lookup").param("word", "went").session(session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.word").value("go"));
+        for (String form : java.util.List.of("scientists", "scientist", "scientist's")) {
+            mockMvc.perform(post("/api/dictionary/save").param("word", form).session(session))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.savedInReviewBook").value(true));
+        }
+        mockMvc.perform(get("/api/word-bank/stats").session(session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.review").value(1));
+        mockMvc.perform(get("/api/news/lookup").param("word", "scientists").session(session))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.savedInReviewBook").value(true));
+    }
+
+    @Test
     void wordBankSearchMatchesEnglishPrefixOnly() throws Exception {
         mockMvc.perform(get("/api/word-bank/words")
                         .session(studentSession())

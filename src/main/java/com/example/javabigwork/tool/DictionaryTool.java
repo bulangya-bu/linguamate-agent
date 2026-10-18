@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.example.javabigwork.cache.RedisCacheService;
 import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.dictionary.service.OnlineWordService;
+import com.example.javabigwork.dictionary.service.OfflineDictionaryService;
 import com.example.javabigwork.news.dto.HoverWordResponse;
 import com.example.javabigwork.vocabulary.entity.UserWordProgress;
 import com.example.javabigwork.vocabulary.entity.Word;
@@ -32,19 +33,22 @@ public class DictionaryTool {
     private final OnlineWordService onlineWordService;
     private final UserContext userContext;
     private final RedisCacheService redisCache;
+    private final OfflineDictionaryService offlineDictionary;
 
     public DictionaryTool(
             WordMapper wordMapper,
             UserWordProgressMapper progressMapper,
             OnlineWordService onlineWordService,
             UserContext userContext,
-            RedisCacheService redisCache
+            RedisCacheService redisCache,
+            OfflineDictionaryService offlineDictionary
     ) {
         this.wordMapper = wordMapper;
         this.progressMapper = progressMapper;
         this.onlineWordService = onlineWordService;
         this.userContext = userContext;
         this.redisCache = redisCache;
+        this.offlineDictionary = offlineDictionary;
     }
 
     public HoverWordResponse lookup(String rawWord) {
@@ -55,7 +59,7 @@ public class DictionaryTool {
         }
         log.info("DictionaryTool.lookup: word={}", normalized);
         Word word = findFastWord(normalized);
-        if (word == null || !isLocalWord(word)) {
+        if (!hasReliableDefinition(word)) {
             return new HoverWordResponse(normalized, "", "", "词库暂未收录", "", "", false);
         }
         return toHoverResponse(word);
@@ -73,8 +77,14 @@ public class DictionaryTool {
         if (word == null) {
             word = onlineWordService.resolveWord(normalized, false);
         }
+        if (!hasReliableDefinition(word)) {
+            throw new IllegalArgumentException("暂未查到可靠释义，请检查拼写或换用单词原形");
+        }
         if (word.id == null) {
             wordMapper.insert(word);
+        } else if (OfflineDictionaryService.SOURCE_TAG.equals(word.levelTag)) {
+            // Repair an existing incomplete online entry when the learner saves its local definition.
+            wordMapper.updateById(word);
         }
         cacheWordLookup(normalized, word);
         UserWordProgress existing = progressMapper.selectOne(Wrappers.<UserWordProgress>query()
@@ -103,22 +113,36 @@ public class DictionaryTool {
     private Word findFastWord(String normalized) {
         String cacheKey = wordLookupKey(normalized);
         Word cached = redisCache.get(cacheKey, Word.class).orElse(null);
-        if (cached != null) {
+        if (hasChineseDefinition(cached)) {
             return cached;
         }
+        Word englishFallback = null;
         for (String candidate : lookupCandidates(normalized)) {
-            Word word = wordMapper.selectList(Wrappers.<Word>query()
-                            .eq("word", candidate)
-                            .last("LIMIT 1"))
-                    .stream()
-                    .findFirst()
-                    .orElse(null);
-            if (word != null) {
+            Word word = findStoredWord(candidate);
+            if (hasChineseDefinition(word)) {
                 cacheWordLookup(normalized, word);
                 return word;
             }
+            Word supplement = offlineDictionary.lookup(candidate).orElse(null);
+            if (supplement != null) {
+                Word stored = supplement.word.equals(candidate) ? word : findStoredWord(supplement.word);
+                if (hasChineseDefinition(stored)) supplement = stored;
+                else if (stored != null) {
+                    supplement.id = stored.id;
+                    supplement.exampleEn = stored.exampleEn;
+                    supplement.exampleCn = stored.exampleCn;
+                }
+                cacheWordLookup(normalized, supplement);
+                return supplement;
+            }
+            if (englishFallback == null && hasReliableDefinition(word)) englishFallback = word;
         }
-        return null;
+        return englishFallback;
+    }
+
+    private Word findStoredWord(String normalized) {
+        return wordMapper.selectList(Wrappers.<Word>query().eq("word", normalized).last("LIMIT 1"))
+                .stream().findFirst().orElse(null);
     }
 
     private void cacheWordLookup(String normalized, Word word) {
@@ -129,7 +153,7 @@ public class DictionaryTool {
     }
 
     private String wordLookupKey(String normalized) {
-        return redisCache.key("word:lookup", normalized);
+        return redisCache.key("word:lookup:v2", normalized);
     }
 
     private String wordLookupIndexKey() {
@@ -153,25 +177,30 @@ public class DictionaryTool {
         );
     }
 
-    private boolean isLocalWord(Word word) {
-        if (word == null || word.meaningCn == null) return false;
-        // Only show words that have Chinese meaning (contain non-ASCII characters)
-        for (int i = 0; i < word.meaningCn.length(); i++) {
-            if (word.meaningCn.charAt(i) > 127) return true;
-        }
-        return false;
+    private boolean hasChineseDefinition(Word word) {
+        return hasReliableDefinition(word) && word.meaningCn.matches("(?s).*[\\p{IsHan}].*");
+    }
+
+    private boolean hasReliableDefinition(Word word) {
+        return word != null && StringUtils.hasText(word.meaningCn)
+                && !"online-fallback".equals(word.levelTag)
+                && !word.meaningCn.contains("暂未收录")
+                && !word.meaningCn.contains("查询失败");
     }
 
     private String normalize(String rawWord) {
         if (rawWord == null) {
             return "";
         }
-        return rawWord.replaceAll("[^A-Za-z'-]", "").toLowerCase(Locale.ROOT);
+        String word = rawWord.replace('’', '\'').replace('‘', '\'').replace('‑', '-').replace('‐', '-')
+                .trim().replaceAll("^[^A-Za-z]+|[^A-Za-z]+$", "").toLowerCase(Locale.ROOT);
+        return word.length() <= 64 && word.matches("[a-z]+(?:['-][a-z]+)*") ? word : "";
     }
 
     private List<String> lookupCandidates(String normalized) {
         Set<String> candidates = new LinkedHashSet<>();
         candidates.add(normalized);
+        if (normalized.endsWith("'s")) candidates.add(normalized.substring(0, normalized.length() - 2));
         switch (normalized) {
             case "habits" -> candidates.add("habit");
             case "stories" -> candidates.add("story");
@@ -206,11 +235,13 @@ public class DictionaryTool {
             String stem = normalized.substring(0, normalized.length() - 3);
             candidates.add(stem);
             candidates.add(stem + "e");
+            if (stem.matches(".*([b-df-hj-np-tv-z])\\1$")) candidates.add(stem.substring(0, stem.length() - 1));
         }
         if (normalized.endsWith("ed") && normalized.length() > 4) {
             String stem = normalized.substring(0, normalized.length() - 2);
             candidates.add(stem);
             candidates.add(stem + "e");
+            if (stem.matches(".*([b-df-hj-np-tv-z])\\1$")) candidates.add(stem.substring(0, stem.length() - 1));
         }
         if (normalized.endsWith("es") && normalized.length() > 4) {
             candidates.add(normalized.substring(0, normalized.length() - 2));
