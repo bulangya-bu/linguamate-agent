@@ -2538,7 +2538,9 @@ function focusReaderWord(token, event) {
 watch(
   () => state.currentArticle?.id,
   () => {
-    focusedSentence.value = "";
+    focusedSentence.value = readerFocus.value
+      ? articleTokens.value.find((token) => token.word)?.sentence || ""
+      : "";
   },
 );
 

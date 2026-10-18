@@ -157,10 +157,10 @@
 .reading-art.is-focusing .module-art-hint {
   color: var(--art-green);
 }
-.page-news .reader-content > span {
+.page-news .reader-content span {
   transition: opacity 200ms ease;
 }
-.page-news .reader-panel.is-reading-focus .reader-content > .reader-art-dim {
+.page-news .reader-panel.is-reading-focus .reader-content .reader-art-dim {
   opacity: 0.28;
 }
 @keyframes art-question-float {
