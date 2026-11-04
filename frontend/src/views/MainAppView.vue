@@ -22,17 +22,7 @@
       aria-label="学习导航"
       :inert="state.settingsOpen || wordDialogVisible"
     >
-      <RouterLink class="brand" to="/">
-        <img
-          class="brand-mark"
-          src="/assets/linguamate-icon.svg?v=bright"
-          alt=""
-        />
-        <div>
-          <strong>LinguaMate<span class="brand-period">.</span></strong
-          ><span>让英语成为日常</span>
-        </div>
-      </RouterLink>
+      <AppBrand />
       <nav>
         <span
           class="nav-active-indicator"
@@ -139,7 +129,7 @@
             ><AppIcon :name="activeSection"
           /></span>
           <span class="workspace-context"
-            ><span>学习空间</span><strong>{{ sectionTitle }}</strong></span
+            ><span>{{ BRAND_NAME }}</span><strong>{{ sectionTitle }}</strong></span
           >
         </div>
         <div class="workspace-tools">
@@ -251,7 +241,7 @@
             />
           </div>
           <div class="studio-canvas-footer" aria-hidden="true">
-            <span>LINGUAMATE</span><span>A little. Every day.</span>
+            <span>{{ BRAND_FULL_NAME }}</span><span>A little. Every day.</span>
           </div>
         </section>
         <div class="home-grid">
@@ -1166,7 +1156,7 @@
             <header class="reader-cover">
               <div class="reader-cover-meta">
                 <span class="reader-source">{{
-                  state.currentArticle?.sourceName || "LinguaMate Reader"
+                  state.currentArticle?.sourceName || `${BRAND_NAME}阅读`
                 }}</span>
                 <span v-if="state.currentArticle" class="reader-topic">{{
                   articleTopicText(state.currentArticle.topicTags)
@@ -1988,6 +1978,8 @@
 
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
+import AppBrand from "@/components/AppBrand.vue";
+import { BRAND_NAME, BRAND_FULL_NAME, brandedPageTitle } from "@/brand";
 import { defineAsyncComponent } from "vue";
 const LearningJournal = defineAsyncComponent(
   () => import("@/components/LearningJournal.vue"),
@@ -3856,7 +3848,7 @@ watch(
 );
 
 watch([activeSection, () => route.query.scope], async ([section]) => {
-  document.title = sectionTitle.value + " · LinguaMate";
+  document.title = brandedPageTitle(sectionTitle.value);
   state.tooltip.visible = false;
   if (section === "news") state.lookupCache = {};
   if (section === "review" && !state.loading && !state.reviewBusy)
@@ -3867,7 +3859,7 @@ watch([activeSection, () => route.query.scope], async ([section]) => {
 });
 
 onMounted(() => {
-  document.title = sectionTitle.value + " · LinguaMate";
+  document.title = brandedPageTitle(sectionTitle.value);
   document.addEventListener("keydown", trapDialogFocus, true);
   boot().catch((error) => {
     console.error(error);

@@ -49,7 +49,7 @@
           <article v-for="(message, index) in messages" :key="message.id || index" class="studio-message" :class="message.role">
             <div class="studio-message-avatar"><AppIcon v-if="message.role !== 'user'" name="spark" /><span v-else>我</span></div>
             <div class="studio-message-body">
-              <div class="studio-message-byline"><strong>{{ message.role === 'user' ? '你' : 'LinguaMate' }}</strong>
+              <div class="studio-message-byline"><strong>{{ message.role === 'user' ? '你' : BRAND_FULL_NAME }}</strong>
                 <span v-if="message.coaching">{{ message.coaching.source === 'model' ? 'AI 对话教练' : '本地场景练习' }}</span>
                 <span v-else-if="message.role === 'assistant' && message.trace?.some(step => step.title === '调用在线模型')">AI 学习助手</span>
                 <span v-else-if="message.role === 'assistant' && message.trace?.some(step => step.title === '使用本地兜底')">本地学习建议</span>
@@ -118,6 +118,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import AppIcon from './AppIcon.vue';
 import ConversationArt from './ConversationArt.vue';
+import { BRAND_FULL_NAME } from '@/brand';
 const props = defineProps({ messages: { type: Array, default: () => [] }, conversations: { type: Array, default: () => [] }, conversationId: [Number, String],
   scene: { type: String, default: 'daily' }, mode: { type: String, default: 'practice' }, draft: { type: String, default: '' }, busy: Boolean,
   error: String, modelName: String, contextWords: { type: Array, default: () => [] }, trace: { type: Array, default: () => [] } });

@@ -1,12 +1,14 @@
-# LinguaMate Agent Deployment Guide
+# 语伴智学（LinguaMate）Deployment Guide
 
-This guide covers local setup, Docker deployment, and production deployment for the Spring Boot application.
+This guide covers local setup, Docker deployment, and production deployment for 语伴智学（LinguaMate）, a Vue 3 / Vite desktop web application served by Spring Boot. The repository includes production static assets; frontend source changes must be rebuilt before packaging.
 
 ## Environment
 
 - JDK 17 (local) or Docker
 - MySQL 8.x
 - Windows PowerShell or another shell that can run Maven Wrapper
+- Node.js 20.x (20.19 or newer) or 22.12+ with npm when developing or rebuilding the Vite frontend
+- Optional Redis for caching; use `LINGUAMATE_REDIS_CACHE_ENABLED=false` when running without Redis
 - Optional OpenAI-compatible API provider
 
 ## Configuration via Environment Variables
@@ -24,9 +26,13 @@ All sensitive or environment-specific settings are configurable through environm
 | `LINGUAMATE_AI_BASE_URL` | `https://api.openai.com/v1` | AI provider base URL |
 | `LINGUAMATE_AI_API_KEY` | *(empty)* | AI API key |
 | `LINGUAMATE_AI_CHAT_MODEL` | `gpt-4o-mini` | Chat model name |
-| `LINGUAMATE_AI_EMBEDDING_MODEL` | `text-embedding-3-small` | Embedding model name |
+| `LINGUAMATE_AI_EMBEDDING_MODEL` | `text-embedding-3-small` | Reserved embedding setting; current RAG uses keyword retrieval |
+| `LINGUAMATE_REDIS_CACHE_ENABLED` | `true` | Enable Redis cache |
+| `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Redis connection |
 
 When no AI API key is configured, the app still starts and local fallback logic keeps the demo usable.
+
+These AI environment variables supply deployment defaults. Signed-in users can save their own base URL, API key and model through the sidebar's “模型配置”; the administrator has a separate “模型连接” page. Use the chat-completion connection test after configuration. Model-list retrieval alone does not prove the provider can answer requests. Local fallback and online-model feedback are labeled separately.
 
 ## Database Setup
 
@@ -39,7 +45,10 @@ Schema and seed data are loaded from:
 
 ## Run Locally
 
+Set database credentials for this shell, then start the backend:
+
 ```powershell
+$env:DB_PASSWORD="your-local-password"
 .\mvnw.cmd spring-boot:run
 ```
 
@@ -49,16 +58,42 @@ Then open:
 http://localhost:4040
 ```
 
-Override settings inline:
+Frontend development uses Vite on port 5173 and proxies `/api` to the backend on port 4040:
 
 ```powershell
-.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--DB_PASSWORD=your-password"
+cd frontend
+npm ci
+npm run dev
 ```
+
+To publish frontend source changes to the Spring Boot application, build the assets before starting or packaging it:
+
+```powershell
+cd frontend
+npm ci
+npm run build
+cd ..
+.\mvnw.cmd package
+```
+
+The build writes to `src/main/resources/static`. Alternatively, `.\mvnw.cmd -Pfrontend-build package` invokes the frontend build through Maven. The Dockerfile packages the static assets already in the source tree, so run the frontend build before rebuilding the image when the UI changes.
+
+Application routes include `/login`, `/`, `/mission`, `/chat`, `/vocabulary`, `/review`, `/news`, `/writing`, `/wordbank`, `/report` and `/admin`. Demo accounts for local evaluation are:
+
+```text
+Student: student / student123
+Administrator: admin / admin123
+```
+
+Change or disable seeded demonstration accounts before exposing a deployment to the public internet.
 
 ## Run Tests
 
 ```powershell
 .\mvnw.cmd test
+cd frontend
+npm test
+npm run build
 ```
 
 The test suite uses a fake local model endpoint and verifies fallback behavior, so it does not require external network access for AI calls.
@@ -79,7 +114,7 @@ $env:DB_PASSWORD="your-strong-password"
 $env:LINGUAMATE_AI_API_KEY="your-api-key"
 
 # 2. Build and start
-docker compose up -d
+docker compose up -d --build
 ```
 
 The app will be available at `http://localhost:4040`.
@@ -128,6 +163,8 @@ Then simply run:
 docker compose up -d
 ```
 
+Keep real `.env` files, API keys, local databases and runtime logs out of commits and screenshots. Only placeholder configuration belongs in public documentation.
+
 ---
 
 ## Production Deployment Checklist
@@ -169,7 +206,7 @@ CREATE DATABASE linguamate CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ### AI Requests Fail
 
-Confirm the provider base URL ends at the API root, for example `https://api.openai.com/v1`. If the key or provider is unavailable, LinguaMate should continue with local fallback responses.
+Confirm the provider base URL ends at the API root, for example `https://api.openai.com/v1`. Check the current account's saved settings and run its connection test. If the key or provider is unavailable, 语伴智学（LinguaMate）continues with clearly labeled local fallback responses. Drafts and already saved learning records remain available.
 
 ### Logs
 

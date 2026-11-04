@@ -1,4 +1,12 @@
-# Learning workspace update
+# 语伴智学（LinguaMate）学习工作区说明
+
+The current desktop application uses Vue 3, Vite and Element Plus. Source files live in `frontend/src`; the production build is served by Spring Boot from `src/main/resources/static`. The shared `AppBrand` component and `brand.js` constants apply the bilingual product name to login/registration, student and administrator navigation, browser page titles and AI message attribution. Chinese is the primary wordmark and “LinguaMate” the secondary line.
+
+## Daily themes and saved evidence
+
+The home page offers two curated, fictional teaching themes: 校园节水讲解 and 迎新校园向导. Each connects reading, three vocabulary questions, three expression goals and personal reflection. Learners can request progressively stronger hints and submit a new expression after feedback; original answers, retries and hint use remain available as growth evidence. Tasks resume by account, theme and Beijing calendar day. Current materials are curated rather than generated afresh each day. See [每日主题任务与成长证据](DAILY_MISSIONS.md).
+
+## Writing, reading and feedback
 
 The desktop writing workspace now supports local account-scoped drafts, live word count, linked sentence annotations, token-level revision comparison, writing history, and student rewrite/resubmission. Each rewrite references an owned submission. Scores are compared only when the review source, model, exam type and target level match; local scores are explicitly labeled as practice references.
 
@@ -12,9 +20,11 @@ Learning evidence uses `STRICT_REVIEW` logs from the current calendar day and si
 
 AI settings include a real chat-completion connection test against the current form without saving it. Saved settings are initially untested; model-list retrieval alone does not prove chat availability. The shared client has a 5-second connection timeout and 45-second read timeout. Replies and structured feedback arrive together; waiting indicators show actual elapsed time without simulated completion percentages. Existing local fallbacks remain available.
 
+Conversation practice separates the ongoing dialogue from per-turn correction/upgrade notes, reusable phrases and a next challenge. The learning assistant combines the current request, recent conversation and bounded evidence from the signed-in account, including priority vocabulary and due-review state. The process panel records actual system operations. Local fallback replies and model-backed replies retain distinct labels. The current RAG implementation retrieves knowledge chunks by keyword, not vector similarity.
+
 Database additions are declared in `schema.sql` and applied to existing installations by `DatabaseMigration`. No bulk dictionary import or destructive migration is involved.
 
-Validation: full Maven test suite, frontend Node tests and Vite build, plus desktop browser checks at 1920×1080 and 1366×768 in light/dark themes. HTTP integration tests use a local OpenAI-compatible protocol fixture; they do not establish the quality or availability of an external provider.
+Previous workspace verification included the Maven suite, frontend Node tests and Vite build, plus desktop browser checks at 1920×1080 and 1366×768 in light/dark themes. The latest run results belong in [测试报告](TEST_REPORT.md). HTTP integration tests use a local OpenAI-compatible protocol fixture; they do not establish the quality or availability of an external provider.
 
 ## Personal learning journal
 

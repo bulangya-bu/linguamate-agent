@@ -8,17 +8,7 @@
   </div>
   <div v-else class="app-shell admin-shell">
     <aside class="side-nav" aria-label="管理导航">
-      <RouterLink class="brand" to="/admin"
-        ><img
-          class="brand-mark"
-          src="/assets/linguamate-icon.svg?v=bright"
-          alt="LinguaMate 图标"
-        />
-        <div>
-          <strong>LinguaMate<span class="brand-period">.</span></strong
-          ><span>管理工作台</span>
-        </div></RouterLink
-      >
+      <AppBrand to="/admin" />
       <nav aria-label="后台功能">
         <span
           v-if="state.section !== 'ai'"
@@ -72,7 +62,7 @@
           <span class="workspace-location-icon" aria-hidden="true"
             ><AdminSketchIcon :name="state.section" /></span
           ><span class="workspace-context"
-            ><span>管理空间</span
+            ><span>{{ BRAND_NAME }} · 管理空间</span
             ><strong>{{ adminSectionTitles[state.section] }}</strong></span
           >
         </div>
@@ -949,6 +939,8 @@
 
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
+import AppBrand from "@/components/AppBrand.vue";
+import { BRAND_NAME, brandedPageTitle } from "@/brand";
 import AdminSketchIcon from "@/components/AdminSketchIcon.vue";
 import AdminTrendChart from "@/components/AdminTrendChart.vue";
 import SketchShape from "@/components/SketchShape.vue";
@@ -1436,7 +1428,7 @@ async function retryBoot() {
 }
 
 onMounted(() => {
-  document.title = "LinguaMate 管理端";
+  document.title = brandedPageTitle("管理工作台");
   retryBoot();
 });
 </script>

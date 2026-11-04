@@ -15,17 +15,7 @@
       @focusin="freeze"
     >
       <AuthAurora />
-      <RouterLink class="brand" to="/login"
-        ><img
-          class="brand-mark"
-          src="/assets/linguamate-icon.svg?v=bright"
-          alt=""
-        />
-        <div>
-          <strong>LinguaMate<span class="brand-period">.</span></strong
-          ><span>让英语成为日常</span>
-        </div></RouterLink
-      >
+      <AppBrand to="/login" variant="auth" />
       <div class="auth-story-copy">
         <h1>
           <span class="auth-title-line">A little.</span><br /><em
@@ -205,6 +195,8 @@
 </template>
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
+import AppBrand from "@/components/AppBrand.vue";
+import { brandedPageTitle } from "@/brand";
 import ThemeToggle from "@/components/ThemeToggle.vue";
 import AuthGarden from "@/components/AuthGarden.vue";
 import AuthAurora from "@/components/AuthAurora.vue";
@@ -293,7 +285,7 @@ async function submitRegister() {
 }
 
 function syncAuthTitle() {
-  document.title = isLogin.value ? "LinguaMate 登录" : "LinguaMate 注册";
+  document.title = brandedPageTitle(isLogin.value ? "登录" : "注册");
 }
 
 watch(isLogin, () => {

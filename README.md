@@ -1,35 +1,114 @@
-# LinguaMate Agent
+# 语伴智学（LinguaMate）
 
-LinguaMate Agent 是一个基于 Spring Boot 的英语学习助手，面向 Java 课程设计与完整 Web 应用演示场景。项目把对话练习、词汇闯关、复习计划、作文批改、分级阅读、轻量 RAG 和可解释 Agent 流程整合到一个学习工作台中。
+**基于 AI Agent 的个性化英语学习平台**
 
-默认可以在没有真实模型密钥的情况下运行：AI 对话、作文批改、词汇解析等能力在在线调用失败时会自动降级到本地规则或种子数据，便于课堂展示、答辩和本地开发。
+作者：庄鹏桦 · 作品方向：智慧教育与科普创作 · 当前面向电脑网页端
+
+语伴智学将主题阅读、词汇练习、AI 对话、写作修改和个人成长记录放在同一套学习工作区中。学习者可以围绕具体情境练习英语，理解对应原句的反馈，再用自己的话表达一次。
+
+![语伴智学：迎新校园向导主题与今日学习路线](docs/images/dashboard.png)
+
+> 页面截图来自本地演示账号，统计数字用于展示功能，不代表真实运营规模或教学效果。对话截图展示已保存的模型演示记录；写作截图展示原稿编辑，成长证据展示真实提交的版本。模型无法使用时，界面会明确标注本地练习或本地规则批改。
 
 ## 项目亮点
 
-- 每日主题任务：校园节水科普与迎新向导，串联阅读、主题词、分级提示、AI 情境表达和个人复盘，按账号与日期续做。
-- 可回看的成长证据：保留实际作答、再次表达、提示使用、作文原稿与学习者改写；详见 [主题任务说明](docs/DAILY_MISSIONS.md)。
-- 可解释 Agent 流程：每轮问答保留 Observe、Think、Act、Answer 四阶段轨迹。
-- 英语对话练习：支持日常、面试、考试、旅行等场景，并结合知识库检索生成反馈。
-- 单词学习与复习：内置 CET-4、CET-6、考研、雅思词库，支持闯关、收藏、掌握状态、错词复习。
-- 作文智能批改：提供总分、维度评分、修改建议和本地 fallback。
-- 分级阅读助手：内置阅读材料、主题筛选、阅读进度、悬停查词、全文翻译。
-- 轻量 RAG：基于 seeded knowledge documents 的关键词检索，适合课程项目展示检索增强流程。
-- 后台管理：管理员可维护用户、阅读文章、词库与学习数据概览。
-- OpenAI 兼容接入：支持配置 base URL、API key、chat model，也可接入兼容接口。
+- **每日主题任务**：迎新校园向导、校园节水讲解两套精编情境，串联阅读、三个主题词、三轮表达、分级提示和个人复盘，支持按账号与日期续做。
+- **AI 对话教练**：日常交流、考试口语、商务表达、阅读讨论四个入口，围绕会话上下文提供原句反馈、可复用短语和下一轮挑战。
+- **个性化学习助手**：结合当前账号的今日进度和优先巩固词回答学习问题，说明推荐依据，并承接练习时长等连续追问。
+- **单词练习与复习**：内置 CET-4、CET-6、考研、雅思词库。作答后展示完整词性与释义，补充解析按需展开；今日到期与错词强化分别安排。
+- **阅读空间**：难度和主题筛选、即时查词与词形还原、句子聚焦、全文翻译，遇到的词可以加入待复习，当前文章可以带入 AI 讨论。
+- **写作工坊**：四维参考评分、逐句批注和润色对照，支持学习者主动改写并再次提交，分别保留原稿与 AI 参考。
+- **词库与成长档案**：统一管理收藏词、错词、待复习和掌握状态，以手绘成长树、活动图表与日历回看记录，并打开原始作答与改写证据。
+- **Agent 与轻量 RAG**：保留 Observe、Think、Act、Answer 执行记录，对知识分块进行关键词检索，并在回答中使用相关材料。
+- **管理与模型接入**：后台维护用户、词库、知识文档及阅读材料。学习者与管理员使用各自的 OpenAI-compatible 模型配置，在线失败时明确降级。
 
-## 截图
+当前主题为两套精编材料，并非每天自动生成。词语出现核对不等于掌握判定，模型评分也不作为长期教学成效的证明。详见 [主题任务与成长证据](docs/DAILY_MISSIONS.md)。
 
-### 学习工作台
+## 页面展示
 
-![LinguaMate dashboard](docs/images/dashboard.png)
+以下图片为 1920 × 1080 桌面网页实拍，点击图片可查看原图。
 
-### 单词闯关
+<details>
+<summary>登录、黑夜模式与迎新主题</summary>
 
-![LinguaMate vocabulary quiz](docs/images/vocabulary.png)
+### 登录入口
 
-### 阅读助手
+统一中英文品牌，保留交互单词与动态背景。
 
-![LinguaMate reading assistant](docs/images/reading.png)
+![语伴智学登录页](docs/images/login.png)
+
+### 黑夜模式
+
+![语伴智学黑夜学习工作区](docs/images/dashboard-dark.png)
+
+### 迎新校园向导
+
+根据校园地图、借阅条件与开放时间，完成有具体目标的英语练习。
+
+![迎新校园向导：地图和主题阅读](docs/images/mission-welcome.png)
+
+</details>
+
+<details>
+<summary>AI 对话教练与个人学习助手</summary>
+
+### AI 对话练习
+
+对话与本轮反馈并列呈现，原句、修改理由、短语和下一轮挑战可以分别查看。
+
+![语伴智学 AI 对话与逐轮反馈](docs/images/chat.png)
+
+### 学习助手
+
+依据当前账号的学习记录提供建议，继续追问可以限定练习时长。
+
+![语伴智学学习助手的五分钟练习建议](docs/images/assistant.png)
+
+</details>
+
+<details>
+<summary>单词练习、复习、阅读与我的词库</summary>
+
+### 单词练习
+
+![单词作答后的词性释义、例句与反馈](docs/images/vocabulary.png)
+
+### 温故知新
+
+![今日到期与错词强化复习](docs/images/review.png)
+
+### 阅读空间
+
+![阅读正文、句子聚焦与即时查词](docs/images/reading.png)
+
+### 我的词库
+
+![收藏词、错词、待复习与掌握状态](docs/images/wordbank.png)
+
+</details>
+
+<details>
+<summary>写作、成长证据与管理后台</summary>
+
+### 写作工坊
+
+![校园迎新主题的英文原稿编辑](docs/images/writing.png)
+
+### 学习档案
+
+![手绘成长树、学习趋势与活动日历](docs/images/growth.png)
+
+### 成长证据
+
+![学习者作文原稿与再次提交的对照记录](docs/images/growth-evidence.png)
+
+### 管理后台
+
+![管理后台：学习记录概览、手绘趋势图与内容资产](docs/images/admin.png)
+
+![管理后台：知识文档维护](docs/images/admin-knowledge.png)
+
+</details>
 
 ## 技术栈
 
@@ -39,12 +118,14 @@ LinguaMate Agent 是一个基于 Spring Boot 的英语学习助手，面向 Java
 - MyBatis-Plus 3.5.7
 - MySQL 8 兼容数据库
 - Spring AI 依赖与自定义 OpenAI-compatible REST client
-- Vue 3、Vite、Element Plus
-- Vanilla static hosting through Spring Boot
+- Vue 3、Vite、Element Plus、Rough.js 手绘图表
+- Spring Boot 托管 Vite 构建后的静态资源
 
 ## 快速启动
 
-### 1. 准备数据库
+### 1. 准备环境与数据库
+
+需要 Java 17+、MySQL 8 兼容数据库。修改前端时还需要满足 Vite 7 要求的 Node.js 环境（20.19+ 或 22.12+）。
 
 创建 MySQL 数据库，或使用默认连接中的 `createDatabaseIfNotExist=true` 让应用自动创建 `linguamate` 数据库。默认配置位于 `src/main/resources/application.properties`。
 
@@ -56,16 +137,20 @@ $env:DB_PASSWORD="your-local-password"
 $env:DB_URL="jdbc:mysql://localhost:3306/linguamate?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf-8"
 ```
 
-### 2. 可选配置 AI 服务
+### 2. 配置 AI 服务（可选）
+
+登录后，可在左下角“模型配置”中填写兼容接口地址、密钥并选择模型。配置按账号保存，管理员有独立入口。
+
+也可通过环境变量提供服务端默认配置：
 
 ```powershell
 $env:LINGUAMATE_AI_BASE_URL="https://api.openai.com/v1"
 $env:LINGUAMATE_AI_API_KEY="your-api-key"
-$env:LINGUAMATE_AI_CHAT_MODEL="gpt-4o-mini"
+$env:LINGUAMATE_AI_CHAT_MODEL="your-compatible-chat-model"
 $env:LINGUAMATE_GNEWS_API_KEY="your-gnews-api-key"
 ```
 
-不配置 API key 也可以启动，应用会使用本地 fallback。
+未连接模型也可以启动并查看本地材料、查词和练习流程，在线失败时使用明确标注的本地降级。个人 AI 配置与运行数据库不随仓库上传。
 
 ### 3. 启动后端
 
@@ -96,7 +181,7 @@ npm install
 npm run dev
 ```
 
-构建静态资源：
+构建静态资源（修改前端后必须重新构建）：
 
 ```powershell
 cd frontend
@@ -117,12 +202,16 @@ $env:DB_PASSWORD="your-local-password"
 docker compose up --build
 ```
 
-Docker 场景下数据库初始化脚本由容器处理，应用侧 SQL 初始化可通过 `DB_INIT_MODE` 控制。
+Docker 场景下数据库初始化脚本由容器处理，应用侧 SQL 初始化可通过 `DB_INIT_MODE` 控制。当前 Dockerfile 使用仓库中的静态资源，修改前端后应先运行 `npm run build`，再重建镜像。
 
 ## 测试
 
 ```powershell
 .\mvnw.cmd test
+cd frontend
+npm test
+npm run build
+cd ..
 ```
 
 集成测试使用 MockMvc，并把模型接口指向不可用地址，用来验证本地 fallback 行为，不需要真实模型密钥。
@@ -140,6 +229,7 @@ src/main/java/com/example/javabigwork
   config/       数据源、MyBatis、Web、AI、RAG、迁移配置
   dictionary/   本地/在线查词与翻译支持
   knowledge/    知识文档、切块、关键词检索
+  mission/      每日主题、情境作答、提示与复盘
   news/         阅读文章、阅读记录、推荐、悬停查词
   report/       学习报告汇总
   tool/         Agent 工具调用
@@ -156,5 +246,7 @@ scripts/        工具脚本
 
 - [部署说明](docs/DEPLOYMENT.md)
 - [项目架构](docs/PROJECT_ARCHITECTURE.md)
+- [学习工作区说明](docs/LEARNING_WORKSPACE.md)
+- [每日主题与成长证据](docs/DAILY_MISSIONS.md)
 - [Spring AI 与 RAG 说明](docs/SPRING_AI_AND_RAG_NOTES.md)
 - [测试报告](docs/TEST_REPORT.md)
