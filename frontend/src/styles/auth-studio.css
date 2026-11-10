@@ -427,14 +427,6 @@
     width: 15px;
     height: 15px;
   }
-  .auth-page--garden .auth-garden-hint {
-    display: block;
-    margin: 15px 0 0;
-    font-size: 11px;
-    letter-spacing: 1.1px;
-    color: var(--muted);
-    opacity: 0.7;
-  }
   .auth-page--garden .auth-garden:hover .auth-garden-caption,
   .auth-page--garden .auth-garden:focus-visible .auth-garden-caption {
     border-color: #bedcb0;

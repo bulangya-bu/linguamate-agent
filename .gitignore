@@ -5,6 +5,7 @@ target/
 !**/src/test/**/target/
 
 ### Local runtime data ###
+.runtime/
 logs/
 output/
 database.db
@@ -21,6 +22,8 @@ stdout.log
 .claude/
 frontend/node_modules/
 frontend/dist/
+frontend/.env*
+!frontend/.env.example
 
 ### Screenshots and manual verification captures ###
 *.png

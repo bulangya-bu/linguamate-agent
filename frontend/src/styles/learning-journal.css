@@ -3,7 +3,6 @@
 .learning-journal button { cursor:pointer; }
 .learning-journal button:disabled { cursor:default; opacity:.5; }
 .learning-journal button:focus-visible { outline:2px solid var(--j-green-ink); outline-offset:3px; }
-.journal-handwriting { font-family:'Caveat',Georgia,serif; font-weight:400; }
 .journal-heading { display:flex; align-items:center; justify-content:space-between; flex-shrink:0; gap:18px; }
 .journal-heading h2 { margin:0; color:var(--j-ink); font-size:18px; font-weight:600; line-height:1.4; }
 .journal-heading p { margin:6px 0 0; color:var(--j-muted); font-size:12px; }
@@ -86,7 +85,6 @@
 .journal-day-detail { display:flex; align-items:center; gap:14px; min-height:20px; margin:9px 0 0 25px; color:var(--j-muted); font-size:10px; }
 .journal-day-detail time { color:var(--j-ink); }
 .journal-growth { display:flex; flex-direction:column; min-height:0; min-width:0; padding:22px 24px 18px; border:1px solid var(--j-rule); border-radius:18px; background:var(--j-soft); }
-.journal-growth .journal-section-heading > .journal-handwriting { font-size:21px; color:var(--j-blue-ink); transform:rotate(-6deg); opacity:.7; }
 .journal-tree { flex:1; min-height:190px; max-height:400px; width:100%; margin:15px auto 8px; overflow:visible; }
 .journal-tree-trunk { animation:journal-tree-enter 600ms var(--ease) both; }
 .journal-tree-node { outline:none; cursor:pointer; }
@@ -110,15 +108,6 @@
 .journal-footnotes small { color:var(--j-muted); font-size:9px; }
 .journal-signature { display:flex; align-items:center; gap:6px; margin-top:auto; padding-top:15px; flex-shrink:0; color:var(--j-muted); font-size:10px; }
 .journal-signature svg { width:12px; height:12px; }
-.journal-notes { width:540px; max-height:calc(100dvh - 60px); overflow:auto; padding:25px 30px; border:1px solid var(--j-rule); border-radius:20px; background:var(--j-paper); color:var(--j-ink); box-shadow:0 20px 80px #15253533; }
-.journal-notes::backdrop { background:#14263940; backdrop-filter:blur(5px); }
-.journal-notes > header { display:flex; align-items:center; justify-content:space-between; }
-.journal-notes h2 { margin:0; font-size:19px; }
-.journal-notes header button { display:grid; place-items:center; width:28px; height:28px; padding:0; background:none; color:var(--j-muted); }
-.journal-notes header svg { width:17px; height:17px; }
-.journal-notes dt { padding-top:20px; font-size:12px; color:var(--j-green-ink); font-weight:600; }
-.journal-notes dd { margin:7px 0 0; font-size:12px; line-height:1.9; color:var(--j-muted); }
-.journal-notes > p { margin:22px 0 0; padding-top:15px; border-top:1px solid var(--j-rule); color:var(--j-muted); font-size:10px; }
 .journal-load-state { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:15px; min-height:100%; color:var(--j-muted); font-size:13px; }
 .journal-load-state > svg { width:36px; height:36px; color:var(--j-green-ink); }
 .journal-load-state h2 { margin:0; font-size:21px; color:var(--j-ink); }
@@ -158,7 +147,6 @@
   .journal-calendar-map .journal-calendar-key { margin-top:7px; }
   .journal-day-detail { margin-top:5px; font-size:9px; gap:10px; }
   .journal-growth { padding:16px 18px 15px; }
-  .journal-growth .journal-section-heading > .journal-handwriting { font-size:18px; }
   .journal-tree { min-height:170px; margin:8px auto 2px; }
   .journal-streak { padding:9px 0; }
   .journal-sun { width:49px; height:49px; }

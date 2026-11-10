@@ -19,6 +19,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        userContext.clear();
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
@@ -36,12 +37,11 @@ public class AuthInterceptor implements HandlerInterceptor {
             writeError(response, HttpStatus.UNAUTHORIZED, "请先登录");
             return false;
         }
-        userContext.set(user);
-
         if (requiresAdmin(path) && !"ADMIN".equals(user.role)) {
             writeError(response, HttpStatus.FORBIDDEN, "需要管理员权限");
             return false;
         }
+        userContext.set(user);
         return true;
     }
 

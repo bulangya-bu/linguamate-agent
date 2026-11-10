@@ -17,6 +17,7 @@ import com.example.javabigwork.chat.mapper.ConversationMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.javabigwork.agent.dto.CoachFeedback;
 import java.util.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -26,13 +27,16 @@ public class GrowthEvidenceService {
     private final WordMapper words;
     private final EssaySubmissionMapper essays;
     private final MissionService missions;
+    private final boolean missionsEnabled;
     private final MessageMapper messages;
     private final ConversationMapper conversations;
     private final ObjectMapper json;
     public GrowthEvidenceService(UserContext user,WordReviewLogMapper logs,WordMapper words,EssaySubmissionMapper essays,MissionService missions,
-            MessageMapper messages,ConversationMapper conversations,ObjectMapper json) {
+            MessageMapper messages,ConversationMapper conversations,ObjectMapper json,
+            @Value("${linguamate.missions.enabled:false}") boolean missionsEnabled) {
         this.user=user;this.logs=logs;this.words=words;this.essays=essays;this.missions=missions;
         this.messages=messages;this.conversations=conversations;this.json=json;
+        this.missionsEnabled=missionsEnabled;
     }
     public GrowthEvidenceView evidence() {
         var recent=logs.selectList(Wrappers.<WordReviewLog>query().eq("user_id",user.userId()).in("review_type","QUIZ","STRICT_REVIEW")
@@ -49,7 +53,8 @@ public class GrowthEvidenceService {
         }
         var writing=essays.selectList(Wrappers.<EssaySubmission>query().eq("user_id",user.userId()).orderByDesc("created_at","id").last("LIMIT 8"))
             .stream().map(this::writing).toList();
-        return new GrowthEvidenceView(wordEvidence,writing,missions.history().stream().limit(8).toList(),expressions());
+        return new GrowthEvidenceView(wordEvidence, writing,
+                missionsEnabled ? missions.history().stream().limit(8).toList() : List.of(), expressions());
     }
     private List<ExpressionEvidence> expressions() {
         var owned=conversations.selectList(Wrappers.<Conversation>query().eq("user_id",user.userId()).orderByDesc("updated_at","id").last("LIMIT 30"));

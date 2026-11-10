@@ -9,5 +9,6 @@ public record LearningJournalView(LocalDate today, String timeZone, String nickn
     public record Totals(long studiedWords, long reviewWords, long masteredWords, long quizAttempts,
                          long reviewAttempts, Long reviewAccuracy, long essays, long readings, long chatTurns) {}
     public record Day(LocalDate date, long newWords, long reviewWords, long quizAttempts, long reviewAttempts,
-                      Long reviewAccuracy, long studyEvents, boolean loggedIn) {}
+                      Long reviewAccuracy, long studyEvents, boolean loggedIn,
+                      long aiChatTurns, long aiEssayReviews, long readingsFinished) {}
 }

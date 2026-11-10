@@ -1,6 +1,7 @@
 package com.example.javabigwork.vocabulary.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.example.javabigwork.auth.LoginActivityService;
 import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.dictionary.service.OnlineWordService;
 import com.example.javabigwork.vocabulary.dto.WordCardView;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 public class VocabularyService {
@@ -59,6 +61,24 @@ public class VocabularyService {
     public List<WordCardView> todayWords(int limit, String category) {
         int safeLimit = Math.max(1, Math.min(80, limit));
         return onlineWordService.randomWords(safeLimit, category)
+                .stream()
+                .map(this::toView)
+                .toList();
+    }
+
+    public List<WordCardView> newWords(int limit, String category) {
+        int safeLimit = Math.max(1, Math.min(80, limit));
+        boolean hasCategory = StringUtils.hasText(category);
+        return wordMapper.selectList(new QueryWrapper<Word>()
+                        .eq(hasCategory, "level_tag", hasCategory ? category.trim() : null)
+                        .apply("TRIM(meaning_cn) <> ''")
+                        .apply("""
+                                NOT EXISTS (SELECT 1 FROM word_review_log log
+                                    WHERE log.user_id = {0} AND log.word_id = word.id
+                                      AND log.review_type IN ('QUIZ', 'STRICT_REVIEW')
+                                      AND log.created_at IS NOT NULL)
+                                """, userContext.userId())
+                        .last("ORDER BY CASE WHEN level_tag IN ('cet4-bank', 'cet6-bank') THEN 0 ELSE 1 END, RAND() LIMIT " + safeLimit))
                 .stream()
                 .map(this::toView)
                 .toList();
@@ -146,7 +166,7 @@ public class VocabularyService {
         log.answer = answer;
         log.correct = correct;
         log.reviewType = "QUIZ";
-        log.createdAt = LocalDateTime.now();
+        log.createdAt = LocalDateTime.now(LoginActivityService.ZONE);
         logMapper.insert(log);
 
         experienceService.addXp(correct ? 10 : 3);
@@ -197,7 +217,7 @@ public class VocabularyService {
         log.spellingCorrect = spellingCorrect;
         log.meaningCorrect = meaningCorrect;
         log.reviewType = "STRICT_REVIEW";
-        log.createdAt = now;
+        log.createdAt = LocalDateTime.now(LoginActivityService.ZONE);
         logMapper.insert(log);
 
         experienceService.addXp(correct ? 12 : 3);

@@ -49,6 +49,27 @@ public class LearningJournalService {
                     item.quizzes = rs.getLong("quizzes"); item.reviews = rs.getLong("reviews");
                     item.attempts = rs.getLong("attempts"); item.corrects = rs.getLong("corrects");
                 }, userId, first, today.plusDays(1));
+        jdbc.query("""
+                SELECT DATE(event_time) AS day,
+                  COUNT(CASE WHEN kind='chat' THEN 1 END) AS chat_turns,
+                  COUNT(CASE WHEN kind='writing' THEN 1 END) AS essay_reviews,
+                  COUNT(CASE WHEN kind='reading' THEN 1 END) AS readings_finished
+                FROM (
+                    SELECT m.created_at AS event_time, 'chat' AS kind
+                    FROM message m JOIN conversation c ON m.conversation_id=c.id
+                    WHERE c.user_id=? AND m.role='assistant'
+                      AND JSON_UNQUOTE(JSON_EXTRACT(
+                        CASE WHEN JSON_VALID(m.metadata) THEN m.metadata END, '$.coaching.source'
+                      ))='model'
+                    UNION ALL SELECT created_at, 'writing' FROM essay_submission WHERE user_id=? AND review_source='AI批改'
+                    UNION ALL SELECT finished_at, 'reading' FROM reading_record WHERE user_id=? AND finished=TRUE
+                ) task_events WHERE event_time>=? AND event_time<? GROUP BY DATE(event_time)
+                """, rs -> {
+                    var item = counts(daily, rs.getDate("day").toLocalDate());
+                    item.aiChatTurns = rs.getLong("chat_turns");
+                    item.aiEssayReviews = rs.getLong("essay_reviews");
+                    item.readingsFinished = rs.getLong("readings_finished");
+                }, userId, userId, userId, first, today.plusDays(1));
         // Only dated, persisted study events are used; no inferred historical login days.
         Set<LocalDate> activeDates = new HashSet<>();
         jdbc.query("""
@@ -80,7 +101,8 @@ public class LearningJournalService {
         List<LearningJournalView.Day> days = first.datesUntil(first.plusWeeks(12)).map(date -> {
             var value = daily.getOrDefault(date, new Counts());
             return new LearningJournalView.Day(date, value.newWords, value.reviews, value.quizzes, value.attempts,
-                    rate(value.corrects, value.attempts), value.events, loginSet.contains(date));
+                    rate(value.corrects, value.attempts), value.events, loginSet.contains(date),
+                    value.aiChatTurns, value.aiEssayReviews, value.readingsFinished);
         }).toList();
         return new LearningJournalView(today, LoginActivityService.ZONE.getId(), account.nickname, joined,
                 Math.max(1, ChronoUnit.DAYS.between(joined, today) + 1), logins.isEmpty() ? null : logins.get(0),
@@ -102,7 +124,10 @@ public class LearningJournalService {
         }
         return best;
     }
-    private static class Counts { long newWords, reviews, quizzes, attempts, corrects, events; }
+    private static class Counts {
+        long newWords, reviews, quizzes, attempts, corrects, events;
+        long aiChatTurns, aiEssayReviews, readingsFinished;
+    }
     private Counts counts(Map<LocalDate, Counts> map, LocalDate date) { return map.computeIfAbsent(date, key -> new Counts()); }
     private long scalar(String sql, long userId) { Long value = jdbc.queryForObject(sql, Long.class, userId); return value == null ? 0 : value; }
     private long number(Map<String, Object> map, String key) { return ((Number) map.get(key)).longValue(); }

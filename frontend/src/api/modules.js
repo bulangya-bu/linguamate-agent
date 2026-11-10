@@ -92,19 +92,6 @@ export const learningApi = {
     }),
 };
 
-const missionPost = (path, payload = {}) =>
-  api(`/api/missions/${path}`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-export const missionApi = {
-  today: () => api("/api/missions/today"),
-  start: (key) => missionPost(`${key}/start`),
-  get: (id) => api(`/api/missions/sessions/${id}`),
-  update: (id, action, payload) =>
-    missionPost(`sessions/${id}/${action}`, payload),
-};
-
 export const adminApi = {
   summary: () => api("/api/admin/summary"),
   users: (search) => api(`/api/admin/users${query({ search })}`),

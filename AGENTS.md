@@ -13,7 +13,7 @@ coursework. It combines:
   feedback, news reading, and learning reports.
 - Lightweight keyword-based RAG over seeded knowledge documents.
 - OpenAI-compatible chat API integration with local fallback behavior.
-- A vanilla HTML/CSS/JavaScript single-page UI plus login/admin pages.
+- An independently served Vue 3 single-page application with login/admin pages.
 
 Core stack:
 
@@ -23,7 +23,7 @@ Core stack:
 - MyBatis-Plus 3.5.7
 - MySQL 8-compatible database
 - Spring AI dependencies, with a custom OpenAI-compatible REST client
-- Static frontend assets under `src/main/resources/static`
+- Vue source under `frontend/src`, independent frontend build under `frontend/dist`
 
 ## CodeGraph
 
@@ -64,7 +64,6 @@ src/main/java/com/example/javabigwork
   news/         News articles, reading records, recommendations, hover lookup
   report/       Learning report summary
   tool/         Agent tools used by the orchestrator
-  ui/           Page routing
   vocabulary/   Word bank, quiz, favorites, progress, review scheduling
   writing/      Essay submission, scoring, feedback, AI review
 src/main/resources
@@ -72,7 +71,6 @@ src/main/resources
   schema.sql
   data.sql
   word-bank/
-  static/
 docs/
 scripts/
 ```
@@ -87,7 +85,10 @@ Use the Maven Wrapper from the repository root.
 .\mvnw.cmd clean package
 ```
 
-The app listens on `http://localhost:4040` by default.
+The API listens on `http://127.0.0.1:4040`. The separate frontend listens on
+`http://127.0.0.1:5173`. Windows `.\start.cmd` starts both services and their
+local database configuration; `.\stop.cmd` stops the managed frontend/API.
+Run `npm test` and `npm run build` in `frontend/` for frontend changes.
 
 For Docker-based local runs:
 
@@ -133,7 +134,7 @@ When changing backend behavior:
 
 When changing frontend behavior:
 
-- Manually verify `http://localhost:4040` after `.\mvnw.cmd spring-boot:run`
+- Manually verify `http://127.0.0.1:5173` with both services running
   when the change affects visible UI or flows.
 - Check login, dashboard navigation, vocabulary quiz, writing review, news
   hover lookup, and admin pages when touched.
@@ -185,17 +186,18 @@ When changing frontend behavior:
 
 ## Frontend Conventions
 
-Static frontend files live in:
+Frontend source and build output live in:
 
 ```text
-src/main/resources/static/index.html
-src/main/resources/static/login.html
-src/main/resources/static/admin.html
-src/main/resources/static/css/app.css
-src/main/resources/static/js/app.js
-src/main/resources/static/js/auth.js
-src/main/resources/static/js/admin.js
+frontend/src/views/          Route shells and account entry points
+frontend/src/features/       Learning/admin views and feature-owned state
+frontend/src/components/     Shared components
+frontend/src/api/            HTTP client and API contracts
+frontend/src/styles/         Shared styles
+frontend/dist/               Generated standalone frontend build
 ```
+
+The API serves JSON. Frontend builds must never write into the Java resources directory.
 
 Guidelines:
 
@@ -203,8 +205,8 @@ Guidelines:
 - Current UI iterations target desktop web only. Do not add mobile/tablet
   adaptations or run cross-device checks unless the user explicitly asks.
   Preserve existing responsive behavior when changing shared code.
-- Keep vanilla JavaScript patterns unless introducing a framework is explicitly
-  requested.
+- Use the established Vue 3 Composition API. Keep feature state in its owning
+  composable and keep route shells focused on navigation and cross-feature coordination.
 - Reuse existing API helpers, auth handling, section navigation, and rendering
   patterns.
 - Ensure responsive layouts do not overlap or hide text on mobile.

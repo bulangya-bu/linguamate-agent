@@ -66,7 +66,7 @@
       />
     </svg>
     <span class="module-art-hint"
-      >{{ mode === "assistant" ? "点击，换一个学习问题" : "点击，换一句开场"
+      >{{ mode === "assistant" ? "换个学习问题" : "换个开场"
       }}<span aria-hidden="true"> ↗</span></span
     >
     <span class="sr-only" aria-live="polite">{{ announcement }}</span>

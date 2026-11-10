@@ -19,14 +19,15 @@ export function query(params = {}) {
 }
 
 export async function api(url, options = {}, config = {}) {
+  const apiBase = (import.meta.env?.VITE_API_BASE_URL || "").replace(/\/+$/, "");
   const headers = { ...(options.headers || {}) };
   const hasBody = options.body !== undefined && options.body !== null;
   if (hasBody && !(options.body instanceof FormData) && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(url, {
-    credentials: "same-origin",
+  const response = await fetch(apiBase + url, {
+    credentials: "include",
     ...options,
     headers
   });

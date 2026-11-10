@@ -88,7 +88,7 @@
       />
     </svg>
     <span class="module-art-hint">{{
-      active ? "句子聚焦已开启" : "点亮阅读镜"
+      active ? "关闭句子聚焦" : "句子聚焦"
     }}</span>
   </button>
 </template>

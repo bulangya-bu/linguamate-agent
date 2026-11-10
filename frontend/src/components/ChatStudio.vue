@@ -22,7 +22,6 @@
         <header class="studio-dialogue-heading">
           <div><span class="studio-live-dot" :class="{ connected: !busy && (mode === 'practice' ? latestFeedback?.source === 'model' : assistantUsesModel) }"></span>
             <strong>{{ mode === 'practice' ? currentScene.label : '你的学习助手' }}</strong>
-            <span>{{ mode === 'practice' ? 'CONVERSATION LAB' : 'LEARNING ASSISTANT' }}</span>
           </div>
           <span class="studio-turn-count">{{ userTurns }} 轮交流</span>
         </header>
@@ -30,19 +29,16 @@
         <div ref="thread" class="studio-thread" role="log" aria-label="对话记录" aria-live="polite" :aria-busy="busy">
           <div v-if="!messages.length" class="studio-chat-welcome">
             <div class="studio-welcome-art"><ConversationArt :scene="scene" :mode="mode" :disabled="busy" @suggest="suggestFromArt" /></div>
-            <span class="studio-welcome-kicker">{{ mode === 'practice' ? '从一句话，走进真实情境' : '让学习记录，变成下一步行动' }}</span>
-            <h2 v-if="mode === 'practice'">把英语，<br />聊成<span>自己的。</span></h2>
-            <h2 v-else>今天的学习，<br /><span>一起安排。</span></h2>
-            <p>{{ mode === 'practice' ? '你负责表达，AI 陪你接话、推敲，再往前一步。' : '查词、回顾薄弱项，或从今天尚未完成的任务开始。' }}</p>
+            <h2>{{ mode === 'practice' ? '选择练习场景' : '想聊什么？' }}</h2>
             <div v-if="mode === 'practice'" class="studio-scene-choices" aria-label="练习场景">
               <button v-for="item in scenes" :key="item.id" type="button" :class="{ selected: scene === item.id }"
-                @click="$emit('scene', item.id)"><span>{{ item.number }}</span><strong>{{ item.label }}</strong><small>{{ item.hint }}</small><AppIcon name="arrow" /></button>
+                @click="$emit('scene', item.id)"><strong>{{ item.label }}</strong><AppIcon name="arrow" /></button>
             </div>
             <div v-else class="studio-assistant-prompts">
               <button v-for="prompt in assistantPrompts" :key="prompt" type="button" @click="submitPrompt(prompt)">{{ prompt }}<AppIcon name="arrow" /></button>
             </div>
             <button v-if="mode === 'practice'" class="studio-start-practice" type="button" @click="submitPrompt(currentScene.prompt)">
-              从这个场景开始<AppIcon name="arrow" />
+              开始练习<AppIcon name="arrow" />
             </button>
           </div>
 
@@ -61,15 +57,14 @@
                 :aria-pressed="selectedIndex === index" @click="selectedIndex = index"><AppIcon name="spark" />查看本轮反馈<AppIcon name="arrow" /></button>
             </div>
           </article>
-          <div v-if="busy" class="studio-thinking" role="status"><span><i></i><i></i><i></i></span>{{ elapsed >= 15 ? '仍在等待模型回复…' : '正在结合上下文准备回复…' }}<small class="studio-wait-time">{{ elapsed }} 秒</small></div>
+          <div v-if="busy" class="studio-thinking" role="status"><span><i></i><i></i><i></i></span>{{ elapsed >= 15 ? '仍在等待模型回复…' : '正在回复…' }}<small class="studio-wait-time">{{ elapsed }} 秒</small></div>
         </div>
 
         <form class="studio-composer" @submit.prevent="$emit('send')">
           <p v-if="error" class="studio-chat-error" role="alert">{{ error }}</p>
-          <div v-if="messages.length && mode === 'practice'" class="studio-current-scene"><AppIcon name="chat" />{{ currentScene.label }}<span>新场景可以从「新对话」开始</span></div>
           <div class="studio-composer-box">
             <textarea ref="input" :value="draft" maxlength="2000" rows="2" aria-label="对话内容" :disabled="busy"
-              :placeholder="mode === 'practice' ? '用英语说说你的想法，也可以用中文请求提示…' : '今天想解决什么学习问题？'"
+              :placeholder="mode === 'practice' ? '输入英语，或用中文请求提示…' : '今天想解决什么学习问题？'"
               @input="$emit('update:draft', $event.target.value)" @keydown="handleKeydown"></textarea>
             <button type="submit" :disabled="busy || !draft.trim()" :aria-label="busy ? '正在回复' : '发送消息'"><AppIcon :name="busy ? 'ai' : 'arrow'" /><span>{{ busy ? '回复中' : '发送' }}</span></button>
           </div>
@@ -78,36 +73,35 @@
       </section>
 
       <aside class="studio-coach" aria-label="AI 教练反馈">
-        <header class="studio-coach-heading"><span class="studio-coach-mark"><AppIcon name="spark" /></span><div><h2>{{ mode === 'practice' ? '你的 AI 教练' : '学习连接站' }}</h2><p>{{ mode === 'practice' ? '每一轮，都有一点进步' : '从对话走向实际练习' }}</p></div><span class="studio-coach-number">{{ String(userTurns).padStart(2, '0') }}</span></header>
-        <div class="studio-model-line"><span :class="{ ready: !busy && (mode === 'practice' ? feedback?.source === 'model' : assistantUsesModel) }"></span><b>{{ mode === 'practice' ? feedback?.modelName || modelName || '等待配置模型' : modelName || '本地学习工具' }}</b><small>{{ mode === 'assistant' ? assistantStatus : feedback ? feedback.source === 'model' ? '本轮已调用' : '本轮本地练习' : '练习时连接' }}</small></div>
+        <header class="studio-coach-heading"><span class="studio-coach-mark"><AppIcon name="spark" /></span><div><h2>{{ mode === 'practice' ? '本轮反馈' : '学习建议' }}</h2></div></header>
+        <div v-if="responseSource" class="studio-model-line"><span :class="{ ready: !busy && (mode === 'practice' ? feedback?.source === 'model' : assistantUsesModel) }"></span><b>{{ responseSource }}</b></div>
         <div class="studio-coach-scroll">
           <template v-if="mode === 'practice'">
-            <div v-if="busy" class="studio-feedback-pending"><AppIcon name="ai" /><p>正在准备本轮反馈</p><small>完成后会和回复一起呈现</small></div>
+            <div v-if="busy" class="studio-feedback-pending"><AppIcon name="ai" /><p>正在准备本轮反馈</p></div>
             <Transition name="coach-reveal" mode="out-in">
               <div v-if="feedback && !busy" :key="selectedIndex" class="studio-feedback-content">
-                <div v-if="feedback.source === 'local'" class="studio-local-notice"><AppIcon name="settings" /><p>{{ feedback.notice }}</p><button type="button" @click="$emit('settings', $event.currentTarget)">查看模型配置<AppIcon name="arrow" /></button></div>
-                <section v-if="feedback.source === 'model'" class="studio-coach-section">
-                  <h3><span>01</span>本轮表达<small>{{ feedback.revisionType === 'correction' ? '语法修正' : feedback.revisionType === 'upgrade' ? '表达提升' : '学习建议' }}</small></h3>
+                <div v-if="feedback.source === 'local'" class="studio-local-notice"><AppIcon name="settings" /><button type="button" @click="$emit('settings', $event.currentTarget)">查看模型配置<AppIcon name="arrow" /></button></div>
+                <section v-if="feedback.source === 'model' && (feedback.improved || feedback.explanation)" class="studio-coach-section">
+                  <h3>本轮表达<small>{{ feedback.revisionType === 'correction' ? '语法修正' : feedback.revisionType === 'upgrade' ? '表达提升' : '学习建议' }}</small></h3>
                   <template v-if="feedback.improved"><p class="studio-original">{{ feedback.original }}</p><div class="studio-revision"><AppIcon name="arrow" /><p>{{ feedback.improved }}</p></div></template>
                   <p v-if="feedback.explanation" class="studio-explanation">{{ feedback.explanation }}</p>
-                  <p v-else-if="!feedback.improved" class="studio-explanation">这一轮没有提供表达修改，可以接着聊下去。</p>
                 </section>
                 <section v-if="feedback.phrases?.length" class="studio-coach-section">
-                  <h3><span>02</span>带走一句</h3>
+                  <h3>实用短语</h3>
                   <div v-for="phrase in feedback.phrases" :key="phrase.text" class="studio-phrase"><strong>{{ phrase.text }}</strong><p>{{ phrase.meaningCn }}</p></div>
                 </section>
                 <section v-if="feedback.nextChallenge" class="studio-coach-section studio-next-challenge"><h3><AppIcon name="arrow" />下一轮挑战</h3><p>{{ feedback.nextChallenge }}</p><button type="button" @click="focusInput">试着回答<AppIcon name="arrow" /></button></section>
               </div>
-              <div v-else-if="!busy" key="empty" class="studio-coach-intro"><span class="studio-coach-orbit" aria-hidden="true"><AppIcon name="spark" /><i></i></span><h3>让每次开口，<br />留下真正的收获。</h3><ol><li><b>01</b><span>进入情境<strong>围绕你的回应继续聊</strong></span></li><li><b>02</b><span>推敲表达<strong>区分语法错误与风格提升</strong></span></li><li><b>03</b><span>再试一次<strong>把新表达带进下一轮</strong></span></li></ol></div>
+              <p v-else-if="!busy" key="empty" class="studio-feedback-empty">暂无对话反馈</p>
             </Transition>
-            <section class="studio-targets"><h3><AppIcon name="review" />把薄弱词用起来<span>{{ targetWords.length }}</span></h3><p v-if="!targetWords.length">完成单词练习后，AI 会在这里带入你的薄弱词。</p>
+            <section class="studio-targets"><h3><AppIcon name="review" />薄弱词<span>{{ targetWords.length }}</span></h3><p v-if="!targetWords.length">暂无薄弱词</p>
               <div v-else class="studio-target-list"><span v-for="word in targetWords" :key="word.word" :class="{ used: word.used }" :title="word.meaningCn"><AppIcon v-if="word.used" name="check" />{{ word.word }}<small>{{ word.meaningCn }}</small></span></div>
-              <small v-if="targetWords.some(word => word.used)">已在本轮用到 · 掌握情况仍以复习为准</small>
+              <small v-if="targetWords.some(word => word.used)">✓ 本轮已使用</small>
               <button v-if="targetWords.length" type="button" @click="$emit('review')">回到词库复习<AppIcon name="arrow" /></button>
             </section>
           </template>
-          <div v-else class="studio-assistant-guide"><AppIcon name="wordbank" /><h3>你的学习，彼此相连。</h3><p>助手会读取真实学习记录，为你找到今天值得继续的一步。</p><button v-for="prompt in assistantPrompts" :key="prompt" type="button" :disabled="busy" @click="submitPrompt(prompt)">{{ prompt }}<AppIcon name="arrow" /></button><button class="studio-back-practice" type="button" :disabled="busy" @click="$emit('mode', 'practice')">带着薄弱词，开始对话<AppIcon name="chat" /></button></div>
-          <details class="studio-process"><summary><AppIcon name="ai" />本轮处理记录<span>{{ displayedTrace.length ? `${displayedTrace.length} 步` : '等待练习' }}</span></summary><ol v-if="displayedTrace.length"><li v-for="(step,index) in displayedTrace" :key="index"><span>{{ step.phase }}</span><strong>{{ step.title }}</strong><p v-if="step.phase !== 'Observe' && step.phase !== 'Answer'">{{ step.detail }}</p></li></ol><p v-else>完成对话后显示实际执行的步骤。</p></details>
+          <div v-else class="studio-assistant-guide"><template v-if="messages.length"><button v-for="prompt in assistantPrompts" :key="prompt" type="button" :disabled="busy" @click="submitPrompt(prompt)">{{ prompt }}<AppIcon name="arrow" /></button></template><button class="studio-back-practice" type="button" :disabled="busy" @click="$emit('mode', 'practice')">开始对话练习<AppIcon name="chat" /></button></div>
+          <details v-if="displayedTrace.length" class="studio-process"><summary><AppIcon name="ai" />本轮处理记录<span>{{ displayedTrace.length }} 步</span></summary><ol><li v-for="(step,index) in displayedTrace" :key="index"><span>{{ step.phase }}</span><strong>{{ step.title }}</strong><p v-if="step.phase !== 'Observe' && step.phase !== 'Answer'">{{ step.detail }}</p></li></ol></details>
         </div>
       </aside>
     </div>
@@ -125,10 +119,10 @@ const props = defineProps({ messages: { type: Array, default: () => [] }, conver
 const emit = defineEmits(['mode', 'scene', 'history', 'new', 'send', 'update:draft', 'prompt', 'settings', 'review']);
 const modes = [{ id: 'practice', label: '对话练习', icon: 'chat' }, { id: 'assistant', label: '学习助手', icon: 'spark' }];
 const scenes = [
-  { id: 'daily', number: '01', label: '日常交流', hint: '分享生活与想法', prompt: '请和我练习日常英语，从今天的一件小事开始。' },
-  { id: 'exam', number: '02', label: '考试口语', hint: '观点与具体例子', prompt: '请作为英语口语考官，先问我一个观点类问题。' },
-  { id: 'business', number: '03', label: '商务表达', hint: '清楚表达与协作', prompt: '请模拟同事，用英语和我聊一个项目，先问我一个问题。' },
-  { id: 'reading', number: '04', label: '阅读讨论', hint: '从阅读走向思考', prompt: '请和我用英语讨论阅读，先问我最近读过的内容。' },
+  { id: 'daily', label: '日常交流', prompt: '请和我练习日常英语，从今天的一件小事开始。' },
+  { id: 'exam', label: '考试口语', prompt: '请作为英语口语考官，先问我一个观点类问题。' },
+  { id: 'business', label: '商务表达', prompt: '请模拟同事，用英语和我聊一个项目，先问我一个问题。' },
+  { id: 'reading', label: '阅读讨论', prompt: '请和我用英语讨论阅读，先问我最近读过的内容。' },
 ];
 const assistantPrompts = ['今天还有什么没学？', '不熟悉的单词有哪些？', '推荐一篇英语阅读'];
 const currentScene = computed(() => scenes.find(item => item.id === props.scene) || scenes[0]);
@@ -137,9 +131,15 @@ const selectedIndex = ref(-1);
 const latestFeedback = computed(() => [...props.messages].reverse().find(item => item.coaching)?.coaching);
 const latestAssistant = computed(() => props.messages.findLast(item => item.role === 'assistant'));
 const assistantUsesModel = computed(() => !latestAssistant.value?.coaching && latestAssistant.value?.trace?.some(step => step.title === '调用在线模型'));
-const assistantStatus = computed(() => props.busy ? '等待本轮回复' : assistantUsesModel.value ? '本轮已调用'
-  : latestAssistant.value?.trace?.some(step => step.title === '使用本地兜底') ? '本轮本地建议' : '问答时连接');
 const feedback = computed(() => props.messages[selectedIndex.value]?.coaching);
+const responseSource = computed(() => {
+  if (props.mode === 'practice') {
+    if (!feedback.value) return '';
+    return feedback.value.source === 'model' ? feedback.value.modelName || 'AI 教练' : '本地练习';
+  }
+  if (assistantUsesModel.value) return props.modelName || 'AI 学习助手';
+  return latestAssistant.value?.trace?.some(step => step.title === '使用本地兜底') ? '本地学习建议' : '';
+});
 const targetWords = computed(() => feedback.value?.targetWords || props.contextWords);
 const displayedTrace = computed(() => props.mode === 'practice' ? props.messages[selectedIndex.value]?.trace || props.trace : props.trace);
 const thread = ref(null);
@@ -168,3 +168,9 @@ watch(() => props.busy, async (busy, wasBusy) => {
   if (wasBusy && !busy) { await nextTick(); focusInput(); }
 });
 </script>
+
+<style scoped>
+.studio-scene-choices > button { grid-template-columns: 1fr auto; align-items: center; }
+.studio-scene-choices > button > svg { grid-column: 2; grid-row: 1; }
+.studio-feedback-empty { color: var(--muted); }
+</style>

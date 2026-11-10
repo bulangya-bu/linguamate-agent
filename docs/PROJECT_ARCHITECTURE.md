@@ -1,6 +1,6 @@
 # 语伴智学（LinguaMate）项目架构设计
 
-当前版本采用 Vue 3 / Vite 桌面网页前端与 Spring Boot 后端，包含两个精编主题任务、个人模型配置和可回看的成长证据。本文保留课程设计中的测试样例与实施规划；其中“规划”“优化方向”不代表已完成能力，具体校验结果见 [测试报告](TEST_REPORT.md)。
+当前版本采用独立部署的 Vue 3 / Vite 桌面网页前端与 Spring Boot 后端，包含每日待办、个人模型配置和可回看的成长证据。本文保留课程设计中的测试样例与实施规划，其中“规划”“优化方向”为后续工作。具体校验结果见 [测试报告](TEST_REPORT.md)。
 
 ## 1. 项目题目
 
@@ -14,7 +14,7 @@
 
 - 英语对话：用户选择日常、考试、商务等场景，Agent 用英文对话并给出中文解释和改进建议。
 - 单词记忆：根据词库生成背词任务，支持例句、音标、中文释义、熟悉度标记。
-- 主题任务：校园节水讲解与迎新校园向导，连接阅读、三个主题词、三轮情境表达与个人复盘，保存提示使用和再次表达。
+- 学习概览：根据实际记录展示每日待办、下一步推荐、今日单词与近七天学习足迹。
 - 温故知新：今日到期按 `next_review_at` 安排，错词强化保留主动巩固入口，二者不混用。
 - 作文批改与润色：分析语法、词汇、结构、逻辑和表达，输出评分与润色版本。
 - 英语新闻阅读：推荐适合用户水平的英语新闻，阅读时鼠标悬停单词显示中文释义和音标。
@@ -24,7 +24,7 @@
 
 技术栈：
 
-- Spring Boot：后端 API、页面路由、配置管理、静态资源托管。
+- Spring Boot：后端 API、会话、权限与配置管理。Vue/Vite 独立提供网页。
 - MyBatis-Plus：用户学习记录、单词、错词、作文、新闻、会话等数据的 CRUD。
 - Spring AI：保留相关依赖与扩展接口；当前在线调用通过自定义 `OpenAiCompatibleClient` 完成，未启用向量 Embedding 检索。
 - RAG：对已导入的知识文档切块后按关键词检索，词库与阅读内容另由业务表查询。
@@ -51,10 +51,9 @@
 
 一级页面：
 
-- Dashboard（`/`）：学习概览，选择今日主题、续做任务，并查看当前账号学习入口与记录。
-- Mission（`/mission`）：校园节水讲解、迎新校园向导两套原创虚构教学情境，包含阅读、词语、表达和复盘。
+- Dashboard（`/`）：查看每日待办、下一步推荐、今日单词和近七天学习足迹。
 - Chat（`/chat`）：对话练习与学习助手，支持日常、考试、商务和阅读讨论，展示逐轮反馈及实际处理轨迹。
-- Vocabulary（`/vocabulary`）：单词练习，作答后显示完整词性释义，可收藏并按需展开深度解析。
+- Vocabulary（`/vocabulary`）：单词练习，可收藏，作答后可按需展开完整词性释义与深度解析。`scope=new` 进入新词练习。
 - Review（`/review`）：温故知新，区分今日到期和错词强化，通过英文拼写与中文释义主动回忆。
 - Writing（`/writing`）：写作工坊，支持四维参考评分、逐句批注、润色对照与学习者再次提交。
 - News（`/news`）：阅读空间，支持难度/主题筛选、即时查词、句子聚焦、全文翻译和携带文章继续对话。
@@ -78,7 +77,7 @@ Dashboard
 
 ## 4. 后端分层架构
 
-以下为核心分层示意，省略部分实体、DTO 与服务。当前源码还包含 `auth/`、`admin/`、`dictionary/` 和 `mission/`，分别处理账号与权限、后台管理、词典和主题任务。前端源码位于 `frontend/src`，生产构建位于 `src/main/resources/static`。
+以下为核心分层示意，省略部分实体、DTO 与服务。当前源码还包含 `auth/`、`admin/`、`dictionary/` 和 `mission/`，分别处理账号与权限、后台管理、词典和旧版专题任务。专题接口默认停用。前端源码位于 `frontend/src`，生产构建位于独立的 `frontend/dist`。
 
 ```text
 com.example.javabigwork
@@ -194,8 +193,6 @@ com.example.javabigwork
 │   │   └── LearningReportView.java
 │   └── service
 │       └── ReportService.java
-└── ui
-    └── PageController.java
 ```
 
 ## 5. Agent Loop 设计
@@ -423,7 +420,6 @@ agent_trace：
 - GET `/writing`：作文批改页。
 - GET `/news`：新闻阅读页。
 - GET `/wordbank`：个人词库页。
-- GET `/mission`：每日主题任务页。
 - GET `/report`：学习档案页。
 - GET `/login`、`/register`、`/admin`：登录、注册与管理员入口。
 
@@ -447,12 +443,11 @@ agent_trace：
 - POST `/api/knowledge/search`：RAG 知识库检索。
 - GET `/api/report/summary`：获取学习报告。
 - GET `/api/report/journal`、`/api/report/growth`：个人学习档案与成长证据。
-- GET `/api/missions/today`、POST `/api/missions/{key}/start`：获取主题与开启/续做任务，其余作答接口见 [主题任务说明](DAILY_MISSIONS.md)。
 - GET/PUT `/api/ai/settings`、POST `/api/ai/test`：当前账号模型配置与真实对话连接测试。
 
 ## 10. 前端视觉与交互架构
 
-前端采用 Vue 3、Vite 和 Element Plus，源码位于 `frontend/src`。`npm run build` 输出到 `src/main/resources/static`，由 Spring Boot 托管。当前设计与校验聚焦电脑网页端。
+前端采用 Vue 3、Vite 和 Element Plus，源码位于 `frontend/src`。`npm run build` 输出到独立的 `frontend/dist`，开发时由 Vite、容器部署时由 Nginx 提供网页；`/api` 请求代理到 Spring Boot。当前设计与校验聚焦电脑网页端。
 
 视觉语言：保留草绿和浅蓝，结合纸感表面、分层排版与手绘插画。登录/注册、学生端、管理端、浏览器标签和对话署名统一显示“语伴智学（LinguaMate）”；品牌常量与共享字标分别位于 `frontend/src/brand.js` 和 `components/AppBrand.vue`。
 
@@ -460,9 +455,9 @@ agent_trace：
 
 - 左侧导航承载学习概览、对话、单词、复习、写作、阅读、词库与学习档案，左下角放置个人模型配置。
 - 顶部栏展示当前模块、昼夜切换及账号菜单，用户等级与经验进度随账号信息呈现。
-- 首页以今日主题和四阶段学习路线为中心，展示当前账号的实际完成状态。
+- 首页的今日待办支持任选任务。「下一步」按顺序推荐未完成的任务，近七天足迹展示真实学习记录。
 - 对话页保留对话与逐轮教练反馈，学习助手提供基于个人记录的建议；处理记录呈现实际执行步骤。
-- 单词卡答题后显示完整词性释义，深度解析默认收起，按需在右侧竖向展开。
+- 单词卡答题后在底栏显示结果与复习提示。完整词性释义和深度解析按需展开。
 - 阅读正文支持即时查词、句子聚焦与全文翻译，文章可携带到对话中继续讨论。
 - 写作工坊用逐句批注和润色对照帮助理解修改，学习者主动提交第二稿。
 - 学习档案的图表、日历和成长树汇总实际记录，节点可继续打开原始证据。

@@ -5,11 +5,13 @@ import com.example.javabigwork.vocabulary.entity.Word;
 import com.example.javabigwork.vocabulary.mapper.WordMapper;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
 @Order(10)
+@ConditionalOnProperty(name = "linguamate.missions.enabled", havingValue = "true")
 public class MissionWordSeeder implements ApplicationRunner {
     private final MissionCatalog catalog;
     private final WordMapper words;

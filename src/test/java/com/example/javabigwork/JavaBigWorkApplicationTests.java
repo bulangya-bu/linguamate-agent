@@ -1,5 +1,6 @@
 package com.example.javabigwork;
 
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -24,9 +25,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest(properties = {
         "linguamate.ai.base-url=http://127.0.0.1:9/v1",
@@ -42,6 +45,9 @@ class JavaBigWorkApplicationTests {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     void contextLoads() {
@@ -97,6 +103,49 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.data[0].definitions").isNotEmpty())
                 .andExpect(jsonPath("$.data[0].levelTag").isNotEmpty())
                 .andExpect(jsonPath("$.data[0].exampleEn").isNotEmpty());
+    }
+
+    @Test
+    @Transactional
+    void newWordsSkipOnlyFirstAnswersByTheCurrentUser() throws Exception {
+        String suffix = Long.toString(System.nanoTime());
+        String category = "new-bank-" + suffix;
+        String quizzed = "quizzed-" + suffix;
+        String reviewed = "reviewed-" + suffix;
+        String favorited = "favorited-" + suffix;
+        for (String word : new String[] {quizzed, reviewed, favorited}) {
+            jdbc.update("INSERT INTO word (word, meaning_cn, level_tag) VALUES (?, ?, ?)", word, "测试释义", category);
+        }
+        long quizId = jdbc.queryForObject("SELECT id FROM word WHERE word = ?", Long.class, quizzed);
+        long reviewId = jdbc.queryForObject("SELECT id FROM word WHERE word = ?", Long.class, reviewed);
+        long favoriteId = jdbc.queryForObject("SELECT id FROM word WHERE word = ?", Long.class, favorited);
+        String learner = "newLearner" + suffix;
+        String otherLearner = "otherLearner" + suffix;
+        registerUser(learner, "新词练习者");
+        registerUser(otherLearner, "另一位练习者");
+        MockHttpSession session = login(learner, "userpass123");
+        MockHttpSession otherSession = login(otherLearner, "userpass123");
+
+        mockMvc.perform(post("/api/words/" + quizId + "/quiz").session(session)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"answer\":\"答错\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/reviews/" + reviewId).session(session)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"spellingAnswer\":\"wrong\",\"meaningAnswer\":\"答错\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/words/" + favoriteId + "/favorite").session(session))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/words/today").param("scope", "new").param("category", category).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].word").value(favorited));
+        mockMvc.perform(get("/api/words/today").param("scope", "new").param("category", category).session(otherSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[*].word", containsInAnyOrder(quizzed, reviewed, favorited)));
+        mockMvc.perform(get("/api/words/today").param("category", category).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[*].word", containsInAnyOrder(quizzed, reviewed, favorited)));
     }
 
     @Test

@@ -1,6 +1,12 @@
-version: "3.8"
-
 services:
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      - app
+
   redis:
     image: redis:7-alpine
     container_name: linguamate-redis
@@ -53,6 +59,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       LINGUAMATE_REDIS_CACHE_ENABLED: "true"
+      LINGUAMATE_WEB_ALLOWED_ORIGINS: ${LINGUAMATE_WEB_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
       LINGUAMATE_AI_BASE_URL: ${LINGUAMATE_AI_BASE_URL:-https://api.openai.com/v1}
       LINGUAMATE_AI_API_KEY: ${LINGUAMATE_AI_API_KEY:-}
       LINGUAMATE_AI_CHAT_MODEL: ${LINGUAMATE_AI_CHAT_MODEL:-gpt-4o-mini}

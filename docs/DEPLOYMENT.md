@@ -1,6 +1,6 @@
 # 语伴智学（LinguaMate）Deployment Guide
 
-This guide covers local setup, Docker deployment, and production deployment for 语伴智学（LinguaMate）, a Vue 3 / Vite desktop web application served by Spring Boot. The repository includes production static assets; frontend source changes must be rebuilt before packaging.
+This guide covers the independently served Vue 3 / Vite frontend and Spring Boot API. Frontend source builds into `frontend/dist`; Maven builds the API JAR separately.
 
 ## Environment
 
@@ -17,7 +17,12 @@ All sensitive or environment-specific settings are configurable through environm
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `SERVER_PORT` | `4040` | Application HTTP port |
+| `SERVER_PORT` | `4040` | API HTTP port |
+| `FRONTEND_PORT` | `5173` | Frontend HTTP port |
+| `VITE_API_PROXY_TARGET` | `http://127.0.0.1:4040` | Vite development/preview API upstream |
+| `VITE_API_BASE_URL` | *(empty)* | Optional browser-facing API origin |
+| `LINGUAMATE_WEB_ALLOWED_ORIGINS` | Local frontend origins on port 5173 | Exact credentialed CORS allowlist |
+| `SESSION_COOKIE_SECURE` | `false` | Set true for HTTPS deployment |
 | `DB_URL` | `jdbc:mysql://localhost:3306/linguamate?...` | MySQL JDBC URL |
 | `DB_DRIVER` | `com.mysql.cj.jdbc.Driver` | JDBC driver class |
 | `DB_USER` | `root` | Database username |
@@ -45,20 +50,23 @@ Schema and seed data are loaded from:
 
 ## Run Locally
 
-Set database credentials for this shell, then start the backend:
+On Windows, run the project launcher:
 
 ```powershell
-$env:DB_PASSWORD="your-local-password"
-.\mvnw.cmd spring-boot:run
+.\start.cmd
 ```
 
-Then open:
+The script prepares dependencies and starts the configured database, API, and frontend. Use `-NoOpen` to skip opening a browser, or `-CheckOnly` to check the environment. The browser entry is:
 
 ```text
-http://localhost:4040
+http://127.0.0.1:5173
 ```
 
-Frontend development uses Vite on port 5173 and proxies `/api` to the backend on port 4040:
+The API listens on port 4040. Optional local settings can be copied from `scripts/local.config.example.ps1` to ignored `.runtime/config.ps1`. The launcher can reuse the Windows-encrypted database credentials under `%LOCALAPPDATA%\LinguaMate`, or use explicit `DB_URL`, `DB_USER` and `DB_PASSWORD` values. On a new Windows computer with MySQL 8 installed, initialize a private instance with `scripts/setup-local-db.ps1`.
+
+Use `.\stop.cmd` to stop the managed frontend/API. Stop and start after backend source or dependency changes. Frontend edits use Vite hot reload. Launcher logs and process records are in `.runtime/`.
+
+For separate development terminals, start the backend from the project root with `.\mvnw.cmd spring-boot:run`, with the database environment configured. Start Vite from `frontend/`:
 
 ```powershell
 cd frontend
@@ -66,7 +74,7 @@ npm ci
 npm run dev
 ```
 
-To publish frontend source changes to the Spring Boot application, build the assets before starting or packaging it:
+Build the two projects independently:
 
 ```powershell
 cd frontend
@@ -76,9 +84,9 @@ cd ..
 .\mvnw.cmd package
 ```
 
-The build writes to `src/main/resources/static`. Alternatively, `.\mvnw.cmd -Pfrontend-build package` invokes the frontend build through Maven. The Dockerfile packages the static assets already in the source tree, so run the frontend build before rebuilding the image when the UI changes.
+The frontend build writes to `frontend/dist`. The backend JAR contains API resources. The frontend container serves the assets through Nginx, proxies `/api` to `app:4040`, and falls back to `index.html` for Vue history routes. Local `npm run preview` also proxies the API.
 
-Application routes include `/login`, `/`, `/mission`, `/chat`, `/vocabulary`, `/review`, `/news`, `/writing`, `/wordbank`, `/report` and `/admin`. Demo accounts for local evaluation are:
+Application routes include `/login`, `/`, `/chat`, `/vocabulary`, `/review`, `/news`, `/writing`, `/wordbank`, `/report` and `/admin`. Demo accounts for local evaluation are:
 
 ```text
 Student: student / student123
@@ -117,9 +125,9 @@ $env:LINGUAMATE_AI_API_KEY="your-api-key"
 docker compose up -d --build
 ```
 
-The app will be available at `http://localhost:4040`.
+The frontend will be available at `http://localhost:5173`. The API uses port 4040.
 
-Health check: `http://localhost:4040/actuator/health`
+Readiness check: `http://localhost:4040/actuator/health/readiness`
 
 ### Stop
 
@@ -210,4 +218,4 @@ Confirm the provider base URL ends at the API root, for example `https://api.ope
 
 ### Logs
 
-Runtime logs are written under `logs/` and are intentionally ignored by Git.
+Launcher logs and process state are in ignored `.runtime/`. Application logs also use `logs/`.

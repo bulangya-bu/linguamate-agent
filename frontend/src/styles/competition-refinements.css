@@ -51,9 +51,6 @@
     line-height: 1.35;
     letter-spacing: -1.5px;
   }
-  .page-dashboard .studio-focus-detail {
-    max-width: 30ch;
-  }
   #dashboard .studio-focus-actions {
     flex-wrap: wrap;
     gap: 14px;
@@ -63,53 +60,6 @@
   }
   #dashboard .duo-step-button {
     min-height: 66px;
-  }
-  .page-mission .workspace > .topbar {
-    display: none;
-  }
-  .page-mission .workspace {
-    gap: 18px;
-  }
-  .page-mission .workspace-bar {
-    flex-shrink: 0;
-  }
-  .page-mission .section.active {
-    margin-top: 0;
-  }
-  .app-shell .quiz-study-stage {
-    grid-template-rows: auto minmax(80px, 1fr);
-    flex: 0 1 365px;
-    align-content: center;
-    gap: 22px;
-    margin: auto 0 12px;
-    padding-top: 15px;
-  }
-  .app-shell .quiz-workbench:not(.shows-insight) {
-    max-height: 620px;
-    margin-block: auto;
-  }
-  .app-shell .quiz-word-shell {
-    justify-content: center;
-  }
-  .app-shell .quiz-example-slot {
-    align-self: center;
-    max-height: 240px;
-  }
-  .app-shell .word-quiz-card > .quiz-options {
-    margin-top: 0;
-  }
-  .app-shell .word-quiz-card {
-    gap: 14px;
-    justify-content: center;
-  }
-  .app-shell .word-quiz-card > .quiz-progress {
-    margin-bottom: auto;
-  }
-  .app-shell .word-quiz-card > .quiz-feedback {
-    margin-top: 0;
-  }
-  .quiz-definitions {
-    margin-bottom: 16px;
   }
   .review-workspace .review-challenge-card {
     flex: 0 1 auto;
@@ -229,14 +179,6 @@
   #dashboard .duo-step-button {
     min-height: 58px;
   }
-  .app-shell .quiz-study-stage {
-    flex-basis: 280px;
-    gap: 14px;
-    padding-top: 5px;
-  }
-  .app-shell .quiz-example-slot {
-    max-height: 175px;
-  }
   .review-workspace .review-prompt {
     min-height: 155px;
     padding-block: 23px;
@@ -283,9 +225,6 @@
   }
   .app-shell #journal .journal-heading-actions .journal-date-stamp {
     display: none;
-  }
-  .page-mission .workspace {
-    gap: 12px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

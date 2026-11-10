@@ -276,22 +276,10 @@
   .reader-tools {
     display: flex;
     flex-shrink: 0;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     gap: 12px;
     padding: 14px clamp(24px, 2.8vw, 48px) 0;
-  }
-  .reader-hint {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #758b9a;
-    font-size: 11px;
-  }
-  .reader-hint svg {
-    width: 14px;
-    height: 14px;
-    color: #65a5c5;
   }
   .page-news .reader-toolbar .translate-btn {
     display: flex;

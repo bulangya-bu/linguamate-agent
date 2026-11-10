@@ -4,12 +4,6 @@ import MainAppView from "@/views/MainAppView.vue";
 
 const routes = [
   {
-    path: "/mission",
-    name: "mission",
-    component: MainAppView,
-    meta: { section: "mission" },
-  },
-  {
     path: "/login",
     name: "login",
     component: LoginView,

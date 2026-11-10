@@ -14,6 +14,7 @@ public class ReadingRecord {
     public Integer readProgress;
     public Integer lookedUpWords;
     public Boolean finished;
+    public LocalDateTime finishedAt;
     public LocalDateTime createdAt;
     public LocalDateTime updatedAt;
 }

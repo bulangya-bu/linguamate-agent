@@ -2,6 +2,7 @@ package com.example.javabigwork.writing.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.example.javabigwork.agent.AgentTraceStep;
+import com.example.javabigwork.auth.LoginActivityService;
 import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.tool.EssayScoringResult;
 import com.example.javabigwork.tool.EssayScoringTool;
@@ -94,7 +95,7 @@ public class WritingService {
         submission.reviewSource = draft.reviewSource();
         submission.modelName = draft.modelName();
         submission.targetLevel = safeValue(request.targetLevel(), "B1");
-        submission.createdAt = LocalDateTime.now();
+        submission.createdAt = LocalDateTime.now(LoginActivityService.ZONE);
         submissionMapper.insert(submission);
         return submission;
     }

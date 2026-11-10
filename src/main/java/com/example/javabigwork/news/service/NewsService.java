@@ -1,6 +1,7 @@
 package com.example.javabigwork.news.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.example.javabigwork.auth.LoginActivityService;
 import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.cache.RedisCacheService;
 import com.example.javabigwork.news.dto.NewsArticleView;
@@ -107,19 +108,22 @@ public class NewsService {
         }
 
         ReadingRecord record = ensureReadingRecord(articleId);
-        int nextProgress = Math.max(value(record.readProgress), requestedProgress);
-        boolean manuallyFinished = Boolean.TRUE.equals(request.finished());
-        if (manuallyFinished) {
-            nextProgress = 100;
-        }
-        record.readProgress = Math.min(100, nextProgress);
-        record.finished = Boolean.TRUE.equals(record.finished)
-                || manuallyFinished
-                || record.readProgress >= FINISHED_THRESHOLD;
-        record.updatedAt = LocalDateTime.now();
-        readingRecordMapper.updateById(record);
+        int progress = Boolean.TRUE.equals(request.finished()) ? 100 : requestedProgress;
+        // Record the first transition atomically. Legacy finished rows have no reliable completion date.
+        readingRecordMapper.update(null, Wrappers.<ReadingRecord>update()
+                .eq("id", record.id)
+                .setSql("""
+                        finished_at = CASE
+                          WHEN NOT COALESCE(finished, FALSE) AND GREATEST(COALESCE(read_progress, 0), {0}) >= {1}
+                          THEN COALESCE(finished_at, {2}) ELSE finished_at
+                        END
+                        """, progress, FINISHED_THRESHOLD, LocalDateTime.now(LoginActivityService.ZONE))
+                .setSql("finished = COALESCE(finished, FALSE) OR GREATEST(COALESCE(read_progress, 0), {0}) >= {1}",
+                        progress, FINISHED_THRESHOLD)
+                .setSql("read_progress = GREATEST(COALESCE(read_progress, 0), {0})", progress)
+                .set("updated_at", LocalDateTime.now()));
         evictUserRecommendationCache(record.userId);
-        return toProgressView(record);
+        return toProgressView(readingRecordMapper.selectById(record.id));
     }
 
     @Transactional
@@ -129,9 +133,10 @@ public class NewsService {
             throw new IllegalArgumentException("News article does not exist.");
         }
         ReadingRecord record = ensureReadingRecord(articleId);
-        record.lookedUpWords = value(record.lookedUpWords) + 1;
-        record.updatedAt = LocalDateTime.now();
-        readingRecordMapper.updateById(record);
+        readingRecordMapper.update(null, Wrappers.<ReadingRecord>update()
+                .eq("id", record.id)
+                .setSql("looked_up_words = COALESCE(looked_up_words, 0) + 1")
+                .set("updated_at", LocalDateTime.now()));
         evictUserRecommendationCache(record.userId);
     }
 
@@ -159,7 +164,10 @@ public class NewsService {
         if (record != null) {
             if (record.updatedAt == null) {
                 record.updatedAt = record.createdAt == null ? LocalDateTime.now() : record.createdAt;
-                readingRecordMapper.updateById(record);
+                readingRecordMapper.update(null, Wrappers.<ReadingRecord>update()
+                        .eq("id", record.id)
+                        .isNull("updated_at")
+                        .set("updated_at", record.updatedAt));
             }
             return record;
         }

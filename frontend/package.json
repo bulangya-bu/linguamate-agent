@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "vite",
     "build": "vite build",
-    "test": "node --test src/*.test.js",
-    "preview": "vite preview --host 0.0.0.0"
+    "test": "node --test src/*.test.js test/*.test.mjs",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",

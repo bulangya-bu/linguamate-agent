@@ -29,7 +29,6 @@
 .learning-evidence-dialog > header { display: flex; align-items: center; justify-content: space-between; }
 .learning-evidence-dialog > header span { color: var(--green-ink); font-size: 9px; letter-spacing: 2px; }
 .learning-evidence-dialog h2 { margin: 8px 0 0; font-size: 23px; letter-spacing: -.6px; }
-.learning-evidence-dialog header button { display: grid; place-items: center; width: 33px; height: 33px; color: var(--muted); background: transparent; border-radius: 50%; }
 .learning-evidence-dialog svg { width: 18px; height: 18px; }
 .evidence-accuracy { padding: 25px 0 20px; }
 .evidence-accuracy > span { color: var(--muted); font-size: 12px; }

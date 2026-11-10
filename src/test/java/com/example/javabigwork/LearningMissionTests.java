@@ -18,7 +18,13 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-@SpringBootTest(properties={"linguamate.ai.base-url=http://127.0.0.1:9/v1","linguamate.ai.api-key=test-key","linguamate.ai.chat-model=test-model","linguamate.cache.redis.enabled=false"})
+@SpringBootTest(properties = {
+        "linguamate.missions.enabled=true",
+        "linguamate.ai.base-url=http://127.0.0.1:9/v1",
+        "linguamate.ai.api-key=test-key",
+        "linguamate.ai.chat-model=test-model",
+        "linguamate.cache.redis.enabled=false"
+})
 @AutoConfigureMockMvc
 class LearningMissionTests {
     @Autowired MockMvc mvc;

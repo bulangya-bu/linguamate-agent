@@ -52,6 +52,7 @@ public class DatabaseMigration implements ApplicationRunner {
         );
         userOwnedTables.forEach(table -> addColumnIfMissing(table, "user_id", "BIGINT NOT NULL DEFAULT 1"));
         addColumnIfMissing("reading_record", "updated_at", "TIMESTAMP");
+        addColumnIfMissing("reading_record", "finished_at", "DATETIME");
         addColumnIfMissing("word_review_log", "spelling_answer", "VARCHAR(255)");
         addColumnIfMissing("word_review_log", "meaning_answer", "VARCHAR(255)");
         addColumnIfMissing("word_review_log", "spelling_correct", "BOOLEAN");
@@ -134,6 +135,7 @@ public class DatabaseMigration implements ApplicationRunner {
                     MAX(COALESCE(read_progress, 0)) AS read_progress,
                     SUM(COALESCE(looked_up_words, 0)) AS looked_up_words,
                     MAX(CASE WHEN COALESCE(finished, FALSE) THEN 1 ELSE 0 END) AS finished,
+                    MIN(finished_at) AS finished_at,
                     MIN(created_at) AS created_at,
                     MAX(COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)) AS updated_at
                 FROM reading_record
@@ -147,6 +149,7 @@ public class DatabaseMigration implements ApplicationRunner {
                 SET rr.read_progress = merged.read_progress,
                     rr.looked_up_words = merged.looked_up_words,
                     rr.finished = merged.finished = 1,
+                    rr.finished_at = merged.finished_at,
                     rr.created_at = COALESCE(merged.created_at, rr.created_at),
                     rr.updated_at = merged.updated_at
                 """);

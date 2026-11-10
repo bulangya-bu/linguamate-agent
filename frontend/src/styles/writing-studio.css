@@ -49,8 +49,9 @@
 .ws-inspector-heading > span { color: var(--muted); font-size: 9px; letter-spacing: 1.5px; }
 .ws-inspector-heading > button { background: none; color: var(--blue-ink); font-size: 11px; }
 .ws-inspector-scroll { flex: 1; min-height: 0; overflow: auto; padding: 25px 26px; scrollbar-gutter: stable; }
-.ws-intro { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; max-width: 340px; min-height: 100%; margin: auto; }
-.ws-intro-art { position: relative; width: 190px; height: 140px; margin: 0 0 10px -12px; }
+.ws-inspector-scroll:has(> .ws-intro) { scrollbar-gutter: stable both-edges; }
+.ws-intro { display: flex; flex-direction: column; align-items: center; justify-content: center; max-width: 340px; min-height: 100%; margin: auto; text-align: center; }
+.ws-intro-art { position: relative; width: 190px; height: 140px; margin: 0 0 10px; }
 .ws-intro-art > i { position: absolute; inset: 12px 9px; border: 1px solid #b3cddd; border-radius: 50%; transform: rotate(-22deg); }
 .ws-intro-art > i:nth-child(2) { inset: 0 34px; transform: rotate(30deg); border-color: #c2d9ab; }
 .ws-intro-art > span { position: absolute; left: 36px; top: 20px; color: var(--blue-ink); font: italic 76px/1.2 Georgia,serif; letter-spacing: -8px; }

@@ -81,8 +81,6 @@
   #dashboard .session-label { gap: 9px; color: var(--studio-accent); font-size: 12px; letter-spacing: 2px; }
   #dashboard .focus-copy h2 { margin: 20px 0 15px; color: var(--ink); font-size: clamp(40px, 3.3vw, 64px); font-weight: 550; letter-spacing: -2px; line-height: 1.24; }
   #dashboard .focus-copy h2 > span { color: var(--studio-accent); font-weight: 650; }
-  #dashboard .studio-focus-detail { max-width: 26em; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.8; text-wrap: pretty; }
-  #dashboard .focus-copy > .studio-focus-detail { align-self: flex-start; }
   #dashboard .studio-focus-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; margin-top: 26px; }
   #dashboard .focus-copy .primary-button { min-height: 48px; min-width: 158px; gap: 26px; padding: 12px 20px; border-radius: 12px; font-size: 14px; }
   #dashboard .studio-review-link { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 5px 0; color: var(--muted); font-size: 12px; }
@@ -103,14 +101,11 @@
   #dashboard .word-atmosphere--studio .word-shard-cn { top: 32px; right: 4px; left: 4px; font-size: 10px; letter-spacing: 0; }
   #dashboard .word-atmosphere--studio .word-shard.is-revealed { opacity: 1; }
   #dashboard .word-atmosphere--studio .word-shard.is-revealed .word-shard-en { transform: translateY(-8px); }
-  #dashboard .studio-canvas-footer { position: absolute; right: 28px; bottom: 20px; left: 30px; display: flex; justify-content: space-between; align-items: baseline; color: var(--muted); font-size: 8px; letter-spacing: 2px; opacity: .65; pointer-events: none; }
-  #dashboard .studio-canvas-footer > span:last-child { font: italic 12px Georgia, serif; letter-spacing: .3px; }
 
   /* The journey is one continuous, navigable rail rather than five separate tiles. */
   #dashboard .home-grid { grid-column: 2; grid-row: 1 / -1; display: flex; flex-direction: column; gap: 0; min-height: 0; margin: 0; padding: 8px 0 0 26px; border-left: 1px solid var(--line); animation: studio-surface-enter 650ms 90ms var(--ease) both; }
   #dashboard .duo-route-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 0; }
   #dashboard .duo-route-heading { padding: 0 2px 16px; border: 0; }
-  #dashboard .studio-section-kicker { display: block; margin-bottom: 9px; color: var(--muted); font-size: 9px; letter-spacing: 2.3px; }
   #dashboard .duo-route-heading h2 { font-size: 23px; line-height: 1.2; font-weight: 600; }
   #dashboard .duo-route-progress { width: auto; }
   #dashboard .duo-route-progress strong { display: block; color: var(--ink); font: 32px/1 Georgia, serif; font-variant-numeric: tabular-nums; }
@@ -177,12 +172,9 @@
   #dashboard .focus-copy { padding-top: 22px; padding-bottom: 36px; }
   #dashboard .focus-copy h2 { margin: 15px 0 11px; font-size: clamp(36px, 3.15vw, 48px); }
   #dashboard .studio-focus-actions { margin-top: 20px; gap: 10px 14px; }
-  #dashboard .studio-focus-detail { font-size: 12px; }
   #dashboard .focus-copy .primary-button { min-height: 44px; min-width: 148px; padding: 10px 17px; }
-  #dashboard .studio-canvas-footer { bottom: 13px; }
   #dashboard .home-grid { padding-left: 22px; padding-top: 2px; }
   #dashboard .duo-route-heading { padding-bottom: 12px; }
-  #dashboard .studio-section-kicker { margin-bottom: 7px; }
   #dashboard .duo-route-heading h2 { font-size: 21px; }
   #dashboard .duo-route-progress-bar { margin-bottom: 8px; }
   #dashboard .studio-journey-note { margin-top: 12px; margin-bottom: 12px; padding-top: 12px; }

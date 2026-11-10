@@ -148,7 +148,6 @@
         ><AppIcon name="arrow"
       /></span>
     </span>
-    <span class="auth-garden-hint">轻点花朵，发现一个新词</span>
     <span class="sr-only" role="status" aria-live="polite">{{
       announcement
     }}</span>

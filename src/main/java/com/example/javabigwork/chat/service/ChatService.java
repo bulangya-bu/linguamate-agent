@@ -5,6 +5,7 @@ import com.example.javabigwork.agent.AgentTraceRecorder;
 import com.example.javabigwork.agent.LinguaMateAgent;
 import com.example.javabigwork.agent.service.EnglishCoachService;
 import com.example.javabigwork.agent.dto.CoachFeedback.TargetWord;
+import com.example.javabigwork.auth.LoginActivityService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.javabigwork.chat.dto.ChatRequest;
@@ -119,7 +120,7 @@ public class ChatService {
         message.role = role;
         message.content = content;
         message.metadata = metadata;
-        message.createdAt = LocalDateTime.now();
+        message.createdAt = LocalDateTime.now(LoginActivityService.ZONE);
         messageMapper.insert(message);
     }
 }

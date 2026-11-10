@@ -4,32 +4,26 @@
 
 作者：庄鹏桦 · 作品方向：智慧教育与科普创作 · 当前面向电脑网页端
 
-语伴智学将主题阅读、词汇练习、AI 对话、写作修改和个人成长记录放在同一套学习工作区中。学习者可以围绕具体情境练习英语，理解对应原句的反馈，再用自己的话表达一次。
-
-![语伴智学：迎新校园向导主题与今日学习路线](docs/images/dashboard.png)
-
-> 页面截图来自本地演示账号，统计数字用于展示功能，不代表真实运营规模或教学效果。对话截图展示已保存的模型演示记录；写作截图展示原稿编辑，成长证据展示真实提交的版本。模型无法使用时，界面会明确标注本地练习或本地规则批改。
+语伴智学将英语阅读、词汇练习、AI 对话、写作修改和个人成长记录放在同一套学习工作区中。
 
 ## 项目亮点
 
-- **每日主题任务**：迎新校园向导、校园节水讲解两套精编情境，串联阅读、三个主题词、三轮表达、分级提示和个人复盘，支持按账号与日期续做。
+- **学习概览**：今日待办根据实际学习记录更新，可任选任务开始。「下一步」按顺序推荐尚未完成的任务，首页也展示今日单词和近七天学习足迹。
 - **AI 对话教练**：日常交流、考试口语、商务表达、阅读讨论四个入口，围绕会话上下文提供原句反馈、可复用短语和下一轮挑战。
 - **个性化学习助手**：结合当前账号的今日进度和优先巩固词回答学习问题，说明推荐依据，并承接练习时长等连续追问。
-- **单词练习与复习**：内置 CET-4、CET-6、考研、雅思词库。作答后展示完整词性与释义，补充解析按需展开；今日到期与错词强化分别安排。
+- **单词练习与复习**：内置 CET-4、CET-6、考研、雅思词库，支持新词专项练习。作答后在底栏查看反馈，按需展开完整释义、例句译文和深度解析。到期词与错词分别复习。
 - **阅读空间**：难度和主题筛选、即时查词与词形还原、句子聚焦、全文翻译，遇到的词可以加入待复习，当前文章可以带入 AI 讨论。
 - **写作工坊**：四维参考评分、逐句批注和润色对照，支持学习者主动改写并再次提交，分别保留原稿与 AI 参考。
 - **词库与成长档案**：统一管理收藏词、错词、待复习和掌握状态，以手绘成长树、活动图表与日历回看记录，并打开原始作答与改写证据。
 - **Agent 与轻量 RAG**：保留 Observe、Think、Act、Answer 执行记录，对知识分块进行关键词检索，并在回答中使用相关材料。
 - **管理与模型接入**：后台维护用户、词库、知识文档及阅读材料。学习者与管理员使用各自的 OpenAI-compatible 模型配置，在线失败时明确降级。
 
-当前主题为两套精编材料，并非每天自动生成。词语出现核对不等于掌握判定，模型评分也不作为长期教学成效的证明。详见 [主题任务与成长证据](docs/DAILY_MISSIONS.md)。
-
 ## 页面展示
 
-以下图片为 1920 × 1080 桌面网页实拍，点击图片可查看原图。
+以下图片来自早期版本的桌面演示账号。统计数字用于展示功能，模型无法使用时，界面会标注本地练习或本地规则批改。
 
 <details>
-<summary>登录、黑夜模式与迎新主题</summary>
+<summary>登录与黑夜模式</summary>
 
 ### 登录入口
 
@@ -40,12 +34,6 @@
 ### 黑夜模式
 
 ![语伴智学黑夜学习工作区](docs/images/dashboard-dark.png)
-
-### 迎新校园向导
-
-根据校园地图、借阅条件与开放时间，完成有具体目标的英语练习。
-
-![迎新校园向导：地图和主题阅读](docs/images/mission-welcome.png)
 
 </details>
 
@@ -119,90 +107,77 @@
 - MySQL 8 兼容数据库
 - Spring AI 依赖与自定义 OpenAI-compatible REST client
 - Vue 3、Vite、Element Plus、Rough.js 手绘图表
-- Spring Boot 托管 Vite 构建后的静态资源
+- 前后端独立运行：Vue/Vite 前端与 Spring Boot API，浏览器通过前端代理访问后端
 
 ## 快速启动
 
-### 1. 准备环境与数据库
+需要 Java 17+、Node.js 20.19+ 或 22.12+、MySQL 8 兼容数据库。
 
-需要 Java 17+、MySQL 8 兼容数据库。修改前端时还需要满足 Vite 7 要求的 Node.js 环境（20.19+ 或 22.12+）。
-
-创建 MySQL 数据库，或使用默认连接中的 `createDatabaseIfNotExist=true` 让应用自动创建 `linguamate` 数据库。默认配置位于 `src/main/resources/application.properties`。
-
-常用环境变量：
+在 Windows 项目根目录执行，也可以双击：
 
 ```powershell
-$env:DB_USER="root"
-$env:DB_PASSWORD="your-local-password"
-$env:DB_URL="jdbc:mysql://localhost:3306/linguamate?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf-8"
+.\start.cmd
 ```
 
-### 2. 配置 AI 服务（可选）
+脚本检查环境、安装锁定的前端依赖、按后端源码变化构建 JAR，启动数据库、后端和 Vite，并在就绪后打开浏览器。首次构建需要联网下载依赖。
 
-登录后，可在左下角“模型配置”中填写兼容接口地址、密钥并选择模型。配置按账号保存，管理员有独立入口。
+- 网页入口：`http://127.0.0.1:5173`
+- 后端 API：`http://127.0.0.1:4040/api`
+- 后端就绪检查：`http://127.0.0.1:4040/actuator/health/readiness`
+- 学生账号：`student / student123`
+- 管理员账号：`admin / admin123`
 
-也可通过环境变量提供服务端默认配置：
+停止前后端：
 
 ```powershell
-$env:LINGUAMATE_AI_BASE_URL="https://api.openai.com/v1"
-$env:LINGUAMATE_AI_API_KEY="your-api-key"
-$env:LINGUAMATE_AI_CHAT_MODEL="your-compatible-chat-model"
-$env:LINGUAMATE_GNEWS_API_KEY="your-gnews-api-key"
+.\stop.cmd
 ```
 
-未连接模型也可以启动并查看本地材料、查词和练习流程，在线失败时使用明确标注的本地降级。个人 AI 配置与运行数据库不随仓库上传。
+MySQL 独立保存数据。脚本的进程记录、日志、构建指纹和个人配置位于 Git 忽略的 `.runtime/`。后端源码或前端依赖更新后，执行 `stop.cmd` 再执行 `start.cmd`。前端页面修改通过 Vite 自动更新。
 
-### 3. 启动后端
+### 数据库与端口
+
+本机已有的 Windows 加密 MySQL 配置可以直接复用。换到一台已安装 MySQL 8 的 Windows 电脑时，可初始化专属的本地数据库实例：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local-db.ps1
+```
+
+专属数据库默认监听 `127.0.0.1:34061`，持久化数据与加密凭据存放于 `%LOCALAPPDATA%\LinguaMate`。也可以使用已有数据库，在执行启动脚本前设置 `DB_URL`、`DB_USER` 和 `DB_PASSWORD`。数据库地址应包含完整 JDBC 参数，示例见 `scripts/local.config.example.ps1`。
+
+可复制配置示例到 `.runtime/config.ps1`，设置后端 `SERVER_PORT`、前端 `FRONTEND_PORT` 或数据库连接。真实密钥应从环境变量或本机加密凭据加载。
+
+### AI 配置
+
+登录后在「模型配置」中设置兼容接口地址、密钥与模型，按账号保存。也支持 `LINGUAMATE_AI_BASE_URL`、`LINGUAMATE_AI_API_KEY`、`LINGUAMATE_AI_CHAT_MODEL` 和 `LINGUAMATE_GNEWS_API_KEY` 环境变量。未配置模型时使用明确标识的本地练习与规则批改。
+
+## 前后端独立开发
+
+独立启动后端前，先配置所用数据库的 `DB_*` 环境变量，再在项目根目录执行：
 
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-默认访问地址：
-
-```text
-http://localhost:4040
-```
-
-演示账号：
-
-```text
-普通用户：student / student123
-管理员：admin / admin123
-```
-
-## 前端开发
-
-前端源码位于 `frontend/`，生产构建输出到 `src/main/resources/static`，由 Spring Boot 统一托管。
+前端在 `frontend/` 执行：
 
 ```powershell
-cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-构建静态资源（修改前端后必须重新构建）：
+`frontend/vite.config.js` 将 `/api` 代理到后端。前端配置示例见 `frontend/.env.example`。生产构建执行 `npm run build`，输出仅在 `frontend/dist/`，可由独立 Web 服务托管。本地预览构建产物可执行 `npm run preview`，该预览也配置了 API 代理。
 
-```powershell
-cd frontend
-npm run build
-cd ..
-```
-
-也可以通过 Maven profile 构建前端并打包：
-
-```powershell
-.\mvnw.cmd -Pfrontend-build package
-```
+后端 Maven 独立打包，仅包含 Java API 与数据库、词典等后端资源。前端功能模块位于 `frontend/src/features/`，管理工作台也按六个功能区域分组。架构审查与边界见 [架构审查](docs/ARCHITECTURE_REVIEW.md)。
 
 ## Docker 运行
 
 ```powershell
-$env:DB_PASSWORD="your-local-password"
+$env:DB_PASSWORD="your-database-password"
 docker compose up --build
 ```
 
-Docker 场景下数据库初始化脚本由容器处理，应用侧 SQL 初始化可通过 `DB_INIT_MODE` 控制。当前 Dockerfile 使用仓库中的静态资源，修改前端后应先运行 `npm run build`，再重建镜像。
+Compose 分别构建前端 Nginx 与 Java API 镜像，连同 MySQL、Redis 一起启动。网页访问 `http://localhost:5173`。Nginx 将 `/api` 转发给后端，并为前端路由提供刷新回退。部署配置见 [部署说明](docs/DEPLOYMENT.md)。
 
 ## 测试
 
@@ -229,11 +204,10 @@ src/main/java/com/example/javabigwork
   config/       数据源、MyBatis、Web、AI、RAG、迁移配置
   dictionary/   本地/在线查词与翻译支持
   knowledge/    知识文档、切块、关键词检索
-  mission/      每日主题、情境作答、提示与复盘
+  mission/      旧版专题服务，默认停用
   news/         阅读文章、阅读记录、推荐、悬停查词
   report/       学习报告汇总
   tool/         Agent 工具调用
-  ui/           页面路由
   vocabulary/   词库、闯关、收藏、进度、复习计划
   writing/      作文提交、评分、反馈、AI 批改
 
@@ -247,6 +221,6 @@ scripts/        工具脚本
 - [部署说明](docs/DEPLOYMENT.md)
 - [项目架构](docs/PROJECT_ARCHITECTURE.md)
 - [学习工作区说明](docs/LEARNING_WORKSPACE.md)
-- [每日主题与成长证据](docs/DAILY_MISSIONS.md)
+- [旧版专题任务与成长证据设计](docs/DAILY_MISSIONS.md)
 - [Spring AI 与 RAG 说明](docs/SPRING_AI_AND_RAG_NOTES.md)
 - [测试报告](docs/TEST_REPORT.md)

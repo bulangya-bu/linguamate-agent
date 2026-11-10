@@ -352,16 +352,39 @@
   letter-spacing: -1px;
   margin: 0;
 }
-.settings-close,
-.wordbank-dialog-close {
+.panel-close {
   display: grid;
-  width: 32px;
-  height: 32px;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   place-items: center;
   border: 1px solid var(--line);
-  border-radius: 50%;
-  color: #6f7f8f;
-  font-size: 22px;
+  border-radius: 10px;
+  color: color-mix(in srgb, var(--muted) 70%, var(--ink));
+  background: color-mix(in srgb, var(--surface), var(--blue-ink) 5%);
+}
+.panel-close > svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+.panel-close:hover:not(:disabled) {
+  color: var(--blue-ink);
+  border-color: color-mix(in srgb, var(--line), var(--blue-ink) 26%);
+  background: color-mix(in srgb, var(--surface), var(--blue-ink) 12%);
+}
+.panel-close:focus-visible {
+  outline: 2px solid var(--blue-ink);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-close {
+    transition: none;
+  }
+  .panel-close:active:not(:disabled) {
+    transform: none;
+  }
 }
 .settings-note {
   margin-bottom: 25px;

@@ -15,21 +15,8 @@
       @focusin="freeze"
     >
       <AuthAurora />
+      <AmbientBackground contained />
       <AppBrand to="/login" variant="auth" />
-      <div class="auth-story-copy">
-        <h1>
-          <span class="auth-title-line">A little.</span><br /><em
-            ><span class="auth-title-line auth-title-line--accent"
-              >Every day.</span
-            ><svg viewBox="0 0 440 25" fill="none" aria-hidden="true">
-              <path
-                pathLength="1"
-                d="M4 17C106 3 261 3 432 10M41 23C168 9 299 9 397 16"
-              /></svg
-          ></em>
-        </h1>
-        <p>每一次开口，每一个新词。<br />慢慢来，也能走很远。</p>
-      </div>
       <AuthGarden />
       <WordAtmosphere />
     </section>
@@ -46,14 +33,7 @@
           <div class="auth-entry-mark" aria-hidden="true">
             <AppIcon name="spark" /><span></span>
           </div>
-          <h2>{{ isLogin ? "欢迎回来" : "从这里开始" }}<span>。</span></h2>
-          <p>
-            {{
-              isLogin
-                ? "新的一天，和英语再近一点。"
-                : "让每一次小小的进步，都被记住。"
-            }}
-          </p>
+          <h2>{{ isLogin ? "账号登录" : "创建账号" }}</h2>
         </div>
         <div class="auth-mode-switch" aria-label="账号入口">
           <span class="auth-mode-indicator" aria-hidden="true"></span>
@@ -89,8 +69,7 @@
                     autocomplete="username"
                     :disabled="busy"
                     spellcheck="false"
-                    autocapitalize="none"
-                    placeholder="输入用户名" /></span
+                    autocapitalize="none" /></span
               ></label>
               <label class="auth-field"
                 ><span>密码</span
@@ -100,8 +79,7 @@
                     required
                     :type="showPassword ? 'text' : 'password'"
                     autocomplete="current-password"
-                    :disabled="busy"
-                    placeholder="输入密码" /><button
+                    :disabled="busy" /><button
                     type="button"
                     :disabled="busy"
                     :aria-label="showPassword ? '隐藏密码' : '显示密码'"
@@ -139,7 +117,7 @@
                     :disabled="busy"
                     spellcheck="false"
                     autocapitalize="none"
-                    placeholder="3–32 位，作为登录账号" /></span
+                    placeholder="3–32 位" /></span
               ></label>
               <label class="auth-field"
                 ><span>昵称<small>选填</small></span
@@ -147,8 +125,7 @@
                   ><AppIcon class="auth-field-icon" name="smile" /><input
                     v-model.trim="registerForm.nickname"
                     autocomplete="nickname"
-                    :disabled="busy"
-                    placeholder="希望我们怎么称呼你" /></span
+                    :disabled="busy" /></span
               ></label>
               <label class="auth-field"
                 ><span>密码</span
@@ -200,6 +177,7 @@ import { brandedPageTitle } from "@/brand";
 import ThemeToggle from "@/components/ThemeToggle.vue";
 import AuthGarden from "@/components/AuthGarden.vue";
 import AuthAurora from "@/components/AuthAurora.vue";
+import AmbientBackground from "@/components/AmbientBackground.vue";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import { useArtMotion } from "@/composables/useArtMotion";
 import { useAuthParallax } from "@/composables/useAuthParallax";

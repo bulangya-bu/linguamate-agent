@@ -101,9 +101,6 @@
         opacity=".5"
       />
     </svg>
-    <span class="module-art-hint"
-      >{{ example.note }}<span aria-hidden="true"> ↻</span></span
-    >
     <span class="sr-only" aria-live="polite"
       >表达示例：{{ example.before }}，换一种说法：{{
         example.after
@@ -119,10 +116,10 @@ const root = ref(null),
   index = ref(0);
 const { playing } = useArtMotion(root);
 const examples = [
-  { before: "very good", after: "remarkable", note: "让赞美更具体" },
-  { before: "I think", after: "I believe", note: "试试另一种开场" },
-  { before: "very important", after: "essential", note: "用一个词，说清重点" },
-  { before: "help people", after: "support others", note: "为表达换一个角度" },
+  { before: "very good", after: "remarkable" },
+  { before: "I think", after: "I believe" },
+  { before: "very important", after: "essential" },
+  { before: "help people", after: "support others" },
 ];
 const example = computed(() => examples[index.value]);
 </script>

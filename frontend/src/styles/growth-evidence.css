@@ -13,7 +13,17 @@
 .growth-evidence[open] {
   display: flex;
   flex-direction: column;
-  animation: mission-page-in 0.25s ease;
+  animation: growth-evidence-enter 0.25s ease;
+}
+@keyframes growth-evidence-enter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .growth-evidence::backdrop {
   background: #11283466;
@@ -31,21 +41,7 @@
   font-size: 23px;
   font-weight: 600;
   letter-spacing: -0.5px;
-  margin: 8px 0 0;
-}
-.growth-heading > button {
-  width: 35px;
-  height: 35px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--muted);
-}
-.growth-heading svg {
-  width: 18px;
-  height: 18px;
+  margin: 0;
 }
 .growth-tabs {
   display: flex;
@@ -205,11 +201,6 @@
   font-size: 12px;
   line-height: 1.7;
 }
-.growth-records summary > span {
-  float: right;
-  color: var(--muted);
-  font-size: 10px;
-}
 .growth-records details > p {
   font-size: 14px;
   line-height: 1.8;
@@ -227,50 +218,6 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   margin: 9px 0 16px;
-}
-.growth-mission h3 {
-  margin-top: 7px;
-}
-.growth-mission > header button {
-  font-size: 11px;
-  flex-shrink: 0;
-}
-.growth-mission-metrics {
-  display: flex;
-  gap: 18px;
-  font-size: 10px;
-  color: var(--muted);
-  margin: 15px 0 18px;
-}
-.growth-mission-turn {
-  padding: 17px 0 0;
-}
-.growth-reflection {
-  margin-top: 17px;
-  padding: 15px 19px;
-  background: var(--green-soft);
-  border-radius: 10px;
-}
-.growth-reflection > p {
-  font-size: 13px;
-  line-height: 1.8;
-  margin: 7px 0 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.growth-cross-link {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  padding: 20px 0;
-  color: var(--muted);
-  font-size: 11px;
-}
-.growth-cross-link > button {
-  color: var(--blue-ink);
-  background: transparent;
-  flex-shrink: 0;
 }
 .growth-state {
   flex: 1;
@@ -304,15 +251,11 @@
 .growth-evidence > footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 18px;
   border-top: 1px solid var(--line);
   padding: 16px 32px;
   flex-shrink: 0;
-}
-.growth-evidence > footer > span {
-  font-size: 10px;
-  color: var(--muted);
 }
 .growth-evidence > footer > button {
   display: flex;

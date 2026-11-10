@@ -5,10 +5,14 @@ import com.example.javabigwork.auth.AuthorizationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
@@ -45,17 +49,28 @@ public class GlobalExceptionHandler {
         return ApiResponse.fail(exception.getMessage());
     }
 
-    @ExceptionHandler(NoResourceFoundException.class)
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ApiResponse<Void> handleNoResource(NoResourceFoundException exception) {
-        log.warn("Resource not found: {}", exception.getResourcePath());
+    public ApiResponse<Void> handleNotFound(Exception exception) {
         return ApiResponse.fail("资源不存在");
+    }
+
+    @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<Void> handleInvalidRequest(Exception exception) {
+        return ApiResponse.fail("请求参数格式错误");
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
+    public ApiResponse<Void> handleUnsupportedMethod(HttpRequestMethodNotSupportedException exception) {
+        return ApiResponse.fail("请求方法不支持");
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<Void> handleException(Exception exception) {
         log.error("Unhandled exception", exception);
-        return ApiResponse.fail("服务暂时不可用：" + exception.getMessage());
+        return ApiResponse.fail("服务暂时不可用，请稍后再试");
     }
 }

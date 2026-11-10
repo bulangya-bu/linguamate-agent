@@ -6,9 +6,11 @@ import com.example.javabigwork.mission.service.MissionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
+@ConditionalOnProperty(name = "linguamate.missions.enabled", havingValue = "true")
 @RequestMapping("/api/missions")
 public class MissionController {
     private final MissionService missions;

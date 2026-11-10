@@ -1,3 +1,48 @@
+<script setup>
+import { computed, useTemplateRef, watch } from "vue";
+import AppIcon from "./AppIcon.vue";
+
+const props = defineProps({
+  word: { type: Object, required: true },
+  detail: { type: Object, default: null },
+  source: { type: String, default: "" },
+});
+const emit = defineEmits(["request", "close"]);
+const root = useTemplateRef("root");
+const content = useTemplateRef("content");
+const isBaseForm = (variant) =>
+  variant.form?.trim().toLowerCase() === props.word.word.trim().toLowerCase();
+const derivedForms = computed(
+  () =>
+    props.detail?.data?.variants?.filter((variant) => !isBaseForm(variant)) ||
+    [],
+);
+const hasContent = computed(
+  () =>
+    derivedForms.value.length ||
+    ["usageNotes", "examples", "collocations"].some(
+      (key) => props.detail?.data?.[key]?.length,
+    ),
+);
+
+let focusOnReady = false;
+function request(force) {
+  focusOnReady = root.value?.contains(document.activeElement);
+  emit("request", force);
+}
+watch(
+  () => props.detail?.status,
+  (status) => {
+    if (status !== "ready" || !focusOnReady) return;
+    focusOnReady = false;
+    if (document.activeElement === document.body) {
+      content.value?.focus({ preventScroll: true });
+    }
+  },
+  { flush: "post" },
+);
+</script>
+
 <template>
   <aside ref="root" class="quiz-insight" aria-label="单词深度解析">
     <header class="insight-heading">
@@ -9,35 +54,28 @@
         <span
           v-if="detail?.status === 'ready'"
           class="insight-source"
-          :title="source"
           >{{ source }}</span
         >
         <button
-          class="insight-close"
+          class="panel-close"
           type="button"
           aria-label="收起深度解析"
           @click="emit('close')"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            aria-hidden="true"
-          >
-            <path d="m6 6 12 12M18 6 6 18" />
-          </svg>
+          <AppIcon name="close" />
         </button>
       </div>
     </header>
-    <template v-if="detail?.status === 'ready'">
-      <section
-        ref="content"
-        class="insight-content"
-        tabindex="0"
-        aria-label="完整解析内容"
-      >
+    <section
+      ref="content"
+      class="insight-content"
+      tabindex="0"
+      aria-label="完整解析内容"
+    >
+      <slot name="summary">
         <div class="insight-word">{{ word.word }}</div>
+      </slot>
+      <template v-if="detail?.status === 'ready'">
         <section v-if="detail.data.usageNotes?.length" class="insight-section">
           <h3>用法</h3>
           <p
@@ -97,78 +135,33 @@
           </article>
         </section>
         <p v-if="!hasContent" class="insight-note">当前暂无补充内容。</p>
-      </section>
-    </template>
-    <div
-      v-else
-      class="insight-placeholder"
-      :aria-busy="detail?.status === 'loading'"
-    >
-      <template v-if="detail?.status === 'loading'">
-        <span class="quiz-ai-spinner" aria-hidden="true"></span>
-        <h3>正在解析 {{ word.word }}</h3>
-        <p>正在整理用法、搭配与例句</p>
       </template>
-      <template v-else-if="detail?.status === 'error'">
-        <AppIcon name="ai" />
-        <h3>解析暂时不可用</h3>
-        <p>{{ detail.message || "请稍后再试" }}</p>
-        <button class="settings-secondary" type="button" @click="request(true)">
-          重新生成
-        </button>
-      </template>
-      <template v-else>
-        <h3>探索 {{ word.word }}</h3>
+      <div
+        v-else
+        class="insight-placeholder"
+        :aria-busy="detail?.status === 'loading'"
+      >
+        <template v-if="detail?.status === 'loading'">
+          <span class="quiz-ai-spinner" aria-hidden="true"></span>
+          <h3>正在解析 {{ word.word }}</h3>
+        </template>
+        <template v-else-if="detail?.status === 'error'">
+          <AppIcon name="ai" />
+          <h3>解析暂时不可用</h3>
+          <p v-if="detail.message">{{ detail.message }}</p>
+          <button class="settings-secondary" type="button" @click="request(true)">
+            重新生成
+          </button>
+        </template>
         <button
+          v-else
           class="settings-secondary"
           type="button"
           @click="request(false)"
         >
           查看深度解析<AppIcon name="arrow" />
         </button>
-      </template>
-    </div>
+      </div>
+    </section>
   </aside>
 </template>
-
-<script setup>
-import { computed, nextTick, ref, watch } from "vue";
-import AppIcon from "./AppIcon.vue";
-const props = defineProps({
-  word: { type: Object, required: true },
-  detail: { type: Object, default: null },
-  source: { type: String, default: "" },
-});
-const emit = defineEmits(["request", "close"]);
-const root = ref(null);
-const content = ref(null);
-const isBaseForm = (variant) =>
-  variant.form?.trim().toLowerCase() === props.word.word.trim().toLowerCase();
-const derivedForms = computed(
-  () =>
-    props.detail?.data?.variants?.filter((variant) => !isBaseForm(variant)) ||
-    [],
-);
-let focusOnReady = false;
-function request(force) {
-  focusOnReady = root.value?.contains(document.activeElement);
-  emit("request", force);
-}
-const hasContent = computed(
-  () =>
-    derivedForms.value.length ||
-    ["usageNotes", "examples", "collocations"].some(
-      (key) => props.detail?.data?.[key]?.length,
-    ),
-);
-watch(
-  () => props.detail?.status,
-  async (status) => {
-    if (status === "ready" && focusOnReady) {
-      await nextTick();
-      content.value?.focus({ preventScroll: true });
-      focusOnReady = false;
-    }
-  },
-);
-</script>

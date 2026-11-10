@@ -116,17 +116,6 @@
         <g class="book-page-copy">
           <text
             x="178"
-            y="181"
-            transform="rotate(13 178 181)"
-            fill="var(--studio-print, #a6c8d4)"
-            font-family="Georgia,serif"
-            font-size="11"
-            letter-spacing="2"
-          >
-            WORD {{ String(page).padStart(2, "0") }}
-          </text>
-          <text
-            x="178"
             y="216"
             text-anchor="middle"
             transform="rotate(13 178 216)"
@@ -139,16 +128,6 @@
             {{ word.en }}
           </text>
           <g transform="rotate(-12 365 204)">
-            <text
-              x="365"
-              y="181"
-              text-anchor="middle"
-              fill="var(--studio-print, #a6c8d4)"
-              font-size="11"
-              letter-spacing="2"
-            >
-              MEANING
-            </text>
             <text
               x="365"
               y="212"
@@ -200,9 +179,6 @@
         opacity=".65"
       />
     </svg>
-    <span class="studio-book-hint"
-      >点击翻页<span aria-hidden="true"> ↗</span></span
-    >
     <span class="art-sr-only" aria-live="polite">{{ announcement }}</span>
   </button>
 </template>
@@ -319,21 +295,6 @@ onBeforeUnmount(() => timers.forEach(clearTimeout));
 }
 .book-spark-small {
   animation-delay: -1.4s;
-}
-.studio-book-hint {
-  position: absolute;
-  bottom: 9%;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--muted);
-  font-size: 11px;
-  opacity: 0.65;
-  white-space: nowrap;
-  transition: opacity 180ms;
-}
-.studio-book:hover .studio-book-hint,
-.studio-book:focus-visible .studio-book-hint {
-  opacity: 1;
 }
 .studio-book:hover .art-loop,
 .studio-book:focus-visible .art-loop,

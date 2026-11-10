@@ -155,6 +155,7 @@ CREATE TABLE IF NOT EXISTS reading_record (
     read_progress INT,
     looked_up_words INT,
     finished BOOLEAN,
+    finished_at DATETIME,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     UNIQUE KEY uk_reading_record_user_article (user_id, article_id)

@@ -60,10 +60,7 @@ public class AuthService implements ApplicationRunner {
         user.createdAt = LocalDateTime.now();
         user.updatedAt = LocalDateTime.now();
         userMapper.insert(user);
-        servletRequest.getSession(true).setAttribute(SESSION_USER_ID, user.id);
-        loginActivity.recordVisit(user.id, servletRequest.getSession());
-        cacheSessionUser(user);
-        return AuthUserView.from(user);
+        return startSession(user, servletRequest);
     }
 
     public AuthUserView login(LoginRequest request, HttpServletRequest servletRequest) {
@@ -74,8 +71,14 @@ public class AuthService implements ApplicationRunner {
         if (DISABLED.equals(user.status)) {
             throw new AuthorizationException("账号已被禁用");
         }
-        servletRequest.getSession(true).setAttribute(SESSION_USER_ID, user.id);
-        loginActivity.recordVisit(user.id, servletRequest.getSession());
+        return startSession(user, servletRequest);
+    }
+
+    private AuthUserView startSession(UserAccount user, HttpServletRequest request) {
+        HttpSession session = request.getSession(true);
+        request.changeSessionId();
+        session.setAttribute(SESSION_USER_ID, user.id);
+        loginActivity.recordVisit(user.id, session);
         cacheSessionUser(user);
         return AuthUserView.from(user);
     }
