@@ -1,227 +1,238 @@
 # 语伴智学（LinguaMate）
 
-**基于 AI Agent 的个性化英语学习平台**
+**把英语词汇、对话、阅读和写作放进同一个学习工作区。**
 
-作者：庄鹏桦 · 作品方向：智慧教育与科普创作 · 当前面向电脑网页端
+作者 · 庄鹏桦｜作品方向 · 智慧教育与科普创作｜使用端 · 桌面网页
 
-语伴智学将英语阅读、词汇练习、AI 对话、写作修改和个人成长记录放在同一套学习工作区中。
+语伴智学是一套基于 AI Agent 的个性化英语学习平台。学习者可以从首页任选一项任务开始，在例句中练词，围绕文章和 AI 对话，或者提交自己的英文作文。练习会留下可回看的记录，方便下次接着学，也能看到自己曾经答错的词、调整过的表达和提交过的文章版本。
 
-## 项目亮点
+[功能速览](#功能速览) · [页面展示](#页面展示) · [AI 如何参与学习](#ai-如何参与学习) · [快速启动](#快速启动) · [开发与测试](#开发与测试)
 
-- **学习概览**：今日待办根据实际学习记录更新，可任选任务开始。「下一步」按顺序推荐尚未完成的任务，首页也展示今日单词和近七天学习足迹。
-- **AI 对话教练**：日常交流、考试口语、商务表达、阅读讨论四个入口，围绕会话上下文提供原句反馈、可复用短语和下一轮挑战。
-- **个性化学习助手**：结合当前账号的今日进度和优先巩固词回答学习问题，说明推荐依据，并承接练习时长等连续追问。
-- **单词练习与复习**：内置 CET-4、CET-6、考研、雅思词库，支持新词专项练习。作答后在底栏查看反馈，按需展开完整释义、例句译文和深度解析。到期词与错词分别复习。
-- **阅读空间**：难度和主题筛选、即时查词与词形还原、句子聚焦、全文翻译，遇到的词可以加入待复习，当前文章可以带入 AI 讨论。
-- **写作工坊**：四维参考评分、逐句批注和润色对照，支持学习者主动改写并再次提交，分别保留原稿与 AI 参考。
-- **词库与成长档案**：统一管理收藏词、错词、待复习和掌握状态，以手绘成长树、活动图表与日历回看记录，并打开原始作答与改写证据。
-- **Agent 与轻量 RAG**：保留 Observe、Think、Act、Answer 执行记录，对知识分块进行关键词检索，并在回答中使用相关材料。
-- **管理与模型接入**：后台维护用户、词库、知识文档及阅读材料。学习者与管理员使用各自的 OpenAI-compatible 模型配置，在线失败时明确降级。
+![学习概览，左侧显示下一步建议，右侧是今日待办，下方排列今日单词和学习足迹](docs/images/current/dashboard.png)
+
+## 功能速览
+
+| 模块 | 可以做什么 |
+| --- | --- |
+| **学习概览** | 从到期复习、新词、对话、写作和阅读中任选一项。完成情况根据实际学习记录更新。「下一步」按顺序提示尚未完成的任务，下方显示今日单词和最近七天的学习足迹。 |
+| **单词练习** | 从 CET-4、CET-6、考研、雅思词库或智能混合题组练习。在例句里选释义，作答后查看正误、例句译文和完整词义，并可收藏单词或打开深度解析。 |
+| **温故知新** | 按「今日到期」或「错词强化」进入复习。在例句中回忆英文拼写和中文释义，检查两项结果，再继续下一题。 |
+| **AI 对话教练** | 选择日常交流、考试口语、商务表达或阅读讨论。按轮查看原句反馈、参考表达和可复用短语。配置可用模型后可按需展开 AI 回复的中文译文。 |
+| **学习助手** | 询问短时间内该练什么，或追问某个词和用法。助手可结合当天进度与优先巩固词给出建议，并提供对应的练习入口。 |
+| **阅读空间** | 按难度和主题找文章，聚焦句子、查询词义、查看翻译。遇到的生词可以加入复习，正在读的文章可以带入 AI 讨论。 |
+| **写作工坊** | 提交英文作文，查看语法、词汇、结构和逻辑四项参考评分，以及逐句建议和参考稿。自己修改后可再次提交并回看版本差异。 |
+| **我的词库** | 查看收藏、待复习、错词与掌握进度，按需要回看单词释义、例句和相关练习。 |
+| **学习档案** | 查看近 7 天或 30 天的词汇趋势、可切换月份的学习日历，以及词汇、对话、写作和阅读的累计成果。 |
+| **成长证据** | 逐条回看词汇作答、对话原句与参考表达、写作修订和阅读记录。词汇分别显示拼写与释义，写作高亮本人修改的内容，阅读记录可打开原文。 |
+| **管理后台** | 维护用户、词库、知识文档与阅读材料。在独立的模型配置入口检查管理端的连接情况。 |
 
 ## 页面展示
 
-以下图片来自早期版本的桌面演示账号。统计数字用于展示功能，模型无法使用时，界面会标注本地练习或本地规则批改。
+截图来自当前版本的桌面界面。对话、评分和学习统计使用演示数据。点击图片可查看原图。
 
 <details>
-<summary>登录与黑夜模式</summary>
+<summary><strong>登录与工作区</strong></summary>
 
-### 登录入口
+### 登录
 
-统一中英文品牌，保留交互单词与动态背景。
+登录和创建账号共用一套界面，注册表单会核对两次密码输入。
 
-![语伴智学登录页](docs/images/login.png)
+![语伴智学登录页与动态背景](docs/images/current/login.png)
 
 ### 黑夜模式
 
-![语伴智学黑夜学习工作区](docs/images/dashboard-dark.png)
+学习工作区提供亮暗主题，可从顶部切换。
+
+![黑夜模式下的学习概览](docs/images/current/dashboard-dark.png)
 
 </details>
 
-<details>
-<summary>AI 对话教练与个人学习助手</summary>
-
-### AI 对话练习
-
-对话与本轮反馈并列呈现，原句、修改理由、短语和下一轮挑战可以分别查看。
-
-![语伴智学 AI 对话与逐轮反馈](docs/images/chat.png)
-
-### 学习助手
-
-依据当前账号的学习记录提供建议，继续追问可以限定练习时长。
-
-![语伴智学学习助手的五分钟练习建议](docs/images/assistant.png)
-
-</details>
-
-<details>
-<summary>单词练习、复习、阅读与我的词库</summary>
+<details open>
+<summary><strong>词汇练习与复习</strong></summary>
 
 ### 单词练习
 
-![单词作答后的词性释义、例句与反馈](docs/images/vocabulary.png)
+在例句中判断目标词义，底栏集中显示答题反馈、深度解析和下一题入口。
+
+![单词练习的笔记本题面、释义选项和作答反馈](docs/images/current/vocabulary.png)
 
 ### 温故知新
 
-![今日到期与错词强化复习](docs/images/review.png)
+在例句中填空，分别回忆拼写和释义。
 
-### 阅读空间
-
-![阅读正文、句子聚焦与即时查词](docs/images/reading.png)
+![温故知新的到期复习、错词强化和例句填空](docs/images/current/review.png)
 
 ### 我的词库
 
-![收藏词、错词、待复习与掌握状态](docs/images/wordbank.png)
+集中查看收藏单词和复习状态，可进入单词详情。
+
+![我的词库中的分类、释义和学习状态](docs/images/current/wordbank.png)
 
 </details>
 
-<details>
-<summary>写作、成长证据与管理后台</summary>
+<details open>
+<summary><strong>对话、写作与阅读</strong></summary>
+
+### AI 对话
+
+对话和反馈并列，回看某一轮时可以查看参考表达和修改原因。
+
+![AI 对话教练的消息与本轮反馈](docs/images/current/chat.png)
+
+### 学习助手
+
+可以直接问「只有五分钟，先练什么」，结合复习进度进入对应的练习。
+
+![学习助手结合学习进度给出的练习建议](docs/images/current/assistant.png)
 
 ### 写作工坊
 
-![校园迎新主题的英文原稿编辑](docs/images/writing.png)
+提交英文习作后，可以在同一页面查看批改反馈和参考表达。
 
-### 学习档案
+![写作工坊的英文作文与反馈区](docs/images/current/writing.png)
 
-![手绘成长树、学习趋势与活动日历](docs/images/growth.png)
+### 阅读空间
 
-### 成长证据
+在文章内查看原文、查词和学习进度。
 
-![学习者作文原稿与再次提交的对照记录](docs/images/growth-evidence.png)
-
-### 管理后台
-
-![管理后台：学习记录概览、手绘趋势图与内容资产](docs/images/admin.png)
-
-![管理后台：知识文档维护](docs/images/admin-knowledge.png)
+![阅读空间的英文文章及阅读工具](docs/images/current/reading.png)
 
 </details>
 
-## 技术栈
+<details open>
+<summary><strong>学习档案与成长证据</strong></summary>
 
-- Java 17
-- Spring Boot 3.5.3
-- Maven Wrapper
-- MyBatis-Plus 3.5.7
-- MySQL 8 兼容数据库
-- Spring AI 依赖与自定义 OpenAI-compatible REST client
-- Vue 3、Vite、Element Plus、Rough.js 手绘图表
-- 前后端独立运行：Vue/Vite 前端与 Spring Boot API，浏览器通过前端代理访问后端
+### 学习档案
+
+趋势、月度日历和学习成果集中展示。点击日期可查看当天记录，左右箭头可切换月份。
+
+![学习档案的词汇趋势、四类学习成果和月度日历](docs/images/current/growth.png)
+
+### 成长证据
+
+左侧浏览近期记录，右侧对照具体答案、表达或提交版本。
+
+![成长证据的词汇、对话、写作、阅读书签以及记录详情](docs/images/current/growth-evidence.png)
+
+</details>
+
+[截图索引与历史版本](docs/images/README.md)
+
+## AI 如何参与学习
+
+- **对话** · 以「日常交流」为例，学习者用英语回答，教练根据本轮原句给出更自然的参考说法、解释改动，并提供下一轮可以尝试的表达。消息的中文译文按需展开。
+- **写作** · 批改会保留提交原稿、修改建议和参考稿。学习者自行修订并再次提交后，才形成自己的新版本。在同一评分设置下，可查看两次评分的变化。
+- **学习助手** · 根据问题、近期对话、今日学习进度和薄弱词组织建议。需要回看依据时，可查看 Agent 的 Observe、Think、Act、Answer 执行记录。
+- **知识检索** · 后端将知识文档切分为片段，再按照问题里的关键词召回相关内容，连同必要的学习上下文一起提供给模型。实现细节见 [Spring AI 与 RAG 说明](docs/SPRING_AI_AND_RAG_NOTES.md)。
+- **本地可用性** · 注册登录、词库、复习、学习记录和内置文章使用本地服务。在线模型不可用时，对话练习和写作批改提供带明确标记的本地反馈。评分为练习参考。
 
 ## 快速启动
 
-需要 Java 17+、Node.js 20.19+ 或 22.12+、MySQL 8 兼容数据库。
+### Windows 一键启动
 
-在 Windows 项目根目录执行，也可以双击：
-
-```powershell
-.\start.cmd
-```
-
-脚本检查环境、安装锁定的前端依赖、按后端源码变化构建 JAR，启动数据库、后端和 Vite，并在就绪后打开浏览器。首次构建需要联网下载依赖。
-
-- 本机网页入口：`http://127.0.0.1:5173`
-- 同一局域网的设备使用 CMD 中显示的 `LAN` 地址和网页端口。Windows 防火墙需允许当前子网入站访问该网页端口。
-- 本机后端 API：`http://127.0.0.1:4040/api`。网页的 `/api` 请求由前端转发。
-- 后端就绪检查：`http://127.0.0.1:4040/actuator/health/readiness`
-- 学生账号：`student / student123`
-- 管理员账号：`admin`。首次创建或更换旧的默认管理员密码时，在启动后端前通过环境变量 `LINGUAMATE_ADMIN_BOOTSTRAP_PASSWORD` 提供新密码（12–64 位）。后续启动保留已设置的密码。
-
-停止前后端：
+要求 Java 17+、Node.js 20.19+ 或 22.12+、MySQL 8。首次构建需联网下载依赖。
 
 ```powershell
-.\stop.cmd
+git clone https://github.com/bulangya-bu/linguamate-agent.git
+cd linguamate-agent
 ```
 
-MySQL 独立保存数据。脚本的进程记录、日志、构建指纹和个人配置位于 Git 忽略的 `.runtime/`。后端源码或前端依赖更新后，执行 `stop.cmd` 再执行 `start.cmd`。前端页面修改通过 Vite 自动更新。
-
-### 数据库与端口
-
-本机已有的 Windows 加密 MySQL 配置可以直接复用。换到一台已安装 MySQL 8 的 Windows 电脑时，可初始化专属的本地数据库实例：
+如果这台电脑已有可用数据库，可预先设置 `DB_URL`、`DB_USER` 和 `DB_PASSWORD`。如果已安装 MySQL 8 且需要初始化项目专用实例，先执行下面的命令，后续可复用本机加密凭据。
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local-db.ps1
 ```
 
-专属数据库默认监听 `127.0.0.1:34061`，持久化数据与加密凭据存放于 `%LOCALAPPDATA%\LinguaMate`。也可以使用已有数据库，在执行启动脚本前设置 `DB_URL`、`DB_USER` 和 `DB_PASSWORD`。数据库地址应包含完整 JDBC 参数，示例见 `scripts/local.config.example.ps1`。
+```powershell
+.\start.cmd
+```
 
-可复制配置示例到 `.runtime/config.ps1`，设置后端 `SERVER_PORT`、前端 `FRONTEND_PORT` 或数据库连接。若只需本机访问，可设置 `$env:FRONTEND_HOST = '127.0.0.1'`。真实密钥应从环境变量或本机加密凭据加载。
+1. 浏览器打开 [本机学习入口](http://127.0.0.1:5173) 后，点击「创建账号」注册，或使用本地演示学生账号 `student / student123`。
+2. 想使用在线反馈时，在左下角「模型配置」填写 OpenAI 兼容接口地址、密钥和模型名称，再进行连接测试。
+3. 回到「学习概览」，任选一项开始。完成后可到「学习档案」查看活动或原始记录。
 
-### AI 配置
+脚本默认将网页运行在 `5173`、API 运行在本机 `4040`。同一局域网的设备可使用 CMD 显示的 `LAN` 地址访问网页。只在本机使用时，可按 [本地配置示例](scripts/local.config.example.ps1) 设置 `FRONTEND_HOST=127.0.0.1`。在首次创建管理员账号时，通过后端环境变量 `LINGUAMATE_ADMIN_BOOTSTRAP_PASSWORD` 提供 12–64 位新密码。
 
-登录后在「模型配置」中设置兼容接口地址、密钥与模型，按账号保存。也支持 `LINGUAMATE_AI_BASE_URL`、`LINGUAMATE_AI_API_KEY`、`LINGUAMATE_AI_CHAT_MODEL` 和 `LINGUAMATE_GNEWS_API_KEY` 环境变量。未配置模型时使用明确标识的本地练习与规则批改。
+```powershell
+.\stop.cmd
+```
 
-## 前后端独立开发
+停止脚本关闭前端和 API。MySQL 独立保存数据，本机配置信息与运行日志位于 Git 忽略的目录。
 
-独立启动后端前，先配置所用数据库的 `DB_*` 环境变量，再在项目根目录执行：
+### Docker Compose
+
+在支持 Docker Compose 的终端运行。以下命令以 PowerShell 为例，请使用自己的数据库密码。
+
+```powershell
+$env:DB_PASSWORD = '<你的数据库密码>'
+docker compose up -d --build
+```
+
+Compose 启动前端 Nginx、Spring Boot API、MySQL 与 Redis。网页默认在 [5173 端口](http://localhost:5173)。端口、跨域、模型与部署配置见 [部署说明](docs/DEPLOYMENT.md)。
+
+## 开发与测试
+
+### 架构
+
+```text
+浏览器
+  └─ Vue 3 / Vite（开发）或 Nginx（Docker）
+      └─ /api → Spring Boot
+          ├─ 账号、词汇、阅读、写作与学习档案 → MySQL
+          ├─ 学习 Agent 与轻量知识检索
+          └─ 可选 OpenAI 兼容模型与 Redis 缓存
+```
+
+前端使用 Vue 3、Element Plus 与 Rough.js。后端使用 Java 17、Spring Boot 3.5.3、MyBatis-Plus 和 Maven Wrapper。浏览器经同源代理请求 API，前后端可独立启动、构建和部署。
+
+### 分开启动
+
+先设置后端所用数据库的环境变量。在项目根目录启动 API。
 
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-前端在 `frontend/` 执行：
+另开一个终端，在项目根目录执行。
 
 ```powershell
+cd frontend
 npm ci
 npm run dev
 ```
 
-`frontend/vite.config.js` 将 `/api` 代理到后端。前端配置示例见 `frontend/.env.example`。生产构建执行 `npm run build`，输出仅在 `frontend/dist/`，可由独立 Web 服务托管。本地预览构建产物可执行 `npm run preview`，该预览也配置了 API 代理。
+Vite 默认把 `/api` 代理到 `http://127.0.0.1:4040`。需要不同上游地址时，参考 [前端配置示例](frontend/.env.example)。
 
-后端 Maven 独立打包，仅包含 Java API 与数据库、词典等后端资源。前端功能模块位于 `frontend/src/features/`，管理工作台也按六个功能区域分组。架构审查与边界见 [架构审查](docs/ARCHITECTURE_REVIEW.md)。
+### 测试与构建
 
-## Docker 运行
-
-```powershell
-$env:DB_PASSWORD="your-database-password"
-docker compose up --build
-```
-
-Compose 分别构建前端 Nginx 与 Java API 镜像，连同 MySQL、Redis 一起启动。网页访问 `http://localhost:5173`。Nginx 将 `/api` 转发给后端，并为前端路由提供刷新回退。部署配置见 [部署说明](docs/DEPLOYMENT.md)。
-
-## 测试
+在根目录用隔离的测试数据库配置运行后端测试。MockMvc 集成测试不需要真实模型密钥。
 
 ```powershell
 .\mvnw.cmd test
-cd frontend
+.\mvnw.cmd package
+```
+
+在 `frontend/` 目录运行前端测试和构建。构建产物输出到 `frontend/dist/`，可用 `npm run preview` 本地查看。
+
+```powershell
 npm test
 npm run build
-cd ..
 ```
 
-集成测试使用 MockMvc，并把模型接口指向不可用地址，用来验证本地 fallback 行为，不需要真实模型密钥。
+### 目录
 
-## 项目结构
+| 路径 | 用途 |
+| --- | --- |
+| [frontend/src](frontend/src) | Vue 页面、组件、前端业务模块与 API 客户端 |
+| [src/main/java/com/example/javabigwork](src/main/java/com/example/javabigwork) | Spring Boot API、Agent、鉴权、词汇、写作、阅读、报表及后台管理 |
+| [src/main/resources](src/main/resources) | 数据库结构、内置数据、词库与应用配置 |
+| [src/test](src/test) | 后端单元测试及 MockMvc 集成测试 |
+| [scripts](scripts) | Windows 启停、数据库初始化与本地配置 |
+| [docs](docs) | 部署、架构、学习工作区、测试说明和页面截图 |
 
-```text
-src/main/java/com/example/javabigwork
-  admin/        管理后台 API 与聚合服务
-  agent/        Agent 编排、提示词、轨迹记录、记忆
-  ai/           OpenAI 兼容配置、DTO、持久化、REST client
-  auth/         登录注册、会话鉴权、角色与当前用户上下文
-  chat/         对话 API、消息与会话持久化
-  common/       ApiResponse、PageResponse、异常处理
-  config/       数据源、MyBatis、Web、AI、RAG、迁移配置
-  dictionary/   本地/在线查词与翻译支持
-  knowledge/    知识文档、切块、关键词检索
-  mission/      旧版专题服务，默认停用
-  news/         阅读文章、阅读记录、推荐、悬停查词
-  report/       学习报告汇总
-  tool/         Agent 工具调用
-  vocabulary/   词库、闯关、收藏、进度、复习计划
-  writing/      作文提交、评分、反馈、AI 批改
+## 进一步阅读
 
-frontend/       Vue 3 + Vite 前端工程
-docs/           架构、部署、RAG 和测试文档
-scripts/        工具脚本
-```
-
-## 文档
-
-- [部署说明](docs/DEPLOYMENT.md)
 - [项目架构](docs/PROJECT_ARCHITECTURE.md)
 - [学习工作区说明](docs/LEARNING_WORKSPACE.md)
-- [旧版专题任务与成长证据设计](docs/DAILY_MISSIONS.md)
-- [Spring AI 与 RAG 说明](docs/SPRING_AI_AND_RAG_NOTES.md)
+- [架构审查](docs/ARCHITECTURE_REVIEW.md)
 - [测试报告](docs/TEST_REPORT.md)
