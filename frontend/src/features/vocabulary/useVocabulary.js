@@ -24,13 +24,12 @@ export function useVocabulary({ route, router, activeSection, loadReport }) {
     wordDetails: {},
     reviewMode: "today",
     reviewWords: [],
-    reviewIndex: 0,
     reviewTotal: 0,
     reviewMistakes: 0,
     reviewForm: { spellingAnswer: "", meaningAnswer: "" },
     reviewBusy: false,
+    reviewLoading: false,
     lastReviewResult: null,
-    reviewPendingResult: false,
     reviewCompleted: false,
     wordBank: {
       scope: "all",
@@ -107,9 +106,7 @@ export function useVocabulary({ route, router, activeSection, loadReport }) {
     ),
   );
 
-  const currentReviewWord = computed(
-    () => state.reviewWords[state.reviewIndex],
-  );
+  const currentReviewWord = computed(() => state.reviewWords[0]);
 
   const selectedWordDetail = computed(() =>
     state.selectedWord ? state.wordDetails[state.selectedWord.id] : null,
@@ -458,28 +455,43 @@ export function useVocabulary({ route, router, activeSection, loadReport }) {
   }
 
   async function setReviewMode(mode) {
-    if (state.reviewBusy || mode === state.reviewMode) return;
-    state.reviewMode = mode;
-    await loadReviews();
+    if (state.reviewBusy || state.reviewLoading || mode === state.reviewMode) return;
+    try {
+      await loadReviews(mode);
+    } catch (error) {
+      ElMessage.error(error.message || "加载复习题失败，请重试");
+    }
   }
 
-  async function loadReviews() {
-    state.reviewWords = await learningApi.reviews(state.reviewMode, 8);
-    state.reviewIndex = 0;
-    state.reviewTotal = state.reviewWords.length;
-    state.reviewMistakes = 0;
-    state.lastReviewResult = null;
-    state.reviewPendingResult = false;
-    state.reviewCompleted = false;
-    state.reviewForm.spellingAnswer = "";
-    state.reviewForm.meaningAnswer = "";
+  let reviewLoadRequest = 0;
+
+  async function loadReviews(mode = state.reviewMode) {
+    if (state.reviewBusy) return;
+    const request = ++reviewLoadRequest;
+    state.reviewLoading = true;
+    try {
+      const words = await learningApi.reviews(mode, 8);
+      if (request !== reviewLoadRequest) return;
+      state.reviewMode = mode;
+      state.reviewWords = words;
+      state.reviewTotal = words.length;
+      state.reviewMistakes = 0;
+      state.lastReviewResult = null;
+      state.reviewCompleted = false;
+      state.reviewForm.spellingAnswer = "";
+      state.reviewForm.meaningAnswer = "";
+    } finally {
+      if (request === reviewLoadRequest) state.reviewLoading = false;
+    }
   }
 
   async function submitReview() {
+    const word = state.reviewWords[0];
     if (
-      !currentReviewWord.value ||
+      !word ||
       state.reviewBusy ||
-      state.reviewPendingResult
+      state.reviewLoading ||
+      state.lastReviewResult
     )
       return;
     if (!state.reviewForm.spellingAnswer || !state.reviewForm.meaningAnswer) {
@@ -489,31 +501,27 @@ export function useVocabulary({ route, router, activeSection, loadReport }) {
     state.reviewBusy = true;
     try {
       state.lastReviewResult = await learningApi.submitReview(
-        currentReviewWord.value.id,
+        word.id,
         { ...state.reviewForm },
       );
-      applyWordProgress(currentReviewWord.value.id, state.lastReviewResult);
+      applyWordProgress(word.id, state.lastReviewResult);
       if (!state.lastReviewResult.correct) state.reviewMistakes++;
-      state.reviewPendingResult = true;
       await loadReport();
     } catch (error) {
-      ElMessage.error(error.message || "提交失败，答案已保留，请重试");
+      if (!state.lastReviewResult) {
+        ElMessage.error(error.message || "检查失败，答案已保留，请重试");
+      }
     } finally {
       state.reviewBusy = false;
     }
   }
 
   function advanceReview() {
-    if (!currentReviewWord.value || !state.reviewPendingResult) return;
-    if (state.lastReviewResult?.correct) {
-      state.reviewWords.splice(state.reviewIndex, 1);
-    } else {
-      const [word] = state.reviewWords.splice(state.reviewIndex, 1);
-      if (word) state.reviewWords.push(word);
-    }
-    state.reviewIndex = 0;
+    if (state.reviewBusy || state.reviewLoading) return;
+    if (!state.reviewWords.length || !state.lastReviewResult) return;
+    const word = state.reviewWords.shift();
+    if (!state.lastReviewResult.correct) state.reviewWords.push(word);
     state.lastReviewResult = null;
-    state.reviewPendingResult = false;
     state.reviewForm.spellingAnswer = "";
     state.reviewForm.meaningAnswer = "";
     if (!state.reviewWords.length) {

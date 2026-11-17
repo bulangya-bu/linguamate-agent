@@ -121,11 +121,12 @@
 
 脚本检查环境、安装锁定的前端依赖、按后端源码变化构建 JAR，启动数据库、后端和 Vite，并在就绪后打开浏览器。首次构建需要联网下载依赖。
 
-- 网页入口：`http://127.0.0.1:5173`
-- 后端 API：`http://127.0.0.1:4040/api`
+- 本机网页入口：`http://127.0.0.1:5173`
+- 同一局域网的设备使用 CMD 中显示的 `LAN` 地址和网页端口。Windows 防火墙需允许当前子网入站访问该网页端口。
+- 本机后端 API：`http://127.0.0.1:4040/api`。网页的 `/api` 请求由前端转发。
 - 后端就绪检查：`http://127.0.0.1:4040/actuator/health/readiness`
 - 学生账号：`student / student123`
-- 管理员账号：`admin / admin123`
+- 管理员账号：`admin`。首次创建或更换旧的默认管理员密码时，在启动后端前通过环境变量 `LINGUAMATE_ADMIN_BOOTSTRAP_PASSWORD` 提供新密码（12–64 位）。后续启动保留已设置的密码。
 
 停止前后端：
 
@@ -145,7 +146,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-local-db.p
 
 专属数据库默认监听 `127.0.0.1:34061`，持久化数据与加密凭据存放于 `%LOCALAPPDATA%\LinguaMate`。也可以使用已有数据库，在执行启动脚本前设置 `DB_URL`、`DB_USER` 和 `DB_PASSWORD`。数据库地址应包含完整 JDBC 参数，示例见 `scripts/local.config.example.ps1`。
 
-可复制配置示例到 `.runtime/config.ps1`，设置后端 `SERVER_PORT`、前端 `FRONTEND_PORT` 或数据库连接。真实密钥应从环境变量或本机加密凭据加载。
+可复制配置示例到 `.runtime/config.ps1`，设置后端 `SERVER_PORT`、前端 `FRONTEND_PORT` 或数据库连接。若只需本机访问，可设置 `$env:FRONTEND_HOST = '127.0.0.1'`。真实密钥应从环境变量或本机加密凭据加载。
 
 ### AI 配置
 

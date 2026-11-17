@@ -193,18 +193,6 @@
     opacity: 0.9;
     transform: scaleX(1);
   }
-  .auth-page--garden .auth-form .auth-field {
-    animation: auth-field-reveal 700ms 220ms var(--ease) backwards;
-  }
-  .auth-page--garden .auth-form .auth-field:nth-child(2) {
-    animation-delay: 300ms;
-  }
-  .auth-page--garden .auth-form .auth-field:nth-child(3) {
-    animation-delay: 380ms;
-  }
-  .auth-page--garden .auth-primary {
-    animation: auth-field-reveal 700ms 420ms var(--ease) backwards;
-  }
   .auth-page--garden .auth-primary::after {
     transition-duration: 950ms;
   }
@@ -372,16 +360,6 @@
   }
   50% {
     box-shadow: 0 0 0 5px #1cb0f610;
-  }
-}
-@keyframes auth-field-reveal {
-  from {
-    opacity: 0;
-    transform: translateY(9px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }
 @keyframes auth-bloom-ring {

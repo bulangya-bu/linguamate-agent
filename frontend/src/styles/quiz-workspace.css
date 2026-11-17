@@ -366,7 +366,7 @@
   width: 15px;
   height: 15px;
 }
-.app-shell #vocabulary .quiz-nav :is(.quiz-secondary, .quiz-insight-toggle) {
+.app-shell :is(#vocabulary, #review) .quiz-nav :is(.quiz-secondary, .quiz-insight-toggle) {
   flex: none;
   border: 1px solid transparent;
   color: var(--muted);
@@ -376,7 +376,7 @@
 .app-shell #vocabulary .quiz-nav .quiz-insight-toggle {
   color: var(--blue-ink);
 }
-.app-shell #vocabulary .quiz-nav :is(.quiz-secondary, .quiz-insight-toggle):hover:not(:disabled),
+.app-shell :is(#vocabulary, #review) .quiz-nav :is(.quiz-secondary, .quiz-insight-toggle):hover:not(:disabled),
 .app-shell #vocabulary .quiz-nav .quiz-insight-toggle[aria-expanded="true"] {
   color: var(--ink);
   background: color-mix(in srgb, var(--quiz-line) 54%, transparent);
@@ -387,15 +387,15 @@
 .quiz-nav .quiz-insight-toggle.is-unavailable {
   visibility: hidden;
 }
-.app-shell #vocabulary .quiz-nav .quiz-primary {
-  min-width: 100px;
+.app-shell :is(#vocabulary, #review) .quiz-nav .quiz-primary {
+  min-width: var(--quiz-primary-width, 100px);
   border: 1px solid #a7cb83;
   color: #213e24;
   background: #c9e9a4;
   box-shadow: 0 2px 0 #87ae69;
   font-weight: 700;
 }
-.app-shell #vocabulary .quiz-nav .quiz-primary:hover:not(:disabled) {
+.app-shell :is(#vocabulary, #review) .quiz-nav .quiz-primary:hover:not(:disabled) {
   background: #d8efb8;
   box-shadow: 0 2px 0 #87ae69;
 }

@@ -1,6 +1,7 @@
 package com.example.javabigwork.report.controller;
 
 import com.example.javabigwork.common.ApiResponse;
+import com.example.javabigwork.report.dto.LearningCalendarView;
 import com.example.javabigwork.report.dto.LearningReportView;
 import com.example.javabigwork.report.service.ReportService;
 import com.example.javabigwork.report.service.LearningJournalService;
@@ -9,6 +10,7 @@ import com.example.javabigwork.report.dto.GrowthEvidenceView;
 import com.example.javabigwork.report.service.GrowthEvidenceService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -31,5 +33,11 @@ public class ReportController {
 
     @GetMapping("/journal")
     public ApiResponse<LearningJournalView> journal() { return ApiResponse.ok(journalService.journal()); }
+
+    @GetMapping("/journal/calendar")
+    public ApiResponse<LearningCalendarView> calendar(@RequestParam(value = "month", required = false) String month) {
+        return ApiResponse.ok(journalService.calendar(month));
+    }
+
     @GetMapping("/growth") public ApiResponse<GrowthEvidenceView> growth() {return ApiResponse.ok(growth.evidence());}
 }

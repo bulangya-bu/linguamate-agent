@@ -1,3 +1,10 @@
+<script setup>
+import AppIcon from "@/components/AppIcon.vue";
+import { useTheme } from "@/composables/useTheme";
+
+const { isDark, toggleTheme } = useTheme();
+</script>
+
 <template>
   <button
     class="theme-toggle"
@@ -5,7 +12,7 @@
     :aria-label="isDark ? '切换到白天模式' : '切换到黑夜模式'"
     :title="isDark ? '切换到白天模式' : '切换到黑夜模式'"
     :aria-pressed="isDark"
-    @click="toggleTheme"
+    @click="toggleTheme($event.currentTarget)"
   >
     <span class="theme-toggle-symbol" aria-hidden="true">
       <AppIcon name="moon" class="theme-toggle-moon" :class="{ 'is-visible': !isDark }" />
@@ -13,12 +20,6 @@
     </span>
   </button>
 </template>
-
-<script setup>
-import AppIcon from "@/components/AppIcon.vue";
-import { useTheme } from "@/composables/useTheme";
-const { isDark, toggleTheme } = useTheme();
-</script>
 
 <style scoped>
 .theme-toggle {

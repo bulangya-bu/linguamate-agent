@@ -4,9 +4,12 @@
 #
 # $env:SERVER_PORT = '4040'
 # $env:FRONTEND_PORT = '5173'
+# $env:FRONTEND_HOST = '127.0.0.1' # Disable LAN access, which is enabled by default.
 # $env:LINGUAMATE_MYSQL_BIN = 'C:\Program Files\MySQL\MySQL Server 8.4\bin'
 #
 # For your own MySQL server, supply DB_URL and DB_USER together.
 # $env:DB_URL = 'jdbc:mysql://127.0.0.1:3306/linguamate?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf-8'
 # $env:DB_USER = 'your_database_user'
 # $env:DB_PASSWORD must be supplied in your current environment or securely loaded.
+# Supply LINGUAMATE_ADMIN_BOOTSTRAP_PASSWORD in your environment to create the
+# administrator or replace its legacy default credential on the next backend start.

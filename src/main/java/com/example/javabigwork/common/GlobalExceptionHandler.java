@@ -2,6 +2,7 @@ package com.example.javabigwork.common;
 
 import com.example.javabigwork.auth.AuthenticationRequiredException;
 import com.example.javabigwork.auth.AuthorizationException;
+import com.example.javabigwork.auth.UsernameAlreadyExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthorizationException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ApiResponse<Void> handleAuthorization(AuthorizationException exception) {
+        return ApiResponse.fail(exception.getMessage());
+    }
+
+    @ExceptionHandler(UsernameAlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ApiResponse<Void> handleUsernameConflict(UsernameAlreadyExistsException exception) {
         return ApiResponse.fail(exception.getMessage());
     }
 

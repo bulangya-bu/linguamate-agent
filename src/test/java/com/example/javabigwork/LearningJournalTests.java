@@ -69,6 +69,37 @@ class LearningJournalTests {
         assertEquals(0,other.path("activeDays").asInt());
     }
 
+    @Test void calendarReturnsHistoricalMonthWithOnlyOwnedStudyActivity() throws Exception {
+        MockHttpSession session = account("cal" + System.nanoTime());
+        long user = userId(session);
+        long other = userId(account("calOther" + System.nanoTime()));
+        LocalDate february = LocalDate.of(2024, 2, 1);
+        log(user, 1, "QUIZ", true, february.minusDays(1));
+        log(user, 1, "QUIZ", true, february);
+        log(user, 2, "STRICT_REVIEW", true, february);
+        log(other, 3, "QUIZ", false, february);
+        log(user, 4, "QUIZ", true, february.plusMonths(1));
+        jdbc.update("INSERT INTO user_login_day(user_id,login_date,first_seen_at) VALUES(?,?,?)",
+                user, february, february.atTime(12,0));
+
+        var response = mvc.perform(get("/api/report/journal/calendar").param("month", "2024-02").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.month").value("2024-02"))
+                .andExpect(jsonPath("$.data.today").value(today.toString()))
+                .andExpect(jsonPath("$.data.days.length()").value(29))
+                .andReturn();
+        JsonNode calendar = json.readTree(response.getResponse().getContentAsString(StandardCharsets.UTF_8)).required("data");
+        assertEquals("2024-02-01", calendar.required("days").get(0).required("date").asText());
+        assertEquals("2024-02-29", calendar.required("days").get(28).required("date").asText());
+        JsonNode firstDay = day(calendar, february);
+        assertEquals(1, firstDay.required("newWords").asInt());
+        assertEquals(1, firstDay.required("reviewWords").asInt());
+        assertEquals(2, firstDay.required("studyEvents").asInt());
+        assertFalse(firstDay.has("loggedIn"));
+        assertEquals(0, day(calendar, february.plusDays(1)).required("studyEvents").asInt());
+        assertEquals(84, journal(session).required("days").size());
+    }
+
     @Test void successfulVisitsAreDeduplicatedAndSessionRolloverIsRecorded() throws Exception {
         String name="journalLogin"+System.nanoTime();MockHttpSession session=account(name);long user=userId(session);
         for(int i=0;i<3;i++)journal(session);
@@ -82,6 +113,38 @@ class LearningJournalTests {
         assertEquals(2,journal(session).path("loginDays").asInt());
         mvc.perform(get("/api/report/journal")).andExpect(status().isUnauthorized());
         mvc.perform(get("/report")).andExpect(status().isNotFound());
+    }
+
+    @Test void journalCountsWordsFromOwnedFinishedArticlesAndSubmittedOriginals() throws Exception {
+        MockHttpSession session = account("volumeA" + System.nanoTime());
+        MockHttpSession other = account("volumeB" + System.nanoTime());
+        long user = userId(session);
+        long otherUser = userId(other);
+        long finishedArticle = article("Don't re-read this. 2026 学习");
+        long unfinishedArticle = article("These words from an unfinished article should be excluded.");
+        long otherArticle = article("These words belong to somebody else's completed article.");
+        jdbc.update("INSERT INTO reading_record(user_id, article_id, finished) VALUES(?, ?, TRUE)",
+                user, finishedArticle);
+        jdbc.update("INSERT INTO reading_record(user_id, article_id, finished) VALUES(?, ?, FALSE)",
+                user, unfinishedArticle);
+        jdbc.update("INSERT INTO reading_record(user_id, article_id, finished) VALUES(?, ?, TRUE)",
+                otherUser, finishedArticle);
+        jdbc.update("INSERT INTO reading_record(user_id, article_id, finished) VALUES(?, ?, TRUE)",
+                otherUser, otherArticle);
+        jdbc.update("""
+                INSERT INTO essay_submission(user_id, original_text, polished_text) VALUES(?, ?, ?)
+                """, user, "I don't re-read numbers: 42.", "This revision from the model should not be counted.");
+        jdbc.update("INSERT INTO essay_submission(user_id, original_text) VALUES(?, ?)",
+                otherUser, "Somebody else’s work.");
+
+        JsonNode totals = journal(session).required("totals");
+        assertEquals(3, totals.required("readingWords").asLong());
+        assertEquals(4, totals.required("writtenWords").asLong());
+        assertEquals(1, totals.required("readings").asLong());
+        assertEquals(1, totals.required("essays").asLong());
+        JsonNode empty = journal(account("volumeC" + System.nanoTime())).required("totals");
+        assertEquals(0, empty.required("readingWords").asLong());
+        assertEquals(0, empty.required("writtenWords").asLong());
     }
 
     @Test void dailyTasksCountOwnedModelResultsByDate() throws Exception {
@@ -154,6 +217,11 @@ class LearningJournalTests {
     }
 
     private void log(long user,long word,String type,boolean correct,LocalDate date){jdbc.update("INSERT INTO word_review_log(user_id,word_id,review_type,correct,created_at) VALUES(?,?,?,?,?)",user,word,type,correct,date.atTime(12,0));}
+    private long article(String content) {
+        String title = "Journal volume test " + System.nanoTime();
+        jdbc.update("INSERT INTO news_article(title, content) VALUES(?, ?)", title, content);
+        return jdbc.queryForObject("SELECT id FROM news_article WHERE title=?", Long.class, title);
+    }
     private long conversation(long user) {
         jdbc.update("INSERT INTO conversation(user_id, title) VALUES(?, 'Daily task test')", user);
         return jdbc.queryForObject("SELECT id FROM conversation WHERE user_id=?", Long.class, user);

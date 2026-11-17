@@ -100,11 +100,69 @@ class LearningMissionTests {
     }
     @Test void growthKeepsTheActualChatAnswerAndDoesNotExposeAnotherAccount() throws Exception {
         var owner=account();var other=account();String original="I want to explain how our campus saves water.";
-        postData("/api/chat",Map.of("message",original,"scene","daily","mode","practice"),owner);
+        var practice = postData("/api/chat", Map.of("message", original, "scene", "daily", "mode", "practice"), owner);
+        long conversation = practice.path("conversationId").asLong();
+        db.update("""
+                INSERT INTO message(conversation_id, role, content, metadata, created_at)
+                VALUES(?, 'user', 'Help me find an English exercise.', '{"mode":"assistant"}', ?)
+                """, conversation, LocalDateTime.now());
         var records=getData("/api/report/growth",owner).path("expressions");
         assertEquals(1,records.size());assertEquals(original,records.get(0).path("answer").asText());
         assertEquals("local",records.get(0).path("feedback").path("source").asText());
+        assertEquals(conversation, records.get(0).path("conversationId").asLong());
+        assertEquals("daily", records.get(0).path("scene").asText());
+        assertEquals("practice", records.get(0).path("mode").asText());
         assertEquals(0,getData("/api/report/growth",other).path("expressions").size());
+    }
+
+    @Test void growthShowsSplitReviewAnswersAndOwnedReadingProgress() throws Exception {
+        var owner = account();
+        var other = account();
+        long user = userId(owner);
+        long word = db.queryForObject("SELECT MIN(id) FROM word", Long.class);
+        var articles = db.queryForList("SELECT id FROM news_article ORDER BY id LIMIT 2", Long.class);
+        var now = LocalDateTime.now(com.example.javabigwork.auth.LoginActivityService.ZONE).withNano(0);
+        db.update("""
+                INSERT INTO word_review_log(user_id, word_id, review_type, answer, correct, created_at)
+                VALUES(?, ?, 'QUIZ', 'other meaning', FALSE, ?)
+                """, user, word, now.minusDays(2));
+        db.update("""
+                INSERT INTO word_review_log(user_id, word_id, review_type, answer, spelling_answer, meaning_answer,
+                                            correct, spelling_correct, meaning_correct, created_at)
+                VALUES(?, ?, 'STRICT_REVIEW', 'word | meaning', 'word', 'meaning', FALSE, TRUE, FALSE, ?)
+                """, user, word, now);
+        db.update("""
+                INSERT INTO reading_record(user_id, article_id, read_progress, looked_up_words, finished, created_at, updated_at)
+                VALUES(?, ?, 90, 3, TRUE, ?, ?)
+                """, user, articles.get(0), now.minusDays(3), now.minusDays(2));
+        db.update("""
+                INSERT INTO reading_record(user_id, article_id, read_progress, looked_up_words, finished, finished_at, created_at, updated_at)
+                VALUES(?, ?, 100, 6, TRUE, ?, ?, ?)
+                """, user, articles.get(1), now.minusDays(1), now.minusDays(2), now);
+
+        var growth = getData("/api/report/growth", owner);
+        var attempts = growth.path("words").get(0).path("attempts");
+        assertEquals("other meaning", attempts.get(0).path("answer").asText());
+        assertTrue(attempts.get(0).path("spellingCorrect").isNull());
+        var review = attempts.get(1);
+        assertEquals("word", review.path("spellingAnswer").asText());
+        assertEquals("meaning", review.path("meaningAnswer").asText());
+        assertTrue(review.path("spellingCorrect").asBoolean());
+        assertFalse(review.path("meaningCorrect").asBoolean());
+        var readings = growth.path("readings");
+        assertEquals(2, readings.size());
+        var latest = readings.get(0);
+        assertEquals(articles.get(1).longValue(), latest.path("articleId").asLong());
+        assertFalse(latest.path("title").asText().isBlank());
+        assertEquals(100, latest.path("readProgress").asInt());
+        assertEquals(6, latest.path("lookedUpWords").asInt());
+        assertEquals(now.minusDays(1), LocalDateTime.parse(latest.path("finishedAt").asText()));
+        var legacy = readings.get(1);
+        assertTrue(legacy.path("finished").asBoolean());
+        assertTrue(legacy.path("finishedAt").isNull());
+        var otherGrowth = getData("/api/report/growth", other);
+        assertTrue(otherGrowth.path("words").isEmpty());
+        assertTrue(otherGrowth.path("readings").isEmpty());
     }
     @Test void curatedExamplesReplaceOnlyGenericPlaceholders() {
         var word=new com.example.javabigwork.vocabulary.entity.Word();word.word="accept";

@@ -11,9 +11,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,8 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Order(2)
 public class AuthService implements ApplicationRunner {
     public static final String SESSION_USER_ID = "LINGUAMATE_USER_ID";
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private static final String ADMIN_USERNAME = "admin";
-    private static final String ADMIN_PASSWORD = "admin123";
+    private static final String LEGACY_ADMIN_PASSWORD = "admin123";
     private static final String ACTIVE = "ACTIVE";
     private static final String DISABLED = "DISABLED";
     private static final Duration SESSION_USER_TTL = Duration.ofMinutes(30);
@@ -31,25 +37,39 @@ public class AuthService implements ApplicationRunner {
     private final PasswordHasher passwordHasher;
     private final RedisCacheService redisCache;
     private final LoginActivityService loginActivity;
+    private final String adminBootstrapPassword;
 
-    public AuthService(UserAccountMapper userMapper, PasswordHasher passwordHasher, RedisCacheService redisCache, LoginActivityService loginActivity) {
+    public AuthService(
+            UserAccountMapper userMapper,
+            PasswordHasher passwordHasher,
+            RedisCacheService redisCache,
+            LoginActivityService loginActivity,
+            @Value("${LINGUAMATE_ADMIN_BOOTSTRAP_PASSWORD:}") String adminBootstrapPassword
+    ) {
         this.userMapper = userMapper;
         this.passwordHasher = passwordHasher;
         this.redisCache = redisCache;
         this.loginActivity = loginActivity;
+        this.adminBootstrapPassword = adminBootstrapPassword;
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        ensureSoleAdmin();
+        configureAdmin();
         ensureAccount("student", "student123", "学习者", "USER");
     }
 
     @Transactional
     public AuthUserView register(RegisterRequest request, HttpServletRequest servletRequest) {
         String username = normalizeUsername(request.username());
-        if (findByUsername(username) != null) {
-            throw new IllegalArgumentException("用户名已存在");
+        if (username.isBlank()) {
+            throw new IllegalArgumentException("用户名不能为空");
+        }
+        if (username.length() < 3 || username.length() > 32) {
+            throw new IllegalArgumentException("用户名长度应为 3-32 位");
+        }
+        if (ADMIN_USERNAME.equals(username) || findByUsername(username) != null) {
+            throw new UsernameAlreadyExistsException();
         }
         UserAccount user = new UserAccount();
         user.username = username;
@@ -59,7 +79,11 @@ public class AuthService implements ApplicationRunner {
         user.status = ACTIVE;
         user.createdAt = LocalDateTime.now();
         user.updatedAt = LocalDateTime.now();
-        userMapper.insert(user);
+        try {
+            userMapper.insert(user);
+        } catch (DuplicateKeyException exception) {
+            throw new UsernameAlreadyExistsException();
+        }
         return startSession(user, servletRequest);
     }
 
@@ -210,32 +234,38 @@ public class AuthService implements ApplicationRunner {
         return user;
     }
 
-    private void ensureSoleAdmin() {
+    private void configureAdmin() {
+        if (adminBootstrapPassword.isBlank()) {
+            return;
+        }
         UserAccount admin = findByUsername(ADMIN_USERNAME);
         if (admin == null) {
-            ensureAccount(ADMIN_USERNAME, ADMIN_PASSWORD, "管理员", "ADMIN");
-        } else {
-            admin.passwordHash = passwordHasher.hash(ADMIN_PASSWORD);
-            admin.nickname = safeNickname(admin.nickname, ADMIN_USERNAME);
-            admin.role = "ADMIN";
-            admin.status = ACTIVE;
-            admin.updatedAt = LocalDateTime.now();
-            if (admin.createdAt == null) {
-                admin.createdAt = LocalDateTime.now();
-            }
-            userMapper.updateById(admin);
+            validateAdminBootstrapPassword();
+            ensureAccount(ADMIN_USERNAME, adminBootstrapPassword, "管理员", "ADMIN");
+            return;
         }
-        userMapper.selectList(Wrappers.<UserAccount>query()
-                        .eq("role", "ADMIN")
-                        .ne("username", ADMIN_USERNAME))
-                .forEach(user -> {
-                    user.role = "USER";
-                    if (user.status == null || user.status.isBlank()) {
-                        user.status = ACTIVE;
-                    }
-                    user.updatedAt = LocalDateTime.now();
-                    userMapper.updateById(user);
-                });
+        if (!"ADMIN".equals(admin.role)) {
+            log.warn("Skipping configured admin bootstrap because the username is already in use");
+            return;
+        }
+        if (!passwordHasher.matches(LEGACY_ADMIN_PASSWORD, admin.passwordHash)) {
+            return;
+        }
+        validateAdminBootstrapPassword();
+        userMapper.update(null, Wrappers.<UserAccount>update()
+                .eq("id", admin.id)
+                .eq("role", "ADMIN")
+                .eq("password_hash", admin.passwordHash)
+                .set("password_hash", passwordHasher.hash(adminBootstrapPassword))
+                .set("updated_at", LocalDateTime.now()));
+    }
+
+    private void validateAdminBootstrapPassword() {
+        if (adminBootstrapPassword.length() < 12 || adminBootstrapPassword.length() > 64
+                || LEGACY_ADMIN_PASSWORD.equals(adminBootstrapPassword)) {
+            throw new IllegalStateException("LINGUAMATE_ADMIN_BOOTSTRAP_PASSWORD must be 12–64 characters "
+                    + "and differ from the legacy demo password");
+        }
     }
 
     private void ensureAccount(String username, String password, String nickname, String role) {
@@ -250,11 +280,15 @@ public class AuthService implements ApplicationRunner {
         user.status = ACTIVE;
         user.createdAt = LocalDateTime.now();
         user.updatedAt = LocalDateTime.now();
-        userMapper.insert(user);
+        try {
+            userMapper.insert(user);
+        } catch (DuplicateKeyException exception) {
+            // Another instance initialized the same username first.
+        }
     }
 
     private String normalizeUsername(String username) {
-        return username == null ? "" : username.trim().toLowerCase();
+        return username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
     }
 
     private String safeNickname(String nickname, String username) {

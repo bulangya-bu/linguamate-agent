@@ -1,14 +1,16 @@
 import { api, query } from "./client";
 
+const authFormRequest = { redirectOnUnauthorized: false, redirectOnForbidden: false };
+
 export const authApi = {
   me: (config) => api("/api/auth/me", {}, config),
   login: (payload) =>
-    api("/api/auth/login", { method: "POST", body: JSON.stringify(payload) }),
+    api("/api/auth/login", { method: "POST", body: JSON.stringify(payload) }, authFormRequest),
   register: (payload) =>
     api("/api/auth/register", {
       method: "POST",
       body: JSON.stringify(payload),
-    }),
+    }, authFormRequest),
   logout: () => api("/api/auth/logout", { method: "POST" }),
 };
 
@@ -23,14 +25,17 @@ export const aiApi = {
 };
 
 export const learningApi = {
-  growth: () => api("/api/report/growth"),
+  growth: (signal) => api("/api/report/growth", { signal }),
   report: () => api("/api/report/summary"),
   journal: () => api("/api/report/journal"),
+  journalCalendar: (month, signal) => api(`/api/report/journal/calendar${query({ month })}`, { signal }),
   level: () => api("/api/experience"),
   conversations: () => api("/api/conversations"),
   messages: (id) => api(`/api/conversations/${id}/messages`),
   chat: (payload) =>
     api("/api/chat", { method: "POST", body: JSON.stringify(payload) }),
+  translateChatReply: (id) =>
+    api(`/api/chat/messages/${id}/translation`, { method: "POST" }),
   practiceContext: () => api("/api/chat/practice-context"),
   advisorVocabulary: (params) =>
     api(`/api/learning-advisor/vocabulary${query(params)}`),

@@ -52,13 +52,6 @@ function wordCardExampleCn(word) {
   );
 }
 
-function strictReviewParts(result = {}) {
-  return [
-    result.spellingCorrect ? "拼写正确" : "拼写待修正",
-    result.meaningCorrect ? "释义正确" : "释义待加强",
-  ];
-}
-
 function reviewCloze(word) {
   const example =
     word?.sourceSentence ||
@@ -115,7 +108,6 @@ export {
   wordCardExampleEn,
   meaningfulExample,
   wordCardExampleCn,
-  strictReviewParts,
   reviewCloze,
   highlightTerm,
   escapeHtml,

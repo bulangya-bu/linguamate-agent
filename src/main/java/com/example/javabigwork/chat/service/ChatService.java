@@ -73,16 +73,16 @@ public class ChatService {
         if (practice) {
             var result = coach.practice(conversation.scene, request.message(), history, article == null ? ""
                     : "Title: " + article.title() + "\nArticle:\n" + article.content().substring(0, Math.min(6000, article.content().length())));
-            response = new ChatResponse(conversation.id, result.reply(), result.trace(), List.of(), null, List.of(), result.coaching());
+            response = new ChatResponse(conversation.id, result.reply(), result.trace(), List.of(), null, List.of(), result.coaching(), null);
         } else {
             var result = agent.chat(conversation.scene, request.message(), history);
-            response = new ChatResponse(conversation.id, result.reply(), result.trace(), result.suggestions(), result.learningCard(), result.actions(), null);
+            response = new ChatResponse(conversation.id, result.reply(), result.trace(), result.suggestions(), result.learningCard(), result.actions(), null, null);
         }
-        saveMessage(conversation.id, "assistant", response.reply(), metadata(response));
+        Long replyId = saveMessage(conversation.id, "assistant", response.reply(), metadata(response));
         traceRecorder.flush(response.trace(), String.valueOf(conversation.id));
         conversationService.touch(conversation.id);
         experienceService.addXp(5);
-        return response;
+        return response.withMessageId(replyId);
     }
 
     public List<TargetWord> practiceContext() { return coach.context(); }
@@ -114,7 +114,7 @@ public class ChatService {
                 .orderByAsc("created_at", "id"));
     }
 
-    private void saveMessage(Long conversationId, String role, String content, String metadata) {
+    private Long saveMessage(Long conversationId, String role, String content, String metadata) {
         Message message = new Message();
         message.conversationId = conversationId;
         message.role = role;
@@ -122,5 +122,6 @@ public class ChatService {
         message.metadata = metadata;
         message.createdAt = LocalDateTime.now(LoginActivityService.ZONE);
         messageMapper.insert(message);
+        return message.id;
     }
 }

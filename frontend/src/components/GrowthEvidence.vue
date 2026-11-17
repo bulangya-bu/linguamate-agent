@@ -1,229 +1,181 @@
+<script setup>
+import { computed, nextTick, shallowRef, watch } from 'vue';
+import { learningApi } from '@/api/modules';
+import AppIcon from './AppIcon.vue';
+import GrowthRecordDetail from './growth/GrowthRecordDetail.vue';
+import GrowthRecordList from './growth/GrowthRecordList.vue';
+import { evidenceRecords, evidenceTabs } from './growth/evidenceRecords';
+import '@/styles/growth-evidence.css';
+
+const props = defineProps({
+  open: Boolean,
+  initialTab: { type: String, default: 'words' },
+});
+const emit = defineEmits(['close', 'navigate']);
+
+const pageSize = 5;
+const dialog = shallowRef(null);
+const detailPane = shallowRef(null);
+const data = shallowRef(null);
+const loading = shallowRef(false);
+const error = shallowRef('');
+const retry = shallowRef(0);
+const tab = shallowRef('words');
+const page = shallowRef(0);
+const selectedId = shallowRef(null);
+
+const collections = computed(() => evidenceRecords(data.value));
+const category = computed(() => evidenceTabs.find(item => item.id === tab.value));
+const records = computed(() => collections.value[tab.value]);
+const pageCount = computed(() => Math.ceil(records.value.length / pageSize));
+const pageRecords = computed(() => records.value.slice(page.value * pageSize, (page.value + 1) * pageSize));
+const selected = computed(() => pageRecords.value.find(item => item.id === selectedId.value) ?? pageRecords.value[0]);
+const articleId = computed(() => tab.value === 'reading' ? selected.value?.articleId : undefined);
+const action = computed(() => articleId.value ? '打开原文' : category.value.action);
+
+watch(() => props.open, async open => {
+  if (open) resetSelection(evidenceTabs.find(item => item.id === props.initialTab)?.id ?? 'words');
+  await nextTick();
+  if (open !== props.open || !dialog.value) return;
+  if (open && !dialog.value.open) dialog.value.showModal();
+  if (!open && dialog.value.open) dialog.value.close();
+}, { immediate: true });
+
+watch([() => props.open, retry], async ([open], _, onCleanup) => {
+  if (!open) return;
+  const request = new AbortController();
+  onCleanup(() => request.abort());
+  loading.value = true;
+  error.value = '';
+  data.value = null;
+  try {
+    const result = await learningApi.growth(request.signal);
+    if (!request.signal.aborted) data.value = result;
+  } catch (failure) {
+    if (!request.signal.aborted) error.value = failure.message;
+  } finally {
+    if (!request.signal.aborted) loading.value = false;
+  }
+}, { immediate: true });
+
+watch([tab, selected], () => {
+  if (detailPane.value) detailPane.value.scrollTop = 0;
+}, { flush: 'post' });
+
+function resetSelection(id) {
+  tab.value = id;
+  changePage(0);
+}
+
+function changePage(index) {
+  page.value = index;
+  selectedId.value = null;
+}
+
+function selectTab(id) {
+  if (tab.value !== id) resetSelection(id);
+}
+
+function moveTab(event) {
+  const activeIndex = evidenceTabs.indexOf(category.value);
+  const count = evidenceTabs.length;
+  const index = {
+    ArrowLeft: (activeIndex - 1 + count) % count,
+    ArrowRight: (activeIndex + 1) % count,
+    Home: 0,
+    End: count - 1,
+  }[event.key];
+  if (index == null) return;
+  event.preventDefault();
+  selectTab(evidenceTabs[index].id);
+  event.currentTarget.children[index].focus();
+}
+
+function practice() {
+  emit('navigate', category.value.route, articleId.value);
+  emit('close');
+}
+
+function backdropClose(event) {
+  if (event.target !== dialog.value) return;
+  const bounds = dialog.value.getBoundingClientRect();
+  if (event.clientX < bounds.left || event.clientX > bounds.right
+    || event.clientY < bounds.top || event.clientY > bounds.bottom) emit('close');
+}
+</script>
+
 <template>
   <dialog
     ref="dialog"
     class="growth-evidence"
+    :data-category="tab"
     aria-labelledby="growth-title"
-    @cancel.prevent="$emit('close')"
+    @cancel.prevent="emit('close')"
     @click="backdropClose"
   >
     <header class="growth-heading">
-      <h2 id="growth-title">成长证据</h2>
-      <button class="panel-close" type="button" aria-label="关闭成长证据" @click="$emit('close')">
+      <div>
+        <span class="growth-heading-icon"><AppIcon name="journal" /></span>
+        <h2 id="growth-title">成长证据</h2>
+      </div>
+      <button class="panel-close" type="button" aria-label="关闭成长证据" autofocus @click="emit('close')">
         <AppIcon name="close" />
       </button>
     </header>
-    <nav class="growth-tabs" aria-label="成长证据类型">
+
+    <nav class="growth-tabs" role="tablist" aria-label="成长证据类型" @keydown="moveTab">
       <button
-        v-for="item in tabs"
+        v-for="item in evidenceTabs"
+        :id="'growth-tab-' + item.id"
         :key="item.id"
-        :class="{ active: tab === item.id }"
-        :aria-pressed="tab === item.id"
-        @click="tab = item.id"
+        type="button"
+        role="tab"
+        :data-bookmark="item.id"
+        :aria-selected="tab === item.id"
+        :tabindex="tab === item.id ? 0 : -1"
+        aria-controls="growth-content"
+        @click="selectTab(item.id)"
       >
-        {{ item.label }}<span>{{ counts[item.id] || 0 }}</span>
+        <AppIcon :name="item.icon" />
+        <span>{{ item.label }}</span>
+        <span v-if="data" class="growth-tab-count">近期 {{ collections[item.id].length }} {{ item.unit }}</span>
       </button>
     </nav>
-    <div v-if="loading" class="growth-state" role="status">
-      正在加载记录…
-    </div>
-    <div v-else-if="error" class="growth-state" role="alert">
-      <p>{{ error }}</p>
-      <button type="button" @click="load">重新加载</button>
-    </div>
-    <div v-else class="growth-records">
-      <template v-if="tab === 'words'"
-        ><article
-          v-for="word in data?.words"
-          :key="word.wordId"
-          class="growth-word-record"
-        >
-          <header>
-            <h3>{{ word.word }}</h3>
-            <span>{{ word.meaning }}</span>
-          </header>
-          <ol>
-            <li v-for="attempt in word.attempts" :key="attempt.id">
-              <span
-                class="growth-attempt-dot"
-                :class="{ correct: attempt.correct }"
-                >{{ attempt.correct ? "✓" : "↺" }}</span
-              >
-              <div>
-                <span
-                  >{{ date(attempt.createdAt) }} ·
-                  {{
-                    attempt.type === "STRICT_REVIEW"
-                      ? "拼写与释义复习"
-                      : "词语练习"
-                  }}</span
-                >
-                <p>{{ attempt.answer || "旧记录未保留答案" }}</p>
-                <small>{{ attempt.correct ? "本次答对" : "本次答错" }}</small>
-              </div>
-            </li>
-          </ol>
-        </article></template
-      >
-      <template v-else-if="tab === 'expressions'"
-        ><article
-          v-for="item in data?.expressions"
-          :key="item.id"
-          class="growth-expression"
-        >
-          <header>
-            <h3>{{ item.title }}</h3>
-            <time>{{ date(item.createdAt) }}</time>
-          </header>
-          <span class="growth-label">我的原句</span>
-          <p class="growth-quote">{{ item.answer }}</p>
-          <template v-if="item.feedback?.source === 'model'"
-            ><span class="growth-label"
-              >AI 表达参考 · {{ item.feedback.modelName }}</span
-            >
-            <p class="growth-suggestion">{{ item.feedback.improved }}</p>
-            <p class="growth-explanation">
-              {{ item.feedback.explanation }}
-            </p></template
-          >
-          <p v-else class="growth-explanation">
-            {{
-              item.feedback?.source === "local"
-                ? "本地练习反馈"
-                : "暂无改写记录"
-            }}
-          </p>
-          <details v-if="item.reply">
-            <summary>查看当时的回复</summary>
-            <p>{{ item.reply }}</p>
-          </details>
-        </article></template
-      >
-      <template v-else-if="tab === 'writing'"
-        ><article
-          v-for="item in data?.writing"
-          :key="item.id"
-          class="growth-writing"
-        >
-          <header>
-            <h3>{{ item.title || "我的英文习作" }}</h3>
-            <time>{{ date(item.createdAt) }}</time>
-          </header>
-          <div class="growth-writing-pair">
-            <section v-if="item.before">
-              <span class="growth-label">上一次提交的原稿</span>
-              <p>{{ item.before }}</p>
-            </section>
-            <section>
-              <span class="growth-label">{{
-                item.before ? "我再次提交的改写" : "我的原稿"
-              }}</span>
-              <p>{{ item.after }}</p>
-            </section>
-          </div>
-          <details v-if="item.suggestion">
-            <summary>
-              查看当时的{{
-                ["model", "AI批改"].includes(item.source) ? " AI" : "本地"
-              }}参考稿
-            </summary>
-            <p>{{ item.suggestion }}</p>
-          </details>
-          <p v-if="item.comparable || item.before || item.model" class="growth-explanation">
-            <template v-if="item.comparable">同标准评分 {{ item.previousScore }} → {{ item.score }} 分</template>
-            <template v-else-if="item.before">两次评分不可比</template>
-            <span v-if="item.model">{{ item.comparable || item.before ? " · " : "" }}{{ item.model }}</span>
-          </p>
-        </article></template
-      >
-      <div v-if="!counts[tab]" class="growth-state">
-        <AppIcon name="journal" />
-        <h3>暂无记录</h3>
+
+    <div
+      id="growth-content"
+      class="growth-content"
+      :class="{ 'has-records': selected }"
+      role="tabpanel"
+      :aria-labelledby="'growth-tab-' + tab"
+      :aria-busy="loading"
+    >
+      <div v-if="loading" class="growth-state" role="status">正在加载记录…</div>
+      <div v-else-if="error" class="growth-state" role="alert">
+        <p>{{ error }}</p><button type="button" @click="retry++">重新加载</button>
+      </div>
+      <template v-else-if="selected">
+        <GrowthRecordList
+          :records="pageRecords"
+          :active-id="selected.id"
+          :category="category.label"
+          :page="page"
+          :page-count="pageCount"
+          @select="selectedId = $event"
+          @page="changePage"
+        />
+        <section id="growth-detail" ref="detailPane" class="growth-detail-pane" tabindex="0" aria-label="记录详情">
+          <GrowthRecordDetail :key="tab + '-' + selected.id" :record="selected" :type="tab" />
+        </section>
+      </template>
+      <div v-else class="growth-state">
+        <AppIcon :name="category.icon" />
+        <h3>暂无{{ category.label }}记录</h3>
       </div>
     </div>
-    <footer>
-      <button type="button" @click="practice">
-        {{
-          {
-            words: "继续练词",
-            expressions: "继续对话",
-            writing: "打开写作工坊",
-          }[tab]
-        }}<AppIcon name="arrow" />
-      </button>
+
+    <footer class="growth-footer">
+      <button type="button" @click="practice">{{ action }}<AppIcon name="arrow" /></button>
     </footer>
   </dialog>
 </template>
-<script setup>
-import { computed, nextTick, ref, watch } from "vue";
-import { learningApi } from "@/api/modules";
-import AppIcon from "./AppIcon.vue";
-import "@/styles/growth-evidence.css";
-const props = defineProps({
-    open: Boolean,
-    initialTab: { type: String, default: "words" },
-  }),
-  emit = defineEmits(["close", "navigate"]);
-const dialog = ref(null),
-  data = ref(null),
-  loading = ref(false),
-  error = ref(""),
-  tab = ref("words");
-const tabs = [
-  { id: "words", label: "词语轨迹" },
-  { id: "expressions", label: "表达记录" },
-  { id: "writing", label: "原稿与改写" },
-];
-const counts = computed(() => ({
-  words: data.value?.words.length,
-  expressions: data.value?.expressions.length,
-  writing: data.value?.writing.length,
-}));
-watch(
-  () => props.open,
-  async (open) => {
-    await nextTick();
-    if (open) {
-      tab.value = props.initialTab;
-      if (!dialog.value.open) dialog.value.showModal();
-      load();
-    } else if (dialog.value.open) dialog.value.close();
-  },
-  { immediate: true },
-);
-async function load() {
-  loading.value = true;
-  error.value = "";
-  try {
-    data.value = await learningApi.growth();
-  } catch (e) {
-    error.value = e.message;
-  } finally {
-    loading.value = false;
-  }
-}
-function date(value) {
-  return value?.replace("T", " ").slice(0, 16) || "";
-}
-function practice() {
-  emit(
-    "navigate",
-    {
-      words: "vocabulary",
-      expressions: "chat",
-      writing: "writing",
-    }[tab.value],
-  );
-  emit("close");
-}
-function backdropClose(event) {
-  if (event.target !== dialog.value) return;
-  const r = dialog.value.getBoundingClientRect();
-  if (
-    event.clientX < r.left ||
-    event.clientX > r.right ||
-    event.clientY < r.top ||
-    event.clientY > r.bottom
-  )
-    emit("close");
-}
-</script>

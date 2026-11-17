@@ -23,6 +23,7 @@ All sensitive or environment-specific settings are configurable through environm
 | `VITE_API_BASE_URL` | *(empty)* | Optional browser-facing API origin |
 | `LINGUAMATE_WEB_ALLOWED_ORIGINS` | Local frontend origins on port 5173 | Exact credentialed CORS allowlist |
 | `SESSION_COOKIE_SECURE` | `false` | Set true for HTTPS deployment |
+| `LINGUAMATE_ADMIN_BOOTSTRAP_PASSWORD` | *(empty)* | Create the `admin` account or replace its legacy default password on startup with a new 12–64 character password |
 | `DB_URL` | `jdbc:mysql://localhost:3306/linguamate?...` | MySQL JDBC URL |
 | `DB_DRIVER` | `com.mysql.cj.jdbc.Driver` | JDBC driver class |
 | `DB_USER` | `root` | Database username |
@@ -86,14 +87,13 @@ cd ..
 
 The frontend build writes to `frontend/dist`. The backend JAR contains API resources. The frontend container serves the assets through Nginx, proxies `/api` to `app:4040`, and falls back to `index.html` for Vue history routes. Local `npm run preview` also proxies the API.
 
-Application routes include `/login`, `/`, `/chat`, `/vocabulary`, `/review`, `/news`, `/writing`, `/wordbank`, `/report` and `/admin`. Demo accounts for local evaluation are:
+Application routes include `/login`, `/register`, `/`, `/chat`, `/vocabulary`, `/review`, `/news`, `/writing`, `/wordbank`, `/report` and `/admin`. The demo student account for local evaluation is:
 
 ```text
 Student: student / student123
-Administrator: admin / admin123
 ```
 
-Change or disable seeded demonstration accounts before exposing a deployment to the public internet.
+Set `LINGUAMATE_ADMIN_BOOTSTRAP_PASSWORD` in the backend environment to create `admin` on a fresh database or to migrate an existing `admin` account that still uses the legacy default password. Supply a new password of 12–64 characters. Once set, the password survives restarts and the bootstrap variable can be removed. Change or disable the demo student credentials before exposing a deployment to the public internet.
 
 ## Run Tests
 

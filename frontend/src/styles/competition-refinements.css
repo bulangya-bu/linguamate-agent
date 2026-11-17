@@ -61,28 +61,6 @@
   #dashboard .duo-step-button {
     min-height: 66px;
   }
-  .review-workspace .review-challenge-card {
-    flex: 0 1 auto;
-    align-self: center;
-    margin-block: auto;
-    padding-block: 20px;
-    max-width: 880px;
-  }
-  .review-workspace > .review-list {
-    align-items: center;
-    justify-content: center;
-  }
-  .review-workspace .review-prompt {
-    flex: 0 0 auto;
-    min-height: 190px;
-    padding: 35px 16px;
-  }
-  .review-workspace .review-challenge-form {
-    padding-top: 10px;
-  }
-  .review-workspace .review-prompt-meta {
-    margin-bottom: 20px;
-  }
   .page-news .reader-cover {
     padding-top: 20px;
     padding-bottom: 18px;
@@ -120,51 +98,6 @@
   .reader-paragraph:last-child {
     margin-bottom: 0;
   }
-  .app-shell #journal .journal-observations {
-    display: grid;
-    grid-template-rows: minmax(210px, 1fr) auto;
-    gap: 20px;
-    overflow: auto;
-    scrollbar-width: thin;
-    overscroll-behavior: contain;
-  }
-  .app-shell #journal .journal-trend {
-    min-height: 210px;
-  }
-  .app-shell #journal .journal-chart-wrap {
-    min-height: 65px;
-  }
-  .app-shell #journal .journal-trend-footer {
-    flex-shrink: 0;
-    margin-top: 10px;
-  }
-  .app-shell #journal .journal-calendar {
-    min-height: 0;
-  }
-  .app-shell #journal .journal-body {
-    padding-top: 20px;
-    gap: 24px;
-  }
-  .app-shell #journal .journal-metrics {
-    padding-top: 21px;
-    padding-bottom: 20px;
-  }
-  .app-shell #journal .journal-growth {
-    min-height: 0;
-    overflow: auto;
-    scrollbar-width: thin;
-  }
-  .app-shell #journal .journal-tree {
-    min-height: 190px;
-    flex: 1;
-  }
-  .app-shell #journal .journal-heading-actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-  .journal-date-stamp {
-    font-size: 11px;
-  }
 }
 @media (min-width: 981px) and (max-height: 800px) {
   .daily-theme-choices {
@@ -179,13 +112,6 @@
   #dashboard .duo-step-button {
     min-height: 58px;
   }
-  .review-workspace .review-prompt {
-    min-height: 155px;
-    padding-block: 23px;
-  }
-  .review-workspace .review-challenge-card {
-    padding-block: 10px;
-  }
   .page-news .reader-cover {
     padding-top: 15px;
     padding-bottom: 13px;
@@ -198,33 +124,6 @@
   }
   .page-news .reader-cover h2 {
     font-size: 27px;
-  }
-  .app-shell #journal .journal-observations {
-    grid-template-rows: minmax(190px, 1fr) auto;
-    gap: 15px;
-  }
-  .app-shell #journal .journal-trend {
-    min-height: 190px;
-  }
-  .app-shell #journal .journal-chart-wrap {
-    min-height: 60px;
-  }
-  .app-shell #journal .journal-tree {
-    min-height: 155px;
-  }
-  .app-shell #journal .journal-metrics {
-    padding-top: 16px;
-    padding-bottom: 16px;
-  }
-  .app-shell #journal .journal-metrics strong {
-    font-size: 35px;
-  }
-  .app-shell #journal .learning-journal {
-    padding-top: 20px;
-    padding-bottom: 18px;
-  }
-  .app-shell #journal .journal-heading-actions .journal-date-stamp {
-    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

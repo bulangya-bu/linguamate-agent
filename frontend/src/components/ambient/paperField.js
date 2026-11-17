@@ -1,5 +1,27 @@
 const TAU = Math.PI * 2;
 const MAX_PARTICLES = 48;
+const DESKTOP_PARTICLES = 28;
+const EXTRA_LEARNING_PAPERS = 2;
+
+const learningLayouts = {
+  dashboard: {
+    columns: [[".study-next", ".study-summary"]],
+    rows: [[".study-next, .study-summary", ".study-words-heading"],
+      [".study-word-list, .study-word-empty", ".study-footprint"]],
+    bottom: ".study-footprint",
+  },
+  vocabulary: { center: ".quiz-workbench, .quiz-empty, .quiz-complete" },
+  review: { center: ".review-workspace" },
+  chat: {
+    columns: [[".studio-dialogue", ".studio-coach"]],
+    rows: [[".studio-chat-toolbar", ".studio-chat-columns"]],
+    bottom: ".studio-chat-columns",
+  },
+  writing: { columns: [[".ws-manuscript", ".ws-inspector"]], bottom: ".writing-studio" },
+  news: { columns: [[".news-library", ".reader-panel"]], bottom: ".news-layout" },
+  wordbank: { bottom: ".wordbank-layout" },
+  journal: { columns: [[".journal-observations", ".journal-growth"]], bottom: ".learning-journal" },
+};
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const seed = (index) => {
@@ -8,6 +30,9 @@ const seed = (index) => {
 };
 
 function createParticle(index) {
+  const width = 8 + seed(index + 50) * 7;
+  const height = 6 + seed(index + 60) * 4;
+  const dot = index % 4 === 0;
   return {
     index,
     region: null,
@@ -17,16 +42,50 @@ function createParticle(index) {
     vy: 0,
     angle: seed(index + 10) * TAU,
     spin: 0,
+    lift: 0,
     phase: seed(index + 20) * TAU,
     speed: 4 + seed(index + 30) * 6,
     turn: (seed(index + 40) - .5) * .28,
-    width: 5.5 + seed(index + 50) * 4,
-    height: 4 + seed(index + 60) * 2.5,
-    opacity: .38 + seed(index + 70) * .18,
+    width,
+    opacity: .34 + seed(index + 70) * .16,
     color: index % 7 === 0 ? 2 : index % 2,
-    dot: index % 4 === 0,
+    paper: dot ? null : createPaperShape(width, height, index % 5 === 1),
     reveal: 0,
   };
+}
+
+function createPaperShape(width, height, bookmark) {
+  const left = -width / 2;
+  const right = width / 2;
+  const top = -height / 2;
+  const bottom = height / 2;
+  const corner = bookmark ? 0 : Math.min(3.3, height * .34);
+  const outline = new Path2D();
+  outline.moveTo(left, top);
+  outline.lineTo(right - corner, top);
+  outline.lineTo(right, top + corner);
+  outline.lineTo(right, bottom);
+  if (bookmark) outline.lineTo(0, bottom - 2.4);
+  outline.lineTo(left, bottom);
+  outline.closePath();
+
+  let fold;
+  if (corner) {
+    fold = new Path2D();
+    fold.moveTo(right - corner, top);
+    fold.lineTo(right - corner, top + corner);
+    fold.lineTo(right, top + corner);
+    fold.closePath();
+  }
+
+  let line;
+  if (width >= 11) {
+    line = new Path2D();
+    line.moveTo(left + 2.4, top + 2.6);
+    line.lineTo(right - corner - 1.4, top + 2.6);
+  }
+
+  return { outline, fold, line };
 }
 
 // A canvas owns the free-moving pieces; Vue controls visibility and lifetime.
@@ -37,9 +96,12 @@ export function createPaperField(canvas, { contained }) {
   let bounds;
   let regions = [];
   let palette = [];
+  let paperLight;
+  let paperShadow;
   let layoutKey = "";
   let width = 0;
   let height = 0;
+  let distribute = false;
   let active = false;
   let reduced = false;
   let destroyed = false;
@@ -62,7 +124,7 @@ export function createPaperField(canvas, { contained }) {
     };
   }
 
-  function readLayout() {
+  function readLayout(section) {
     const spaces = [];
     const addSpace = (key, x, y, spaceWidth, spaceHeight) => {
       const right = Math.min(width, x + spaceWidth);
@@ -91,7 +153,6 @@ export function createPaperField(canvas, { contained }) {
 
     const bar = localRect(document.querySelector(".workspace-bar"));
     const nav = localRect(document.querySelector(".side-nav"));
-    const quiz = localRect(document.querySelector(".page-vocabulary #quiz-practice"));
     if (!bar) return spaces;
 
     if (width <= 760) {
@@ -106,33 +167,90 @@ export function createPaperField(canvas, { contained }) {
       range.selectNodeContents(title);
       titleRight = Math.max(titleRight, range.getBoundingClientRect().right - bounds.left + 24);
     }
-    addSpace("top", titleRight, bar.y + bar.height + 7, bar.x + bar.width - 150 - titleRight, 54);
+    const sectionRect = localRect(section);
+    const top = bar.y + bar.height + 7;
+    const barRight = bar.x + bar.width;
+    addSpace("top", titleRight, top, barRight - 24 - titleRight,
+      Math.min(44, (sectionRect?.y ?? top + 44) - top));
+
+    const middle = Math.max(top + 32, sectionRect?.y ?? height * .23);
+    const lower = height * .62;
+    const bottom = height - 4;
+    const addRail = (key, x, railWidth, start = middle, end = bottom) => {
+      const split = clamp(lower, start, end);
+      addSpace(`${key}-middle`, x, start, railWidth, split - start);
+      addSpace(`${key}-lower`, x, split, railWidth, end - split);
+    };
+
     if (nav) {
-      addSpace("left-edge", nav.x + nav.width + 3, height * .23,
-        bar.x - nav.x - nav.width - 6, height * .65);
+      addRail("left-edge", nav.x + nav.width + 3, bar.x - nav.x - nav.width - 6);
     }
-    addSpace("right-edge", bar.x + bar.width + 4, height * .22,
-      width - bar.x - bar.width - 8, height * .65);
-    if (quiz) {
-      addSpace("quiz-left", bar.x + 12, quiz.y + 32,
-        quiz.x - bar.x - 30, quiz.height - 64);
-      addSpace("quiz-right", quiz.x + quiz.width + 18, quiz.y + 32,
-        bar.x + bar.width - quiz.x - quiz.width - 30, quiz.height - 64);
+    addRail("right-edge", barRight + 4, width - barRight - 8);
+
+    const layout = learningLayouts[section?.id];
+    if (!layout) return spaces;
+
+    const find = (selector) => localRect(section.querySelector(selector));
+    const center = layout.center && find(layout.center);
+    if (center) {
+      const start = Math.max(middle, center.y + 10);
+      const end = Math.min(bottom, center.y + center.height);
+      const right = center.x + center.width;
+      addRail("content-left", bar.x + 8, Math.min(48, center.x - bar.x - 16), start, end);
+      const rightWidth = Math.min(48, barRight - right - 16);
+      addRail("content-right", barRight - 8 - rightWidth, rightWidth, start, end);
+    }
+
+    for (const [index, [leftSelector, rightSelector]] of (layout.columns ?? []).entries()) {
+      const left = find(leftSelector);
+      const right = find(rightSelector);
+      if (!left || !right) continue;
+      const x = left.x + left.width + 2;
+      const start = Math.max(left.y, right.y, middle);
+      const end = Math.min(left.y + left.height, right.y + right.height, bottom);
+      addRail(`column-${index}`, x, right.x - x - 2, start, end);
+    }
+
+    for (const [index, [aboveSelector, belowSelector]] of (layout.rows ?? []).entries()) {
+      const above = [...section.querySelectorAll(aboveSelector)].map(localRect).filter(Boolean);
+      const below = find(belowSelector);
+      if (!above.length || !below) continue;
+      const y = Math.max(middle, ...above.map((rect) => rect.y + rect.height + 3));
+      addSpace(`row-${index}`, below.x + 12, y, below.width - 24, below.y - y - 3);
+    }
+
+    const last = layout.bottom ? find(layout.bottom) : center;
+    if (last) {
+      const y = Math.max(middle, last.y + last.height + 2, bottom - 52);
+      addSpace("bottom", bar.x + 20, y, bar.width - 40, bottom - y);
     }
     return spaces;
   }
 
-  function updateParticles() {
-    const area = regions.reduce((total, region) => total + region.width * region.height, 0);
-    const count = area ? clamp(Math.round(area / 4800), 6, MAX_PARTICLES) : 0;
-    particles.length = Math.min(particles.length, count);
-    while (particles.length < count) particles.push(createParticle(particles.length));
+  function updateParticles(learningPage) {
+    const weights = regions.map((region) => {
+      const area = region.width * region.height;
+      return distribute ? Math.min(32000, area) : area;
+    });
+    const topIndex = distribute ? regions.findIndex((region) => region.key === "top") : -1;
+    if (topIndex >= 0 && weights.length > 1) {
+      const rest = weights.reduce((total, weight, index) => total + (index === topIndex ? 0 : weight), 0);
+      weights[topIndex] = Math.min(weights[topIndex] * .65, rest * .5);
+    }
+    const area = weights.reduce((total, weight) => total + weight, 0);
+    const count = area ? clamp(Math.round(area / 4800), 6, distribute ? DESKTOP_PARTICLES : MAX_PARTICLES) : 0;
+    const topWeight = weights[topIndex] ?? 0;
+    const extra = distribute && learningPage && area > topWeight ? EXTRA_LEARNING_PAPERS : 0;
+    const totalCount = count + extra;
+    particles.length = Math.min(particles.length, totalCount);
+    while (particles.length < totalCount) particles.push(createParticle(particles.length));
 
     particles.forEach((particle) => {
       const previous = particle.region;
-      let remaining = seed(particle.index + 90) * area;
-      const region = regions.find((item) => {
-        remaining -= item.width * item.height;
+      const placement = distribute ? (particle.index * .61803398875 + .23) % 1 : seed(particle.index + 90);
+      let remaining = particle.index < count ? placement * area : topWeight + placement * (area - topWeight);
+      const region = regions.find((item, index) => {
+        remaining -= weights[index];
         return remaining <= 0;
       }) || regions[regions.length - 1];
       if (region.key === previous?.key) {
@@ -145,6 +263,7 @@ export function createPaperField(canvas, { contained }) {
         particle.vx = 0;
         particle.vy = 0;
         particle.spin = 0;
+        particle.lift = 0;
         particle.reveal = reduced ? 1 : 0;
       }
       particle.region = region;
@@ -157,6 +276,7 @@ export function createPaperField(canvas, { contained }) {
     bounds = canvas.getBoundingClientRect();
     width = bounds.width;
     height = bounds.height;
+    distribute = !contained && width > 760;
     const ratio = Math.min(window.devicePixelRatio || 1, 2,
       Math.sqrt(6_000_000 / Math.max(1, width * height)));
     const pixelWidth = Math.round(width * ratio);
@@ -169,12 +289,16 @@ export function createPaperField(canvas, { contained }) {
     const style = getComputedStyle(canvas);
     palette = ["--paper-blue", "--paper-green", "--paper-apricot"]
       .map((name) => style.getPropertyValue(name).trim());
-    const layout = readLayout();
-    const nextKey = JSON.stringify(layout);
+    paperLight = style.getPropertyValue("--paper-light").trim();
+    paperShadow = style.getPropertyValue("--paper-shadow").trim();
+    const section = document.querySelector(".workspace > .section.active");
+    const learningPage = Object.hasOwn(learningLayouts, section?.id);
+    const layout = readLayout(section);
+    const nextKey = JSON.stringify([learningPage, layout]);
     if (nextKey !== layoutKey) {
       layoutKey = nextKey;
       regions = layout;
-      updateParticles();
+      updateParticles(learningPage);
     }
     draw(0);
   }
@@ -189,10 +313,51 @@ export function createPaperField(canvas, { contained }) {
     }
   }
 
+  function handleLayoutScroll(event) {
+    if (distribute && (event.target === document || event.target.matches?.(".workspace, .workspace > .section"))) {
+      queueRefresh();
+    }
+  }
+
+  function drawPaper(particle, color, visibility) {
+    const { paper, opacity, lift } = particle;
+    const alpha = (opacity + lift * .19) * visibility;
+
+    context.lineJoin = "round";
+    context.lineWidth = .7;
+
+    context.save();
+    context.translate(.8 + lift, 1 + lift * 1.7);
+    context.globalAlpha = alpha * (.19 + lift * .16);
+    context.fillStyle = paperShadow;
+    context.fill(paper.outline);
+    context.restore();
+    context.globalAlpha = alpha;
+    context.fillStyle = color;
+    context.fill(paper.outline);
+    context.globalAlpha = alpha * .7;
+    context.strokeStyle = color;
+    context.stroke(paper.outline);
+
+    if (paper.fold) {
+      context.globalAlpha = alpha * .87;
+      context.fillStyle = paperLight;
+      context.fill(paper.fold);
+    }
+
+    if (paper.line) {
+      context.globalAlpha = alpha * .68;
+      context.strokeStyle = paperLight;
+      context.lineCap = "round";
+      context.stroke(paper.line);
+    }
+  }
+
   function draw(delta) {
     context.clearRect(0, 0, width, height);
     const drag = Math.exp(-delta * 1.8);
     const spinDrag = Math.exp(-delta * 2.2);
+    const liftDrag = Math.exp(-delta * 2.6);
     particles.forEach((particle) => {
       const region = particle.region;
       const heading = particle.phase + Math.sin(time * .11 + particle.phase) * .7;
@@ -204,6 +369,7 @@ export function createPaperField(canvas, { contained }) {
       particle.x += (flowX + particle.vx) * delta;
       particle.y += (flowY + particle.vy) * delta;
       particle.angle += (particle.turn + particle.spin) * delta;
+      particle.lift *= liftDrag;
       particle.reveal = reduced ? 1 : Math.min(1, particle.reveal + delta * 1.5);
 
       // Pieces fade at the boundary before re-entering from the opposite side.
@@ -211,27 +377,23 @@ export function createPaperField(canvas, { contained }) {
       particle.y = region.y + ((particle.y - region.y) % region.height + region.height) % region.height;
       const edge = Math.min(particle.x - region.x, region.x + region.width - particle.x,
         particle.y - region.y, region.y + region.height - particle.y);
-      const visibility = clamp(edge / 8, 0, 1) * particle.reveal;
+      const fade = distribute ? Math.min(8, region.width * .4, region.height * .4) : 8;
+      const visibility = clamp(edge / fade, 0, 1) * particle.reveal;
       if (!visibility) return;
 
       context.save();
       context.translate(particle.x, particle.y);
       context.rotate(particle.angle);
-      context.fillStyle = palette[particle.color];
-      context.strokeStyle = palette[particle.color];
-      context.globalAlpha = particle.opacity * visibility;
-      context.beginPath();
-      if (particle.dot) {
-        context.arc(0, 0, particle.width * .22, 0, TAU);
+      if (!particle.paper) {
+        context.fillStyle = palette[particle.color];
+        context.globalAlpha = (particle.opacity + particle.lift * .1) * visibility;
+        context.beginPath();
+        context.arc(0, 0, particle.width * .155, 0, TAU);
+        context.fill();
       } else {
-        context.roundRect(-particle.width / 2, -particle.height / 2,
-          particle.width, particle.height, 1.5);
-      }
-      context.fill();
-      if (!particle.dot) {
-        context.globalAlpha *= .45;
-        context.lineWidth = .65;
-        context.stroke();
+        const flutter = Math.sin(time * 1.55 + particle.phase);
+        context.scale(1 + particle.lift * .18, .88 + flutter * .12 + particle.lift * .17);
+        drawPaper(particle, palette[particle.color], visibility);
       }
       context.restore();
     });
@@ -261,16 +423,19 @@ export function createPaperField(canvas, { contained }) {
     const sampleDuration = now - velocitySample.at;
     if (sampleDuration < 8) return;
 
-    const start = velocitySample;
-    const dx = x - start.x;
-    const dy = y - start.y;
-    const distance = Math.hypot(dx, dy);
-    if (distance < .5) return;
+    const dx = x - velocitySample.x;
+    const dy = y - velocitySample.y;
+    const travel = Math.hypot(dx, dy);
+    if (travel < .5) return;
     velocitySample = { x, y, at: now };
-    const speed = distance / sampleDuration * 1000;
-    const radius = 58 + Math.min(speed / 30, 36);
-    const directionX = dx / distance;
-    const directionY = dy / distance;
+    const speed = travel / sampleDuration * 1000;
+    const radius = 60 + Math.min(speed / 27, 35);
+    const gain = 1 + Math.min(speed / 2600, .22);
+    const directionX = dx / travel;
+    const directionY = dy / travel;
+    // A sudden cursor jump should not scatter every piece between the two points.
+    const distance = Math.min(travel, 180);
+    const start = { x: x - directionX * distance, y: y - directionY * distance };
 
     particles.forEach((particle) => {
       const along = (particle.x - start.x) * directionX + (particle.y - start.y) * directionY;
@@ -284,7 +449,7 @@ export function createPaperField(canvas, { contained }) {
       // This keeps the same gesture consistent across mouse sampling rates.
       const from = Math.max(0, along - radius);
       const to = Math.min(distance, along + radius);
-      const steps = Math.ceil((to - from) / 6);
+      const steps = Math.max(1, Math.ceil((to - from) / 6));
       const stepSize = (to - from) / steps;
       const side = Math.sin(particle.phase) >= 0 ? 1 : -1;
       let pushX = 0;
@@ -298,13 +463,21 @@ export function createPaperField(canvas, { contained }) {
         const weight = Math.max(0, 1 - radialDistance / radius) ** 2 * stepSize;
         const normalX = radialDistance > 1 ? xDistance / radialDistance : -directionY * side;
         const normalY = radialDistance > 1 ? yDistance / radialDistance : directionX * side;
-        pushX += (normalX * .65 + directionX * .45) * weight;
-        pushY += (normalY * .65 + directionY * .45) * weight;
-        rotation += side * weight * .025;
+        pushX += (normalX * .95 + directionX * 1.03) * weight;
+        pushY += (normalY * .95 + directionY * 1.03) * weight;
+        rotation += side * weight * .044;
       }
-      particle.vx = clamp(particle.vx + pushX, -160, 160);
-      particle.vy = clamp(particle.vy + pushY, -160, 160);
-      particle.spin = clamp(particle.spin + rotation, -3, 3);
+      const region = particle.region;
+      const vx = particle.vx + pushX * gain;
+      const vy = particle.vy + pushY * gain;
+      const limit = Math.min(1, 175 / (Math.hypot(vx, vy) || 1));
+      // Ease the sweep near a region boundary to keep the hit visible before wrapping.
+      particle.vx = clamp(vx * limit, (region.x - particle.x) * 1.65,
+        (region.x + region.width - particle.x) * 1.65);
+      particle.vy = clamp(vy * limit, (region.y - particle.y) * 1.65,
+        (region.y + region.height - particle.y) * 1.65);
+      particle.spin = clamp(particle.spin + rotation * gain, -4, 4);
+      particle.lift = Math.max(particle.lift, clamp(1 - separation / (radius * .68), 0, 1));
     });
   }
 
@@ -333,6 +506,7 @@ export function createPaperField(canvas, { contained }) {
     attributes: true, attributeFilter: ["data-theme"],
   });
   window.addEventListener("pointermove", movePointer, { passive: true });
+  window.addEventListener("scroll", handleLayoutScroll, { capture: true, passive: true });
   document.addEventListener("pointerleave", leavePointer);
   document.addEventListener("animationend", layoutSettled);
   document.addEventListener("transitionend", layoutSettled);
@@ -349,6 +523,7 @@ export function createPaperField(canvas, { contained }) {
       resizeObserver.disconnect();
       layoutObserver.disconnect();
       window.removeEventListener("pointermove", movePointer);
+      window.removeEventListener("scroll", handleLayoutScroll, true);
       document.removeEventListener("pointerleave", leavePointer);
       document.removeEventListener("animationend", layoutSettled);
       document.removeEventListener("transitionend", layoutSettled);

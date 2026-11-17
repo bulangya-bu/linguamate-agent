@@ -7,7 +7,8 @@ public record LearningJournalView(LocalDate today, String timeZone, String nickn
         long membershipDays, LocalDate loginRecordedSince, long loginDays, int currentStreak, int longestStreak,
         int activeDays, Totals totals, List<Day> days) {
     public record Totals(long studiedWords, long reviewWords, long masteredWords, long quizAttempts,
-                         long reviewAttempts, Long reviewAccuracy, long essays, long readings, long chatTurns) {}
+                         long reviewAttempts, Long reviewAccuracy, long essays, long readings, long chatTurns,
+                         long readingWords, long writtenWords) {}
     public record Day(LocalDate date, long newWords, long reviewWords, long quizAttempts, long reviewAttempts,
                       Long reviewAccuracy, long studyEvents, boolean loggedIn,
                       long aiChatTurns, long aiEssayReviews, long readingsFinished) {}

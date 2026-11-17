@@ -5,6 +5,82 @@ body, .side-nav, .panel, .auth-form-side {
   transition: background-color 220ms ease, color 180ms ease, border-color 220ms ease;
 }
 
+/* The revealed area should already have its final theme colors. */
+:root.is-theme-revealing :is(
+  body, .side-nav, .panel, .auth-form-side, .auth-page--garden .auth-field input,
+  .app-shell .workspace > .workspace-bar, .nav-icon-wrap, .account-trigger, .quiz-option
+) {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root :is(body, .side-nav, .panel, .auth-form-side) { transition: none; }
+}
+
+/* Include the quiz's named regions in the page capture during a theme change. */
+:root.is-theme-revealing :is(.app-shell #vocabulary > .panel > .panel-heading, .word-quiz-card, .quiz-nav, .quiz-insight) {
+  view-transition-name: none;
+}
+
+:root.is-theme-revealing {
+  --theme-reveal-duration: 400ms;
+  --theme-reveal-ease: cubic-bezier(.38, .04, .24, 1);
+  --theme-reveal-origin: var(--theme-reveal-x) var(--theme-reveal-y);
+  --theme-reveal-tint: rgb(242 187 100 / 0.82);
+}
+
+:root.is-theme-revealing[data-theme="dark"] {
+  --theme-reveal-tint: rgb(129 189 248 / 0.88);
+}
+
+:root.is-theme-revealing::view-transition-group(root),
+:root.is-theme-revealing::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+:root.is-theme-revealing::view-transition-new(root) {
+  z-index: 1;
+  mix-blend-mode: normal;
+  animation: theme-reveal var(--theme-reveal-duration) var(--theme-reveal-ease) both;
+}
+
+/* The glow scales independently of the page so its gradient stops stay static. */
+:root.is-theme-revealing::before {
+  content: "";
+  position: fixed;
+  inset: 0 auto auto 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  view-transition-name: theme-reveal-edge;
+}
+
+:root.is-theme-revealing::view-transition-group(theme-reveal-edge) {
+  inset: var(--theme-reveal-y) auto auto var(--theme-reveal-x);
+  width: 256px;
+  height: 256px;
+  z-index: 1;
+  transform: none;
+  translate: -50% -50%;
+  background: radial-gradient(circle closest-side, transparent 98.6%, var(--theme-reveal-tint) 99.3%, transparent);
+  animation: theme-reveal-edge var(--theme-reveal-duration) var(--theme-reveal-ease) both;
+}
+
+:root.is-theme-revealing::view-transition-image-pair(theme-reveal-edge) {
+  display: none;
+}
+
+@keyframes theme-reveal {
+  from { clip-path: circle(18px at var(--theme-reveal-origin)); }
+  to { clip-path: circle(var(--theme-reveal-extent) at var(--theme-reveal-origin)); }
+}
+
+@keyframes theme-reveal-edge {
+  from { scale: .142; }
+  to { scale: var(--theme-reveal-edge-scale); }
+}
+
 :root[data-theme="dark"] {
   color-scheme: dark;
   --ink: #dce6ee;

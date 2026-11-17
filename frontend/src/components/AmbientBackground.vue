@@ -37,6 +37,8 @@ onBeforeUnmount(() => field?.destroy());
   --paper-blue: rgb(62 146 180);
   --paper-green: rgb(119 168 82);
   --paper-apricot: rgb(207 153 88);
+  --paper-light: rgb(255 255 255);
+  --paper-shadow: rgb(48 78 88);
   position: fixed;
   inset: 0;
   z-index: -1;
@@ -48,6 +50,8 @@ onBeforeUnmount(() => field?.destroy());
   --paper-blue: rgb(111 185 211);
   --paper-green: rgb(157 194 122);
   --paper-apricot: rgb(223 181 128);
+  --paper-light: rgb(222 240 243);
+  --paper-shadow: rgb(5 14 22);
 }
 
 .ambient-background.is-contained {

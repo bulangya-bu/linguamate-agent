@@ -26,6 +26,7 @@ export function normalizeLearningAction(action) {
 
 export function learningMessageFromResponse(result = {}) {
   return {
+    ...(result.messageId != null && { id: result.messageId }),
     role: "assistant",
     content: result.reply || "",
     coaching: result.coaching || null,
@@ -43,7 +44,7 @@ export function learningMessageFromHistory(message = {}) {
   if (!metadata || typeof metadata !== "object") metadata = {};
   const reading = metadata.readingArticle;
   const readingArticle = reading && Number.isSafeInteger(reading.id) && typeof reading.title === 'string' ? {id:reading.id,title:reading.title} : null;
-  return { ...message, ...learningMessageFromResponse({ ...metadata, reply: message.content }), role: message.role, readingArticle };
+  return { ...message, ...learningMessageFromResponse({ ...metadata, messageId: message.id, reply: message.content }), role: message.role, readingArticle };
 }
 
 export function nextVocabularyPage(card, direction) {

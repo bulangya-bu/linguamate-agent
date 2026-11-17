@@ -11,53 +11,53 @@
       <p>正在加载学习档案…</p>
     </div>
     <template v-else>
-      <header class="journal-heading">
-        <div>
-          <h2>你的学习记录</h2>
-          <p>
-            {{ data.nickname || "学习者" }} · 加入的第
-            {{ data.membershipDays }} 天
-          </p>
-        </div>
-        <div class="journal-heading-actions">
-          <span class="journal-date-stamp" :title="data.timeZone"
-            ><AppIcon name="calendar" />{{ fullDate(data.today) }}</span
-          ><button
-            type="button"
-            aria-label="刷新学习档案"
-            :disabled="loading"
-            @click="load"
-          >
-            <AppIcon name="review" /></button
-          ><button type="button" @click="$emit('evidence')">
-            成长证据 ↗
-          </button>
-        </div>
-      </header>
-      <div class="journal-metrics">
-        <section>
-          <span>今日首次作答</span
-          ><strong>{{ today.newWords || 0 }}<small>词</small></strong
-          >
-        </section>
-        <section>
-          <span>今日复习</span
-          ><strong>{{ today.reviewWords || 0 }}<small>词</small></strong
-          >
-        </section>
-        <section>
-          <span>累计学过</span
-          ><strong>{{ data.totals.studiedWords }}<small>词</small></strong
-          ><span class="journal-metric-note"
-            >已掌握 {{ data.totals.masteredWords }} 词</span
-          >
-        </section>
-        <section>
-          <span>累计登录</span
-          ><strong>{{ data.loginDays }}<small>天</small></strong
-          >
-        </section>
-      </div>
+      <section class="journal-overview" aria-labelledby="journal-overview-heading">
+        <header class="journal-heading">
+          <div>
+            <h2 id="journal-overview-heading">你的学习记录</h2>
+            <p>{{ data.nickname || "学习者" }} · 加入的第 {{ data.membershipDays }} 天</p>
+          </div>
+          <div class="journal-heading-actions">
+            <time class="journal-date-stamp" :datetime="data.today" :title="data.timeZone">
+              <AppIcon name="calendar" />{{ fullDate(data.today) }}
+            </time>
+            <button
+              class="journal-refresh"
+              type="button"
+              aria-label="刷新学习档案"
+              title="刷新学习档案"
+              :disabled="loading"
+              @click="load"
+            >
+              <AppIcon name="review" />
+            </button>
+            <button class="journal-evidence-link" type="button" @click="$emit('evidence')">
+              成长证据 <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+        </header>
+        <dl class="journal-metrics">
+          <div>
+            <dt>今日首次作答</dt>
+            <dd><strong>{{ today.newWords || 0 }}</strong> 词</dd>
+          </div>
+          <div>
+            <dt>今日复习</dt>
+            <dd><strong>{{ today.reviewWords || 0 }}</strong> 词</dd>
+          </div>
+          <div>
+            <dt>累计学过</dt>
+            <dd>
+              <strong>{{ data.totals.studiedWords }}</strong> 词
+              <span class="journal-metric-note">已掌握 {{ data.totals.masteredWords }} 词</span>
+            </dd>
+          </div>
+          <div>
+            <dt>累计登录</dt>
+            <dd><strong>{{ data.loginDays }}</strong> 天</dd>
+          </div>
+        </dl>
+      </section>
       <div class="journal-body">
         <div class="journal-observations">
           <section
@@ -110,7 +110,7 @@
                     class="journal-grid-line"
                   />
                   <text
-                    x="27"
+                    x="31"
                     :y="chartY(tick) + 4"
                     text-anchor="end"
                     class="journal-axis-label"
@@ -220,276 +220,18 @@
               </button>
             </div>
           </section>
-          <section
-            class="journal-calendar"
-            aria-labelledby="journal-calendar-heading"
-          >
-            <header class="journal-section-heading">
-              <div>
-                <h2 id="journal-calendar-heading">学习日历</h2>
-                <p>
-                  近 12 周 · {{ shortDate(data.days[0].date) }} —
-                  {{ shortDate(data.today) }}
-                </p>
-              </div>
-              <div
-                class="journal-calendar-modes"
-                role="group"
-                aria-label="日历记录类型"
-              >
-                <button
-                  type="button"
-                  :class="{ active: calendarMode === 'study' }"
-                  :aria-pressed="calendarMode === 'study'"
-                  @click="calendarMode = 'study'"
-                >
-                  学习</button
-                ><button
-                  type="button"
-                  :class="{ active: calendarMode === 'login' }"
-                  :aria-pressed="calendarMode === 'login'"
-                  @click="calendarMode = 'login'"
-                >
-                  登录
-                </button>
-              </div>
-            </header>
-            <div class="journal-calendar-content">
-              <div class="journal-calendar-map">
-                <div class="journal-calendar-layout">
-                  <div class="journal-weekdays" aria-hidden="true">
-                    <span
-                      v-for="(label, index) in [
-                        '一',
-                        '',
-                        '三',
-                        '',
-                        '五',
-                        '',
-                        '日',
-                      ]"
-                      :key="index"
-                      >{{ label }}</span
-                    >
-                  </div>
-                  <div class="journal-day-grid" aria-label="活跃日历">
-                    <button
-                      v-for="(day, index) in data.days"
-                      :key="day.date"
-                      :ref="(element) => (calendarRefs[index] = element)"
-                      type="button"
-                      :tabindex="selectedDate === day.date ? 0 : -1"
-                      :class="{
-                        selected: selectedDate === day.date,
-                        future: day.date > data.today,
-                        unrecorded:
-                          calendarMode === 'login' &&
-                          (!data.loginRecordedSince ||
-                            day.date < data.loginRecordedSince),
-                      }"
-                      :style="{
-                        gridColumn: Math.floor(index / 7) + 1,
-                        gridRow: (index % 7) + 1,
-                      }"
-                      :data-intensity="dayIntensity(day, calendarMode)"
-                      :disabled="day.date > data.today"
-                      :aria-label="calendarLabel(day)"
-                      :title="calendarLabel(day)"
-                      @mouseenter="selectedDate = day.date"
-                      @focus="selectedDate = day.date"
-                      @click="selectedDate = day.date"
-                      @keydown.left.prevent="focusCalendar(index - 7)"
-                      @keydown.right.prevent="focusCalendar(index + 7)"
-                      @keydown.up.prevent="focusCalendar(index - 1)"
-                      @keydown.down.prevent="focusCalendar(index + 1)"
-                    ></button>
-                  </div>
-                </div>
-                <div class="journal-calendar-key" aria-hidden="true">
-                  <span>少</span
-                  ><i
-                    v-for="level in [0, 1, 2, 3, 4]"
-                    :key="level"
-                    :data-intensity="level"
-                  ></i
-                  ><span>多</span>
-                </div>
-              </div>
-              <div class="journal-selected-note" aria-live="polite">
-                <time>{{ fullDate(selectedDay.date) }}</time
-                ><template v-if="calendarMode === 'study'"
-                  ><div class="journal-selected-numbers">
-                    <span
-                      ><b>{{ selectedDay.newWords }}</b> 词新学</span
-                    ><span
-                      ><b>{{ selectedDay.reviewWords }}</b> 词复习</span
-                    >
-                  </div>
-                  <p>{{ selectedDay.studyEvents }} 条学习记录</p></template
-                >
-                <p v-else class="journal-login-detail">{{ loginStatus }}</p>
-              </div>
-            </div>
-            <p v-if="calendarMode === 'login' && data.loginRecordedSince" class="journal-calendar-caption">
-              登录记录始于 {{ fullDate(data.loginRecordedSince) }}
-            </p>
-          </section>
+          <JournalCalendar
+            :days="data.days"
+            :today="data.today"
+            :selected-date="selectedDate"
+            @select="selectedDate = $event"
+          />
         </div>
-        <aside class="journal-growth" aria-labelledby="journal-growth-heading">
-          <header class="journal-section-heading">
-            <div>
-              <h2 id="journal-growth-heading">我的学习成长树</h2>
-            </div>
-          </header>
-          <svg
-            class="journal-tree"
-            viewBox="0 0 360 337"
-            role="group"
-            aria-label="累计学习记录，选择分枝查看实际作答与改写"
-          >
-            <g class="journal-tree-trunk">
-              <SketchShape
-                v-for="(path, index) in branches"
-                :key="path"
-                kind="path"
-                :args="[path]"
-                :seed="90 + index"
-                :options="{
-                  stroke: 'var(--j-tree-ink)',
-                  strokeWidth: 2.1,
-                  roughness: 0.8,
-                }"
-              />
-            </g>
-            <SketchShape
-              v-for="(leaf, index) in leaves"
-              :key="index"
-              kind="path"
-              :args="[leaf]"
-              :seed="140 + index"
-              :options="{
-                stroke: 'var(--j-green-ink)',
-                fill: 'var(--j-green)',
-                fillStyle: 'hachure',
-                hachureGap: 4,
-                fillWeight: 1.2,
-                roughness: 0.7,
-              }"
-            />
-            <g
-              v-for="node in treeNodes"
-              :key="node.id"
-              class="journal-tree-node"
-              :class="{ 'has-records': node.count > 0 }"
-              tabindex="0"
-              role="button"
-              :aria-label="`${node.label} ${node.count}${node.unit}，${node.evidenceTab ? '查看成长证据' : '打开阅读空间'}`"
-              @click="openTreeNode(node)"
-              @keydown.enter.prevent="openTreeNode(node)"
-              @keydown.space.prevent="openTreeNode(node)"
-            >
-              <ellipse
-                :cx="node.x"
-                :cy="node.y - 2"
-                rx="52"
-                ry="32.5"
-                class="journal-tree-node-bg"
-              />
-              <SketchShape
-                kind="ellipse"
-                :args="[node.x, node.y - 2, 104, 65]"
-                :seed="node.x + node.y"
-                :options="{
-                  stroke: 'var(--j-tree-node)',
-                  strokeWidth: 1,
-                  roughness: 0.7,
-                }"
-              />
-              <text
-                :x="node.x"
-                :y="node.y - 1"
-                text-anchor="middle"
-                class="journal-tree-count"
-              >
-                {{ node.count }}
-                <tspan dx="4" class="journal-tree-unit">{{ node.unit }}</tspan>
-              </text>
-              <text
-                :x="node.x"
-                :y="node.y + 20"
-                text-anchor="middle"
-                class="journal-tree-label"
-              >
-                {{ node.label }}
-              </text>
-            </g>
-            <SketchShape
-              kind="path"
-              :args="[
-                'M150 298 Q166 292 180 302 Q194 292 210 298 L209 322 Q194 317 180 326 Q165 317 151 322 Z M180 302 L180 325',
-              ]"
-              :seed="22"
-              :options="{
-                stroke: 'var(--j-tree-ink)',
-                strokeWidth: 1.5,
-                fill: 'var(--j-paper)',
-                fillStyle: 'solid',
-              }"
-            />
-          </svg>
-          <div class="journal-streak">
-            <span class="journal-sun" aria-hidden="true"
-              ><svg viewBox="0 0 90 90">
-                <SketchShape
-                  kind="circle"
-                  :args="[45, 45, 48]"
-                  :options="{
-                    stroke: 'var(--j-green-ink)',
-                    strokeWidth: 1.4,
-                    fill: 'var(--j-green)',
-                    hachureGap: 5,
-                    fillWeight: 0.6,
-                  }"
-                />
-                <SketchShape
-                  v-for="(line, index) in sunRays"
-                  :key="index"
-                  kind="line"
-                  :args="line"
-                  :seed="index + 36"
-                  :options="{ stroke: 'var(--j-green-ink)', strokeWidth: 1.5 }"
-                /></svg
-            ></span>
-            <div>
-              <strong>{{ data.currentStreak }}<small>天</small></strong
-              ><span>连续登录</span>
-            </div>
-            <div>
-              <strong>{{ data.longestStreak }}<small>天</small></strong
-              ><span>最长连续登录</span>
-            </div>
-          </div>
-          <div class="journal-footnotes">
-            <span
-              >累计学习 <b>{{ data.activeDays }}</b> 天</span
-            ><span
-              >累计复习 <b>{{ data.totals.reviewWords }}</b> 词</span
-            ><span
-              >复习正确率
-              <b>{{
-                data.totals.reviewAccuracy === null
-                  ? "—"
-                  : data.totals.reviewAccuracy + "%"
-              }}</b
-              ><small>（{{ data.totals.reviewAttempts }} 次作答）</small></span
-            >
-          </div>
-          <footer class="journal-signature">
-            <AppIcon name="calendar" /><span
-              >加入日期 {{ fullDate(data.joinedOn) }}</span
-            >
-          </footer>
-        </aside>
+        <JournalOutcomes
+          :journal="data"
+          @navigate="emit('navigate', $event)"
+          @evidence="emit('evidence', $event)"
+        />
       </div>
     </template>
   </div>
@@ -505,11 +247,12 @@ import {
   watch,
 } from "vue";
 import AppIcon from "./AppIcon.vue";
+import JournalCalendar from "./JournalCalendar.vue";
+import JournalOutcomes from "./JournalOutcomes.vue";
 import SketchShape from "./SketchShape.vue";
 import { learningApi } from "@/api/modules";
 import {
   chartScale,
-  dayIntensity,
   shortDate,
   trendDays,
 } from "@/learning-journal";
@@ -520,9 +263,7 @@ const data = ref(null),
   error = ref(""),
   period = ref(7),
   selectedDate = ref(""),
-  calendarMode = ref("study"),
   dayRefs = ref([]);
-const calendarRefs = ref([]);
 const chartWrap = ref(null),
   plotSize = ref({ width: 720, height: 230 });
 let observer;
@@ -531,19 +272,6 @@ const trend = computed(() =>
 );
 const today = computed(
   () => data.value?.days.find((day) => day.date === data.value.today) || {},
-);
-const selectedDay = computed(
-  () =>
-    data.value?.days.find((day) => day.date === selectedDate.value) ||
-    today.value,
-);
-const loginStatus = computed(() =>
-  selectedDay.value.loggedIn
-    ? "当天已登录"
-    : !data.value?.loginRecordedSince ||
-        selectedDay.value.date < data.value.loginRecordedSince
-      ? "当天尚未开始记录登录"
-      : "未记录登录",
 );
 const chartDay = computed(
   () =>
@@ -576,9 +304,6 @@ function dateSeed(date) {
 function fullDate(date) {
   return date?.replaceAll("-", ".") || "";
 }
-function calendarLabel(day) {
-  return `${fullDate(day.date)}，${day.date > data.value.today ? "未来日期" : calendarMode.value === "login" ? (day.loggedIn ? "已登录" : !data.value.loginRecordedSince || day.date < data.value.loginRecordedSince ? "尚未开始记录" : "未记录登录") : `${day.studyEvents} 条学习记录，新学 ${day.newWords} 词，复习 ${day.reviewWords} 词`}`;
-}
 async function load() {
   if (loading.value) return;
   loading.value = true;
@@ -598,95 +323,6 @@ async function focusDay(index) {
   await nextTick();
   dayRefs.value[safe]?.focus();
 }
-async function focusCalendar(index) {
-  const last = data.value.days.findIndex(
-    (day) => day.date === data.value.today,
-  );
-  const safe = Math.max(0, Math.min(last, index));
-  selectedDate.value = data.value.days[safe].date;
-  await nextTick();
-  calendarRefs.value[safe]?.focus();
-}
-watch(period, () => {
-  if (!trend.value.some((day) => day.date === selectedDate.value))
-    selectedDate.value = data.value.today;
-});
-const branches = [
-  "M180 302 C169 252 191 216 181 172 C174 136 180 92 180 63",
-  "M181 174 C144 156 125 128 91 111",
-  "M181 168 C220 140 241 115 270 103",
-  "M177 239 C136 246 121 230 90 222",
-  "M179 235 C220 239 244 221 270 215",
-];
-const leaves = [
-  "M176 278 Q148 273 147 250 Q170 253 176 278 Z",
-  "M184 259 Q214 251 215 231 Q189 235 184 259 Z",
-  "M151 155 Q127 154 125 135 Q146 137 151 155 Z",
-  "M212 147 Q210 122 231 116 Q237 137 212 147 Z",
-  "M180 118 Q155 109 157 91 Q176 91 180 118 Z",
-  "M187 204 Q207 192 207 173 Q188 178 187 204 Z",
-  "M131 238 Q118 254 103 249 Q105 231 131 238 Z",
-  "M230 231 Q243 247 258 240 Q252 225 230 231 Z",
-];
-const treeNodes = computed(() => [
-  {
-    id: "chat",
-    label: "对话交流",
-    count: data.value.totals.chatTurns,
-    unit: "轮",
-    x: 180,
-    y: 36,
-    evidenceTab: "expressions",
-  },
-  {
-    id: "vocabulary",
-    label: "累计学过",
-    count: data.value.totals.studiedWords,
-    unit: "词",
-    x: 64,
-    y: 98,
-    evidenceTab: "words",
-  },
-  {
-    id: "mastered",
-    label: "已掌握",
-    count: data.value.totals.masteredWords,
-    unit: "词",
-    x: 295,
-    y: 96,
-    evidenceTab: "words",
-  },
-  {
-    id: "news",
-    label: "完成阅读",
-    count: data.value.totals.readings,
-    unit: "篇",
-    x: 62,
-    y: 217,
-  },
-  {
-    id: "writing",
-    label: "写作练习",
-    count: data.value.totals.essays,
-    unit: "次",
-    x: 297,
-    y: 209,
-    evidenceTab: "writing",
-  },
-]);
-function openTreeNode(node) {
-  if (node.evidenceTab) emit("evidence", node.evidenceTab);
-  else emit("navigate", node.id);
-}
-const sunRays = Array.from({ length: 8 }, (_, index) => {
-  const angle = (index * Math.PI) / 4;
-  return [
-    45 + Math.cos(angle) * 31,
-    45 + Math.sin(angle) * 31,
-    45 + Math.cos(angle) * 39,
-    45 + Math.sin(angle) * 39,
-  ];
-});
 watch(chartWrap, (element) => {
   observer?.disconnect();
   if (!element) return;

@@ -132,6 +132,13 @@ function openGrowthEvidence(tab = "words") {
   openGrowth();
 }
 
+function navigateGrowthEvidence(section, articleId) {
+  if (section === "news" && articleId != null) {
+    return returnToArticle(articleId);
+  }
+  return goSection(section);
+}
+
 let previousFocus;
 let dialogFocusFrame;
 
@@ -644,7 +651,7 @@ onBeforeUnmount(() => {
       :open="growthOpen"
       :initial-tab="growthInitialTab"
       @close="growthOpen = false"
-      @navigate="goSection"
+      @navigate="navigateGrowthEvidence"
     />
     <ReadingTooltip :reading="reading" />
   </div>

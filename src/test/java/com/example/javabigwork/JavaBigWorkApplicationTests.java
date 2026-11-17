@@ -35,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
         "linguamate.ai.base-url=http://127.0.0.1:9/v1",
         "linguamate.ai.api-key=test-key",
         "linguamate.ai.chat-model=test-model",
+        "LINGUAMATE_ADMIN_BOOTSTRAP_PASSWORD=test-admin-bootstrap",
         "linguamate.cache.redis.enabled=false"
 })
 @AutoConfigureMockMvc
@@ -1038,7 +1039,8 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.data.todayLearners").isNumber())
                 .andExpect(jsonPath("$.data.dailyWordStats.length()").value(7));
 
-        mockMvc.perform(get("/api/admin/users/1/profile").session(adminSession()))
+        MockHttpSession admin = adminSession();
+        mockMvc.perform(get("/api/admin/users/" + currentUserId(admin) + "/profile").session(admin))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.username").isNotEmpty())
@@ -1050,6 +1052,32 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.data.vocabularyDistribution.learnedWords").isNumber())
                 .andExpect(jsonPath("$.data.readingOverview.readings").isNumber())
                 .andExpect(jsonPath("$.data.aiConfigured").isBoolean());
+    }
+
+    @Test
+    void registrationValidatesNormalizedUsernameAndReportsConflicts() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "username", " a ", "password", "testpass123"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("用户名长度应为 3-32 位"));
+
+        String username = "normalized" + System.nanoTime();
+        String padding = " ".repeat(16);
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "username", padding + "N" + username.substring(1) + padding, "password", "testpass123"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.username").value(username));
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "username", username, "password", "testpass123"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("用户名已存在"));
     }
 
     @Test
@@ -1217,7 +1245,7 @@ class JavaBigWorkApplicationTests {
     }
 
     private MockHttpSession adminSession() throws Exception {
-        return login("admin", "admin123");
+        return login("admin", "test-admin-bootstrap");
     }
 
     private long registerUser(String username, String nickname) throws Exception {

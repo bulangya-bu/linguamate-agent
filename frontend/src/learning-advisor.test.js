@@ -9,7 +9,8 @@ import {
 
 test("history restores per-turn coaching and safely reads legacy metadata", () => {
   const coaching = { source: "model", modelName: "test-model", improved: "I went home." };
-  const restored = learningMessageFromHistory({ role: "assistant", content: "How was your day?", metadata: JSON.stringify({ coaching, trace: [{ phase: "Act" }] }) });
+  const restored = learningMessageFromHistory({ id: 18, role: "assistant", content: "How was your day?", metadata: JSON.stringify({ coaching, trace: [{ phase: "Act" }] }) });
+  assert.equal(restored.id, 18);
   assert.deepEqual(restored.coaching, coaching);
   assert.equal(restored.content, "How was your day?");
   assert.equal(restored.trace[0].phase, "Act");
@@ -19,6 +20,7 @@ test("history restores per-turn coaching and safely reads legacy metadata", () =
 
 test("learning response keeps structured cards and only allows known routes", () => {
   const message = learningMessageFromResponse({
+    messageId: 19,
     reply: "继续完成今天的任务。",
     learningCard: { type: "daily-route", items: [] },
     actions: [
@@ -40,6 +42,7 @@ test("learning response keeps structured cards and only allows known routes", ()
   });
 
   assert.equal(message.role, "assistant");
+  assert.equal(message.id, 19);
   assert.equal(message.learningCard.type, "daily-route");
   assert.deepEqual(
     message.actions.map((item) => item.route),

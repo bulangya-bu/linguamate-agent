@@ -1,0 +1,35 @@
+@media (any-hover: hover) and (any-pointer: fine) {
+  :root {
+    --folded-cursor: url('/assets/cursor-fold-light.svg') 4 3, default;
+    --folded-cursor-link: url('/assets/cursor-fold-light-link.svg') 4 3, pointer;
+  }
+
+  :root[data-theme="dark"] {
+    --folded-cursor: url('/assets/cursor-fold-dark.svg') 4 3, default;
+    --folded-cursor-link: url('/assets/cursor-fold-dark-link.svg') 4 3, pointer;
+  }
+
+  body {
+    cursor: var(--folded-cursor);
+  }
+
+  :root :is(
+    a[href], summary, button:enabled:not([aria-disabled="true"]), select:enabled,
+    input:enabled:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"]),
+    [role="button"]:not(svg *, [aria-disabled="true"]),
+    [role="option"]:not([aria-disabled="true"])
+  ) {
+    cursor: var(--folded-cursor-link);
+  }
+
+  :where(p, pre, blockquote):not(:where(a[href] *, button *, [role="button"] *)),
+  :where(textarea:enabled, [contenteditable]:not([contenteditable="false"]), .reader-paragraph),
+  input:enabled:is(:not([type]), [type="text"], [type="search"], [type="email"], [type="password"], [type="url"], [type="tel"], [type="number"]) {
+    cursor: text;
+  }
+
+  :root .el-select__wrapper:not(.is-disabled),
+  :root .el-select__wrapper:not(.is-disabled) :is(.el-select__caret, .el-select__input[readonly]) {
+    cursor: var(--folded-cursor-link);
+  }
+}

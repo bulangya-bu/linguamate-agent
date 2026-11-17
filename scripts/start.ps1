@@ -23,6 +23,18 @@ function Invoke-BuildCommand([string]$Executable, [string[]]$Arguments, [string]
     if ($code -ne 0) { throw "Dependency installation or compilation failed (exit $code). Inspect $Log." }
 }
 
+function Get-LanIPv4Addresses {
+    foreach ($network in (Get-NetIPConfiguration -ErrorAction SilentlyContinue)) {
+        if ($network.NetAdapter.Status -ne 'Up' -or
+            (!$network.NetAdapter.HardwareInterface -and !$network.IPv4DefaultGateway)) { continue }
+        foreach ($address in $network.IPv4Address) {
+            if ($address.AddressState -eq 'Preferred' -and $address.IPAddress -notmatch '^(127\.|169\.254\.)') {
+                [pscustomobject]@{ InterfaceAlias = $network.InterfaceAlias; IPAddress = $address.IPAddress }
+            }
+        }
+    }
+}
+
 try {
     $lock = Get-LauncherLock
     Set-Location -LiteralPath $script:ProjectRoot
@@ -34,6 +46,10 @@ try {
     $tools = Get-DevelopmentTools
     $backendPort = Get-ConfiguredPort 'SERVER_PORT' 4040
     $frontendPort = Get-ConfiguredPort 'FRONTEND_PORT' 5173
+    $frontendHost = if ($env:FRONTEND_HOST) { $env:FRONTEND_HOST } else { '0.0.0.0' }
+    if ($frontendHost -notin @('0.0.0.0', '127.0.0.1')) {
+        throw 'FRONTEND_HOST must be 0.0.0.0 (LAN access) or 127.0.0.1 (local only).'
+    }
     if ($backendPort -eq $frontendPort) { throw 'Backend and frontend ports must be different.' }
     $mode = Set-DatabaseEnvironment
     if ($mode -eq 'private') { Find-MySqlBin | Out-Null }
@@ -99,7 +115,7 @@ try {
     }
     $env:SERVER_PORT = [string]$backendPort
     $env:FRONTEND_PORT = [string]$frontendPort
-    $env:FRONTEND_HOST = '127.0.0.1'
+    $env:FRONTEND_HOST = $frontendHost
     $env:VITE_API_PROXY_TARGET = "http://127.0.0.1:$backendPort"
     if (!$env:LINGUAMATE_WEB_ALLOWED_ORIGINS) {
         $env:LINGUAMATE_WEB_ALLOWED_ORIGINS = "http://127.0.0.1:$frontendPort,http://localhost:$frontendPort"
@@ -116,12 +132,22 @@ try {
     }
     Write-Host 'Waiting for backend readiness...'
     Wait-ServiceReady $state['backend'] 'backend' 180
+    if ($state.ContainsKey('frontend')) {
+        $frontendRecord = $state['frontend']
+        if (!$frontendRecord.PSObject.Properties['listenAddress'] -or $frontendRecord.listenAddress -ne $frontendHost) {
+            Write-Host 'Restarting the frontend to apply its listen address...'
+            Stop-ManagedProcess $frontendRecord
+            $state.Remove('frontend')
+            Save-LauncherState $state
+        }
+    }
     if (!$state.ContainsKey('frontend')) {
         Assert-PortAvailable $frontendPort $null
         $marker = 'linguamate-' + [guid]::NewGuid().ToString('N')
         $vite = Join-Path $frontend 'node_modules/vite/bin/vite.js'
-        $process = Start-Process -FilePath $tools.Node -ArgumentList @("--title=$marker",('"' + $vite + '"'),'--host','127.0.0.1','--port',[string]$frontendPort,'--strictPort') -WorkingDirectory $frontend -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $script:RuntimeRoot 'frontend.log') -RedirectStandardError (Join-Path $script:RuntimeRoot 'frontend-error.log')
+        $process = Start-Process -FilePath $tools.Node -ArgumentList @("--title=$marker",('"' + $vite + '"'),'--host',$frontendHost,'--port',[string]$frontendPort,'--strictPort') -WorkingDirectory $frontend -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $script:RuntimeRoot 'frontend.log') -RedirectStandardError (Join-Path $script:RuntimeRoot 'frontend-error.log')
         $state['frontend'] = Get-ProcessIdentity $process.Id $marker $frontendPort
+        $state['frontend'] | Add-Member -NotePropertyName listenAddress -NotePropertyValue $frontendHost
         $started.Add('frontend')
         Save-LauncherState $state
     }
@@ -129,9 +155,19 @@ try {
     # Verify that the Vite proxy reaches this backend before reporting success.
     if (!(Test-FrontendProxy $frontendPort)) { throw 'The frontend API proxy is unavailable. Inspect VITE_API_PROXY_TARGET and .runtime/frontend-error.log.' }
     Save-LauncherState $state
-    Write-Host "LinguaMate is ready at http://127.0.0.1:$frontendPort"
+    $localUrl = "http://127.0.0.1:$frontendPort"
+    Write-Host "LinguaMate is ready. Web port: $frontendPort"
+    Write-Host "  Local: $localUrl"
+    if ($frontendHost -eq '0.0.0.0') {
+        $lanAddresses = @(Get-LanIPv4Addresses)
+        foreach ($address in $lanAddresses) {
+            Write-Host "  LAN ($($address.InterfaceAlias)): http://$($address.IPAddress):$frontendPort"
+        }
+        if (!$lanAddresses.Count) { Write-Host '  LAN: no active network IPv4 address found.' }
+    }
+    Write-Host "  Backend API (local only, port $backendPort): http://127.0.0.1:$backendPort/api"
     Write-Host 'Use stop.cmd to stop this project frontend and backend. The private database stays running.'
-    if (!$NoOpen) { Start-Process "http://127.0.0.1:$frontendPort" }
+    if (!$NoOpen) { Start-Process $localUrl }
 } catch {
     $failure = $_.Exception.Message
     for ($index = $started.Count - 1; $index -ge 0; $index--) {
