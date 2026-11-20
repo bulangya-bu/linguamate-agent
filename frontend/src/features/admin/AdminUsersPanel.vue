@@ -1,8 +1,16 @@
 <script setup>
+import { watch } from "vue";
+import { useAdminRecordPane } from "./useAdminRecordPane";
 import AdminSketchIcon from "@/components/AdminSketchIcon.vue";
+import AppIcon from "@/components/AppIcon.vue";
 import { difficultyLabel, formatDate, runAction } from "./admin-utils";
 const props = defineProps({ controller: { type: Object, required: true } });
 const { state, profileMetrics, loadUserProfile, editUser, toggleUserStatus, resetUserPassword, debouncedLoadUsers } = props.controller;
+const userActions = { edit: editUser, status: toggleUserStatus, password: resetUserPassword };
+const { pane, selected, open, back } = useAdminRecordPane(() => state.users);
+watch(() => pane.value === "detail" && selected.value?.id, id => {
+  if (id) runAction(() => loadUserProfile(id));
+}, { immediate: true });
 </script>
 
 <template>
@@ -11,7 +19,7 @@ const { state, profileMetrics, loadUserProfile, editUser, toggleUserStatus, rese
         class="section active"
         aria-label="用户管理"
       >
-        <div class="admin-two-column admin-users-layout">
+        <div class="admin-two-column admin-users-layout" :data-pane="pane">
           <section class="panel admin-list-panel">
             <header class="admin-panel-heading">
               <div>
@@ -66,28 +74,27 @@ const { state, profileMetrics, loadUserProfile, editUser, toggleUserStatus, rese
                   ><button
                     type="button"
                     @click="runAction(() => loadUserProfile(user.id))"
+                  >详情</button>
+                  <el-dropdown
+                    v-if="user.role !== 'ADMIN'"
+                    trigger="click"
+                    @command="action => runAction(() => userActions[action](user))"
                   >
-                    详情</button
-                  ><button
-                    type="button"
-                    :disabled="user.role === 'ADMIN'"
-                    @click="runAction(() => editUser(user))"
-                  >
-                    编辑</button
-                  ><button
-                    type="button"
-                    :disabled="user.role === 'ADMIN'"
-                    @click="runAction(() => toggleUserStatus(user))"
-                  >
-                    {{ user.status === "ACTIVE" ? "停用" : "启用" }}</button
-                  ><button
-                    type="button"
-                    :disabled="user.role === 'ADMIN'"
-                    @click="runAction(() => resetUserPassword(user))"
-                  >
-                    重置密码
-                  </button></span
+                    <button class="admin-user-more" type="button" :aria-label="user.username + '的更多操作'">
+                      <AppIcon name="more" />
+                    </button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item command="edit">编辑昵称</el-dropdown-item>
+                        <el-dropdown-item command="status">{{ user.status === 'ACTIVE' ? '停用' : '启用' }}</el-dropdown-item>
+                        <el-dropdown-item command="password">重置密码</el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
+                </span
                 >
+                <span role="cell" class="admin-mobile-cell"><button class="admin-row-open" type="button"
+                  :aria-label="'查看' + user.username" @click="open('detail', user)"><AdminSketchIcon name="arrow" /></button></span>
               </div>
               <div v-if="!state.users.length" class="admin-empty-state">
                 <AdminSketchIcon name="search" />
@@ -96,10 +103,11 @@ const { state, profileMetrics, loadUserProfile, editUser, toggleUserStatus, rese
             </div>
           </section>
           <section class="panel admin-profile-panel">
+            <button class="admin-mobile-back" type="button" @click="back"><AdminSketchIcon name="arrow" />列表</button>
             <header class="admin-panel-heading">
               <h2><AdminSketchIcon name="overview" />学习数据</h2>
             </header>
-            <div v-if="state.userProfile" class="admin-profile">
+            <div v-if="state.userProfile && (pane !== 'detail' || state.userProfile.id === selected?.id)" class="admin-profile">
               <div class="admin-profile-head">
                 <div>
                   <strong>{{
@@ -118,6 +126,11 @@ const { state, profileMetrics, loadUserProfile, editUser, toggleUserStatus, rese
                     state.userProfile.aiConfigured ? "已配置 AI" : "未配置 AI"
                   }}</mark
                 >
+              </div>
+              <div v-if="selected && selected.role !== 'ADMIN'" class="admin-mobile-user-actions">
+                <button type="button" @click="runAction(() => editUser(selected))">编辑昵称</button>
+                <button type="button" @click="runAction(() => toggleUserStatus(selected))">{{ selected.status === 'ACTIVE' ? '停用' : '启用' }}</button>
+                <button type="button" @click="runAction(() => resetUserPassword(selected))">重置密码</button>
               </div>
               <div class="admin-profile-grid">
                 <div v-for="item in profileMetrics" :key="item.label">
@@ -165,9 +178,15 @@ const { state, profileMetrics, loadUserProfile, editUser, toggleUserStatus, rese
             </div>
             <div v-else class="admin-empty-state">
               <AdminSketchIcon name="users" />
-              <h3>请选择用户</h3>
+              <h3>{{ pane === 'detail' ? '暂无用户数据' : '请选择用户' }}</h3>
             </div>
           </section>
         </div>
       </section>
 </template>
+
+<style scoped>
+.admin-actions { align-items: center; }
+.admin-actions .admin-user-more { display: grid; place-items: center; min-width: 29px; padding-inline: 5px; }
+.admin-user-more svg { width: 16px; height: 16px; stroke-width: 2.8; }
+</style>

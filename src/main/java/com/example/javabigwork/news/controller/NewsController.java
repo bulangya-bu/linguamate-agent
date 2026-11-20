@@ -60,6 +60,12 @@ public class NewsController {
         return ApiResponse.ok(newsService.detail(id));
     }
 
+    @PostMapping("/{articleId:\\d+}/start")
+    public ApiResponse<Void> start(@PathVariable Long articleId) {
+        newsService.startReading(articleId);
+        return ApiResponse.ok(null);
+    }
+
     @PostMapping("/{articleId:\\d+}/progress")
     public ApiResponse<ReadingProgressView> progress(
             @PathVariable Long articleId,

@@ -1,8 +1,15 @@
 <script setup>
+import AdminMobileDetails from "./AdminMobileDetails.vue";
+import { useAdminRecordPane } from "./useAdminRecordPane";
 import AdminSketchIcon from "@/components/AdminSketchIcon.vue";
 import { number, runAction } from "./admin-utils";
 const props = defineProps({ controller: { type: Object, required: true } });
 const { state, loadWords, fillWordForm, clearWordForm, saveWord, deleteWord, debouncedLoadWords } = props.controller;
+const { pane, selected, open, finish, back } = useAdminRecordPane(() => state.wordPage.words, fillWordForm);
+async function submit() {
+  await saveWord();
+  if (pane.value === "edit") await finish();
+}
 </script>
 
 <template>
@@ -11,7 +18,7 @@ const { state, loadWords, fillWordForm, clearWordForm, saveWord, deleteWord, deb
         class="section active"
         aria-label="词库维护"
       >
-        <div class="admin-two-column">
+        <div class="admin-two-column" :data-pane="pane">
           <section class="panel admin-list-panel">
             <header class="admin-panel-heading">
               <div>
@@ -26,6 +33,7 @@ const { state, loadWords, fillWordForm, clearWordForm, saveWord, deleteWord, deb
                   aria-label="搜索英文或中文"
                   @input="debouncedLoadWords"
               /></label>
+              <button class="admin-mobile-action" type="button" @click="open('edit')">新增</button>
             </header>
             <div class="admin-table">
               <div class="admin-row admin-row-head">
@@ -57,6 +65,7 @@ const { state, loadWords, fillWordForm, clearWordForm, saveWord, deleteWord, deb
                     删除
                   </button></span
                 >
+                <button class="admin-row-open" type="button" :aria-label="'查看' + word.word" @click="open('detail', word)"><AdminSketchIcon name="arrow" /></button>
               </div>
               <div
                 v-if="!state.wordPage.words.length"
@@ -88,7 +97,13 @@ const { state, loadWords, fillWordForm, clearWordForm, saveWord, deleteWord, deb
               </button>
             </footer>
           </section>
+          <AdminMobileDetails v-if="pane === 'detail' && selected" :title="selected.word"
+            :fields="[['词性', selected.partOfSpeech], ['释义', selected.meaningCn], ['分类', selected.levelTag], ['美式音标', selected.phoneticUs], ['英式音标', selected.phoneticUk], ['例句', selected.exampleEn], ['译文', selected.exampleCn]]" @back="back">
+            <button class="settings-secondary" type="button" @click="runAction(async () => { await deleteWord(selected); await finish(); })">删除</button>
+            <button class="settings-primary" type="button" @click="open('edit', selected)">编辑</button>
+          </AdminMobileDetails>
           <section class="panel admin-editor-panel">
+            <button class="admin-mobile-back" type="button" @click="back"><AdminSketchIcon name="arrow" />返回</button>
             <header class="admin-panel-heading">
               <div>
                 <h2>
@@ -106,7 +121,7 @@ const { state, loadWords, fillWordForm, clearWordForm, saveWord, deleteWord, deb
                 新增
               </button>
             </header>
-            <form class="admin-form" @submit.prevent="runAction(saveWord)">
+            <form class="admin-form" @submit.prevent="runAction(submit)">
               <div class="admin-form-fields">
                 <label class="admin-field"
                   ><span>英文单词</span

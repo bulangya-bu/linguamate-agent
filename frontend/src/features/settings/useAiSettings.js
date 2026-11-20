@@ -1,7 +1,8 @@
-import { ElMessage } from "element-plus";
 import { reactive, ref, watch } from "vue";
 import { aiApi } from "@/api/modules";
 import { normalizeModelList } from "@/api/client";
+
+import { normalizeAddress, useModelCredential } from "./modelCredential";
 
 export function useAiSettings() {
   const state = reactive({
@@ -15,7 +16,9 @@ export function useAiSettings() {
     },
     aiBusy: false,
     aiTesting: false,
-    aiSaved: { baseUrl: "", chatModel: "" },
+    aiTestStatus: "",
+    aiTestPassed: false,
+    aiSaved: { baseUrl: "", chatModel: "", tested: false },
     aiSummary: {
       label: "个人配置",
       modelName: "",
@@ -25,11 +28,12 @@ export function useAiSettings() {
   });
 
   const settingsPanelRef = ref(null);
+  const { keyHint, rememberCredential } = useModelCredential(state.ai);
 
   const settingsReturnFocus = ref(null);
 
-  function updateAiSummary(settings) {
-    state.aiSummary.label = settings.chatModel ? "未检测" : "未配置";
+  function updateAiSummary(settings, tested = false) {
+    state.aiSummary.label = settings.chatModel ? (tested ? "连接正常" : "未检测") : "未配置";
     state.aiSummary.modelName = settings.chatModel || "";
     state.aiSummary.loaded = true;
   }
@@ -52,33 +56,40 @@ export function useAiSettings() {
     state.settingsOpen = true;
     try {
       const settings = await aiApi.settings();
+      const tested = state.aiSaved.tested && matchesSavedSettings(settings);
       state.ai.baseUrl = settings.baseUrl || "";
       state.ai.chatModel = settings.chatModel || "";
       state.ai.apiKey = "";
       state.ai.models = settings.chatModel ? [settings.chatModel] : [];
-      state.ai.status = settings.hasApiKey ? "已保存密钥" : "未保存密钥";
+      rememberCredential(settings);
+      state.ai.status = settings.hasApiKey ? "已配置密钥" : "未配置密钥";
       state.aiSaved = {
         baseUrl: settings.baseUrl || "",
         chatModel: settings.chatModel || "",
+        tested,
       };
-      updateAiSummary(settings);
+      state.aiTestPassed = tested;
+      state.aiTestStatus = tested ? "连接正常" : "";
+      updateAiSummary(settings, tested);
     } catch (error) {
       state.ai.status = error.message || "加载设置失败";
     }
   }
 
+  function matchesSavedSettings(settings) {
+    return settings.baseUrl === state.aiSaved.baseUrl && settings.chatModel === state.aiSaved.chatModel;
+  }
+
   async function fetchModels() {
     state.aiBusy = true;
-    state.ai.status = "正在获取模型...";
+    state.ai.status = "正在获取…";
     try {
       const models = await aiApi.models({
         baseUrl: state.ai.baseUrl,
         apiKey: state.ai.apiKey,
       });
       state.ai.models = normalizeModelList(models);
-      state.ai.chatModel = state.ai.models.includes(state.ai.chatModel)
-        ? state.ai.chatModel
-        : state.ai.models[0] || state.ai.chatModel;
+      if (!state.ai.chatModel) state.ai.chatModel = state.ai.models[0] || "";
       state.ai.status = state.ai.models.length
         ? `已获取 ${state.ai.models.length} 个模型`
         : "没有找到可用模型";
@@ -94,22 +105,26 @@ export function useAiSettings() {
     if (state.aiBusy) return;
     state.aiBusy = true;
     state.aiTesting = true;
-    state.ai.status = "正在发送实际模型请求…";
+    state.aiTestPassed = false;
+    state.aiTestStatus = "测试中…";
     try {
       const result = await aiApi.test({
         baseUrl: state.ai.baseUrl,
         apiKey: state.ai.apiKey,
         chatModel: state.ai.chatModel,
       });
-      state.ai.status = `${result.modelName} 连接正常 · ${result.latencyMs} ms（当前表单）`;
-      if (
-        !state.ai.apiKey &&
-        state.ai.baseUrl === state.aiSaved.baseUrl &&
-        state.ai.chatModel === state.aiSaved.chatModel
-      )
-        state.aiSummary.label = "连接正常";
+      state.aiTestPassed = true;
+      state.aiTestStatus = `连接正常 · ${result.latencyMs} ms`;
+      if (!state.ai.apiKey && matchesSavedSettings(state.ai)) {
+        state.aiSaved.tested = true;
+        updateAiSummary(state.ai, true);
+      }
     } catch (error) {
-      state.ai.status = error.message || "连接失败，请检查配置后重试";
+      state.aiTestStatus = error.message || "连接失败，请检查配置";
+      if (!state.ai.apiKey && matchesSavedSettings(state.ai)) {
+        state.aiSaved.tested = false;
+        updateAiSummary(state.ai);
+      }
     } finally {
       state.aiBusy = false;
       state.aiTesting = false;
@@ -117,23 +132,34 @@ export function useAiSettings() {
   }
 
   async function saveAiSettings() {
+    if (state.aiBusy) return;
     state.aiBusy = true;
-    state.ai.status = "正在保存...";
+    state.ai.status = "保存中…";
     try {
+      const tested = state.aiTestPassed || (!state.ai.apiKey && state.aiSaved.tested && matchesSavedSettings(state.ai));
       const settings = await aiApi.saveSettings({
         baseUrl: state.ai.baseUrl,
         apiKey: state.ai.apiKey,
         chatModel: state.ai.chatModel,
       });
+      const effectiveAddress = normalizeAddress(state.ai.baseUrl || state.aiSaved.baseUrl);
+      const effectiveModel = state.ai.chatModel.trim() || state.aiSaved.chatModel;
+      const unchanged = (settings.baseUrl || "") === effectiveAddress
+        && (settings.chatModel || "") === effectiveModel;
+      const savedTested = tested && unchanged;
       state.ai.apiKey = "";
-      state.ai.chatModel = settings.chatModel || state.ai.chatModel;
-      state.ai.status = `已应用 ${state.ai.chatModel || "当前模型"}`;
-      updateAiSummary(settings);
+      state.ai.baseUrl = settings.baseUrl || "";
+      state.ai.chatModel = settings.chatModel || "";
+      rememberCredential(settings);
+      state.ai.status = "已保存";
+      updateAiSummary(settings, savedTested);
       state.aiSaved = {
         baseUrl: settings.baseUrl || "",
         chatModel: settings.chatModel || "",
+        tested: savedTested,
       };
-      ElMessage.success("AI 设置已保存");
+      state.aiTestPassed = savedTested;
+      state.aiTestStatus = savedTested ? "连接正常" : "";
     } catch (error) {
       state.ai.status = error.message || "保存失败，输入内容已保留，请重试";
     } finally {
@@ -144,15 +170,18 @@ export function useAiSettings() {
   watch(
     () => [state.ai.baseUrl, state.ai.apiKey, state.ai.chatModel],
     () => {
-      if (!state.aiBusy && state.ai.status.includes("连接正常"))
-        state.ai.status = "配置已修改，请重新测试连接";
+      state.aiTestPassed = false;
+      state.aiTestStatus = "";
+      if (state.ai.status === "已保存") state.ai.status = "有改动";
     },
+    { flush: "sync" },
   );
 
   return {
     state,
     settingsPanelRef,
     settingsReturnFocus,
+    keyHint,
     loadAiSummary,
     openSettings,
     fetchModels,

@@ -41,6 +41,10 @@ const {
 } = props.vocabulary;
 const { activeSection } = toRefs(props);
 
+const mistakes = computed(() => quizRound.value.words.filter(word =>
+  quizRound.value.answers[word.id]?.correct === false,
+));
+
 const promptExample = computed(() => {
   const word = currentQuizWord.value;
   return word?.sourceSentence || (meaningfulExample(word) ? word.exampleEn : "");
@@ -114,17 +118,24 @@ const choices = computed(() => quizOptions.value.map((text, index) => {
             重试
           </button>
         </div>
-        <div v-else-if="quizRound.completed" class="quiz-complete">
-          <h3>本轮单词闯关完成</h3>
-          <p>已完成 {{ quizAnsweredCount }} 个单词</p>
-          <button
-            class="quiz-primary"
-            type="button"
-            :disabled="quizRound.busy"
-            @click="loadWords"
-          >
-            再来一轮
-          </button>
+        <div v-else-if="quizRound.completed" class="quiz-complete quiz-round-summary">
+          <h3>本轮完成</h3>
+          <dl class="quiz-round-totals">
+            <div><dt>答对</dt><dd>{{ quizAnsweredCount - mistakes.length }}</dd></div>
+            <div><dt>答错</dt><dd>{{ mistakes.length }}</dd></div>
+          </dl>
+          <section v-if="mistakes.length" class="quiz-round-mistakes">
+            <h4>本轮错词</h4>
+            <ul>
+              <li v-for="word in mistakes" :key="word.id">
+                <strong>{{ word.word }}</strong><span>{{ word.meaningCn }}</span>
+              </li>
+            </ul>
+          </section>
+          <div class="quiz-round-actions">
+            <RouterLink v-if="mistakes.length" class="quiz-secondary" to="/review?mode=mistakes">复习错词</RouterLink>
+            <button class="quiz-primary" type="button" :disabled="quizRound.busy" @click="loadWords">再练一轮</button>
+          </div>
         </div>
         <div
           v-else-if="currentQuizWord"
@@ -281,3 +292,32 @@ const choices = computed(() => quizOptions.value.map((text, index) => {
     </section>
   </section>
 </template>
+
+<style scoped>
+.quiz-round-summary { gap: 18px; }
+.quiz-round-totals {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.quiz-round-totals > div { display: grid; justify-items: center; gap: 4px; }
+.quiz-round-totals dt { color: var(--muted); }
+.quiz-round-totals dd { margin: 0; color: var(--ink); font-size: 30px; }
+.quiz-round-totals > div:first-child dd { color: var(--green-ink); }
+.quiz-round-mistakes { width: min(100%, 430px); text-align: left; }
+.quiz-round-mistakes h4 { margin: 0 0 5px; font-size: 14px; }
+.quiz-round-mistakes ul { margin: 0; padding: 0; list-style: none; }
+.quiz-round-mistakes li {
+  display: grid;
+  grid-template-columns: minmax(95px, 1fr) 2fr;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.quiz-round-mistakes li > span { color: var(--muted); }
+.quiz-round-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.quiz-round-actions a { display: inline-flex; align-items: center; text-decoration: none; }
+</style>

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, shallowRef, watch } from 'vue';
 import { learningApi } from '@/api/modules';
+import { usePhoneLayout } from '@/composables/usePhoneLayout';
 import AppIcon from './AppIcon.vue';
 import GrowthRecordDetail from './growth/GrowthRecordDetail.vue';
 import GrowthRecordList from './growth/GrowthRecordList.vue';
@@ -23,6 +24,8 @@ const retry = shallowRef(0);
 const tab = shallowRef('words');
 const page = shallowRef(0);
 const selectedId = shallowRef(null);
+const isPhone = usePhoneLayout();
+const mobileDetail = shallowRef(false);
 
 const collections = computed(() => evidenceRecords(data.value));
 const category = computed(() => evidenceTabs.find(item => item.id === tab.value));
@@ -70,7 +73,28 @@ function resetSelection(id) {
 function changePage(index) {
   page.value = index;
   selectedId.value = null;
+  mobileDetail.value = false;
 }
+
+async function pickRecord(id) {
+  selectedId.value = id;
+  if (!isPhone.value) return;
+  mobileDetail.value = true;
+  await nextTick();
+  detailPane.value?.focus();
+}
+
+async function backToList() {
+  mobileDetail.value = false;
+  await nextTick();
+  dialog.value?.querySelector('.growth-index-item[aria-pressed="true"]')?.focus();
+}
+
+function goBack() {
+  if (isPhone.value && mobileDetail.value) backToList();
+  else emit('close');
+}
+defineExpose({ goBack });
 
 function selectTab(id) {
   if (tab.value !== id) resetSelection(id);
@@ -108,14 +132,16 @@ function backdropClose(event) {
   <dialog
     ref="dialog"
     class="growth-evidence"
+    :class="{ 'phone-evidence': isPhone }"
     :data-category="tab"
     aria-labelledby="growth-title"
-    @cancel.prevent="emit('close')"
+    @cancel.prevent="goBack"
     @click="backdropClose"
   >
     <header class="growth-heading">
       <div>
-        <span class="growth-heading-icon"><AppIcon name="journal" /></span>
+        <button v-if="isPhone && mobileDetail" class="mobile-back" type="button" aria-label="返回记录列表" @click="backToList"><AppIcon name="arrow" /></button>
+        <span v-else class="growth-heading-icon"><AppIcon name="journal" /></span>
         <h2 id="growth-title">成长证据</h2>
       </div>
       <button class="panel-close" type="button" aria-label="关闭成长证据" autofocus @click="emit('close')">
@@ -156,15 +182,16 @@ function backdropClose(event) {
       </div>
       <template v-else-if="selected">
         <GrowthRecordList
+          v-show="!isPhone || !mobileDetail"
           :records="pageRecords"
           :active-id="selected.id"
           :category="category.label"
           :page="page"
           :page-count="pageCount"
-          @select="selectedId = $event"
+          @select="pickRecord"
           @page="changePage"
         />
-        <section id="growth-detail" ref="detailPane" class="growth-detail-pane" tabindex="0" aria-label="记录详情">
+        <section v-show="!isPhone || mobileDetail" id="growth-detail" ref="detailPane" class="growth-detail-pane" tabindex="0" aria-label="记录详情">
           <GrowthRecordDetail :key="tab + '-' + selected.id" :record="selected" :type="tab" />
         </section>
       </template>
@@ -174,7 +201,7 @@ function backdropClose(event) {
       </div>
     </div>
 
-    <footer class="growth-footer">
+    <footer v-if="!isPhone || mobileDetail || !selected" class="growth-footer">
       <button type="button" @click="practice">{{ action }}<AppIcon name="arrow" /></button>
     </footer>
   </dialog>

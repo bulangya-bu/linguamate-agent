@@ -20,7 +20,7 @@ const learningLayouts = {
   writing: { columns: [[".ws-manuscript", ".ws-inspector"]], bottom: ".writing-studio" },
   news: { columns: [[".news-library", ".reader-panel"]], bottom: ".news-layout" },
   wordbank: { bottom: ".wordbank-layout" },
-  journal: { columns: [[".journal-observations", ".journal-growth"]], bottom: ".learning-journal" },
+  journal: { columns: [[".archive-trend", ".archive-calendar"]], bottom: ".archive-spread" },
 };
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -43,6 +43,7 @@ function createParticle(index) {
     angle: seed(index + 10) * TAU,
     spin: 0,
     lift: 0,
+    liftTarget: 0,
     phase: seed(index + 20) * TAU,
     speed: 4 + seed(index + 30) * 6,
     turn: (seed(index + 40) - .5) * .28,
@@ -91,7 +92,7 @@ function createPaperShape(width, height, bookmark) {
 // A canvas owns the free-moving pieces; Vue controls visibility and lifetime.
 export function createPaperField(canvas, { contained }) {
   const context = canvas.getContext("2d");
-  if (!context) return { setMotion() {}, destroy() {} };
+  if (!context) return { setMotion() {}, setQuiet() {}, destroy() {} };
 
   let bounds;
   let regions = [];
@@ -104,6 +105,8 @@ export function createPaperField(canvas, { contained }) {
   let distribute = false;
   let active = false;
   let reduced = false;
+  let quiet = false;
+  let driftRate = 1;
   let destroyed = false;
   let frame = 0;
   let refreshFrame = 0;
@@ -264,6 +267,7 @@ export function createPaperField(canvas, { contained }) {
         particle.vy = 0;
         particle.spin = 0;
         particle.lift = 0;
+        particle.liftTarget = 0;
         particle.reveal = reduced ? 1 : 0;
       }
       particle.region = region;
@@ -358,6 +362,7 @@ export function createPaperField(canvas, { contained }) {
     const drag = Math.exp(-delta * 1.8);
     const spinDrag = Math.exp(-delta * 2.2);
     const liftDrag = Math.exp(-delta * 2.6);
+    const liftBlend = 1 - Math.exp(-delta * 18);
     particles.forEach((particle) => {
       const region = particle.region;
       const heading = particle.phase + Math.sin(time * .11 + particle.phase) * .7;
@@ -366,10 +371,15 @@ export function createPaperField(canvas, { contained }) {
       particle.vx *= drag;
       particle.vy *= drag;
       particle.spin *= spinDrag;
-      particle.x += (flowX + particle.vx) * delta;
-      particle.y += (flowY + particle.vy) * delta;
-      particle.angle += (particle.turn + particle.spin) * delta;
-      particle.lift *= liftDrag;
+      particle.x += (flowX * driftRate + particle.vx) * delta;
+      particle.y += (flowY * driftRate + particle.vy) * delta;
+      particle.angle += (particle.turn * driftRate + particle.spin) * delta;
+      if (contained) {
+        particle.lift += (particle.liftTarget - particle.lift) * liftBlend;
+        particle.liftTarget *= liftDrag;
+      } else {
+        particle.lift *= liftDrag;
+      }
       particle.reveal = reduced ? 1 : Math.min(1, particle.reveal + delta * 1.5);
 
       // Pieces fade at the boundary before re-entering from the opposite side.
@@ -392,7 +402,8 @@ export function createPaperField(canvas, { contained }) {
         context.fill();
       } else {
         const flutter = Math.sin(time * 1.55 + particle.phase);
-        context.scale(1 + particle.lift * .18, .88 + flutter * .12 + particle.lift * .17);
+        const tilt = contained ? -.38 : .17;
+        context.scale(1 + particle.lift * .18, .88 + flutter * .12 + particle.lift * tilt);
         drawPaper(particle, palette[particle.color], visibility);
       }
       context.restore();
@@ -402,15 +413,20 @@ export function createPaperField(canvas, { contained }) {
   function tick(now) {
     if (!active) return;
     frame = requestAnimationFrame(tick);
-    if (lastFrame && now - lastFrame < 30) return;
-    const delta = lastFrame ? Math.min((now - lastFrame) / 1000, .05) : 1 / 30;
+    if (!contained && lastFrame && now - lastFrame < 30) return;
+    const elapsed = lastFrame ? (now - lastFrame) / 1000 : 1 / 30;
+    const delta = Math.min(elapsed, .05);
     lastFrame = now;
-    time += delta;
+    if (contained) {
+      const targetRate = quiet ? .16 : 1;
+      driftRate += (targetRate - driftRate) * (1 - Math.exp(-elapsed * 4.5));
+    }
+    time += delta * driftRate;
     draw(delta);
   }
 
   function movePointer(event) {
-    if (!active || event.pointerType === "touch" || !bounds) return;
+    if (!active || quiet || event.pointerType === "touch" || !bounds) return;
     const now = performance.now();
     const x = event.clientX - bounds.left;
     const y = event.clientY - bounds.top;
@@ -429,8 +445,10 @@ export function createPaperField(canvas, { contained }) {
     if (travel < .5) return;
     velocitySample = { x, y, at: now };
     const speed = travel / sampleDuration * 1000;
-    const radius = 60 + Math.min(speed / 27, 35);
-    const gain = 1 + Math.min(speed / 2600, .22);
+    // The login scene keeps slow passes local; a brisk sweep catches a wider strip of paper.
+    const sweep = Math.min(speed / 1050, 1);
+    const radius = contained ? 38 + 36 * sweep : 60 + Math.min(speed / 27, 35);
+    const gain = contained ? .24 + .99 * sweep : 1 + Math.min(speed / 2600, .22);
     const directionX = dx / travel;
     const directionY = dy / travel;
     // A sudden cursor jump should not scatter every piece between the two points.
@@ -477,7 +495,9 @@ export function createPaperField(canvas, { contained }) {
       particle.vy = clamp(vy * limit, (region.y - particle.y) * 1.65,
         (region.y + region.height - particle.y) * 1.65);
       particle.spin = clamp(particle.spin + rotation * gain, -4, 4);
-      particle.lift = Math.max(particle.lift, clamp(1 - separation / (radius * .68), 0, 1));
+      const lift = clamp(1 - separation / (radius * .68), 0, 1);
+      if (contained) particle.liftTarget = Math.max(particle.liftTarget, lift * (.25 + .75 * sweep));
+      else particle.lift = Math.max(particle.lift, lift);
     });
   }
 
@@ -499,22 +519,30 @@ export function createPaperField(canvas, { contained }) {
   const resizeObserver = new ResizeObserver(queueRefresh);
   resizeObserver.observe(canvas);
   const layoutObserver = new MutationObserver(queueRefresh);
-  layoutObserver.observe(document.getElementById("app"), {
-    childList: true, subtree: true, attributes: true, attributeFilter: ["class"],
-  });
+  if (!contained) {
+    layoutObserver.observe(document.getElementById("app"), {
+      childList: true, subtree: true, attributes: true, attributeFilter: ["class"],
+    });
+  }
   layoutObserver.observe(document.documentElement, {
     attributes: true, attributeFilter: ["data-theme"],
   });
   window.addEventListener("pointermove", movePointer, { passive: true });
   window.addEventListener("scroll", handleLayoutScroll, { capture: true, passive: true });
   document.addEventListener("pointerleave", leavePointer);
-  document.addEventListener("animationend", layoutSettled);
-  document.addEventListener("transitionend", layoutSettled);
+  if (!contained) {
+    document.addEventListener("animationend", layoutSettled);
+    document.addEventListener("transitionend", layoutSettled);
+  }
   window.addEventListener("blur", leavePointer);
   refresh();
 
   return {
     setMotion,
+    setQuiet(value) {
+      quiet = Boolean(value);
+      pointer.present = false;
+    },
     destroy() {
       destroyed = true;
       active = false;

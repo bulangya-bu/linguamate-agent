@@ -24,6 +24,7 @@ const {
   recentPractice,
   studyActionBusy,
   openStudyAction,
+  retryTodayTasks,
 } = props.dashboard;
 
 const dailyWords = computed(() => props.words.slice(0, 4));
@@ -64,6 +65,7 @@ const nextTask = computed(() => todayTasks.value?.find((task) => task.id === nex
       :loading="todayTasksLoading"
       :busy="studyActionBusy"
       @start="openStudyAction"
+      @retry="retryTodayTasks"
     />
 
     <section id="dashboard-words" class="study-words" aria-labelledby="study-words-title">

@@ -9,16 +9,19 @@
     }"
   >
     <section
+      ref="storyRef"
       class="auth-story"
+      data-cursor-trail="paper"
       @pointermove="move"
       @pointerleave="reset"
+      @pointercancel="reset"
       @focusin="freeze"
     >
-      <AuthAurora />
-      <AmbientBackground contained />
+      <AuthAurora v-if="!isPhone" />
+      <AmbientBackground v-if="!isPhone" contained :quiet="formActive" />
       <AppBrand to="/login" variant="auth" />
-      <AuthGarden />
-      <WordAtmosphere />
+      <span v-if="isPhone" class="auth-pocket-paper" aria-hidden="true"><i></i></span>
+      <template v-else><AuthGarden /><WordAtmosphere /></template>
     </section>
     <section
       class="auth-form-side"
@@ -43,7 +46,7 @@
             :aria-current="isLogin ? 'page' : undefined"
             :aria-disabled="busy || undefined"
             @click.capture="guardModeSwitch"
-            to="/login"
+            :to="{ path: '/login', query: returnQuery }"
             >登录</RouterLink
           ><RouterLink
             class="auth-mode-pill"
@@ -51,7 +54,7 @@
             :aria-current="!isLogin ? 'page' : undefined"
             :aria-disabled="busy || undefined"
             @click.capture="guardModeSwitch"
-            to="/register"
+            :to="{ path: '/register', query: returnQuery }"
             >创建账号</RouterLink
           >
         </div>
@@ -204,6 +207,7 @@ import AuthAurora from "@/components/AuthAurora.vue";
 import AmbientBackground from "@/components/AmbientBackground.vue";
 import WordAtmosphere from "@/components/WordAtmosphere.vue";
 import { useArtMotion } from "@/composables/useArtMotion";
+import { usePhoneLayout } from "@/composables/usePhoneLayout";
 import { useAuthParallax } from "@/composables/useAuthParallax";
 import {
   computed,
@@ -219,10 +223,12 @@ import { ApiError } from "@/api/client";
 const route = useRoute();
 const router = useRouter();
 const pageRef = ref(null);
+const storyRef = ref(null);
+const isPhone = usePhoneLayout();
 const formActive = ref(false);
 const { playing } = useArtMotion(pageRef);
 const sceneActive = computed(() => playing.value && !formActive.value);
-const { move, reset, freeze } = useAuthParallax(pageRef, sceneActive);
+const { move, reset, freeze } = useAuthParallax(storyRef, playing, formActive);
 const busy = ref(false);
 const showPassword = ref(false);
 const status = ref("");
@@ -231,9 +237,16 @@ const confirmationInvalid = ref(false);
 let authViewVersion = 0;
 
 const isLogin = computed(() => route.meta.mode !== "register");
+const returnQuery = computed(() => typeof route.query.next === "string" ? { next: route.query.next } : {});
 
 function goAfterLogin(user) {
-  return router.replace(user.role === "ADMIN" ? "/admin" : "/");
+  if (user.role === "ADMIN") return router.replace("/admin");
+  const next = returnQuery.value.next;
+  if (next?.startsWith("/") && !next.startsWith("//") && !next.includes("\\")) {
+    const target = router.resolve(next);
+    if (target.meta.section) return router.replace(target.fullPath);
+  }
+  return router.replace("/");
 }
 
 async function checkExistingSession() {

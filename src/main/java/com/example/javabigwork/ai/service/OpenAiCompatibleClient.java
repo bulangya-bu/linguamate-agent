@@ -9,14 +9,19 @@ import com.example.javabigwork.ai.dto.OpenAiModelListResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.Duration;
+import java.net.http.HttpClient;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
 @Service
 public class OpenAiCompatibleClient {
+    private final HttpClient transport = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .followRedirects(HttpClient.Redirect.NEVER)
+            .build();
 
     public List<AiModelOption> listModels(AiRuntimeSettings settings) {
         OpenAiModelListResponse response = restClient(settings)
@@ -65,8 +70,7 @@ public class OpenAiCompatibleClient {
 
     private RestClient restClient(AiRuntimeSettings settings) {
         String baseUrl = normalizeBaseUrl(settings.baseUrl());
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(5));
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(transport);
         factory.setReadTimeout(Duration.ofSeconds(45));
         RestClient.Builder builder = RestClient.builder().requestFactory(factory).baseUrl(baseUrl);
         if (StringUtils.hasText(settings.apiKey())) {

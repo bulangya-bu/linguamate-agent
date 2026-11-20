@@ -2,7 +2,7 @@
 import { BRAND_NAME } from "@/brand";
 import { toRefs } from "vue";
 import AppIcon from "@/components/AppIcon.vue";
-import ReadingArt from "@/components/ReadingArt.vue";
+import ParagraphTranslation from "./ParagraphTranslation.vue";
 import {
   splitArticleTopics,
   newsTopicLabel,
@@ -18,6 +18,9 @@ const props = defineProps({
 });
 const {
   state: readingState,
+  isPhone,
+  phoneArticle,
+  selectArticle,
   readerRef,
   newsLibraryOpen,
   newsLibraryButtonRef,
@@ -26,6 +29,9 @@ const {
   newsTopicOptions,
   visibleNewsTopics,
   readerProgress,
+  canResumeReading,
+  resumeReading,
+  startReadingOver,
   articleParagraphs,
   readerFocus,
   toggleReaderFocus,
@@ -34,11 +40,16 @@ const {
   articleWordCount,
   setNewsDifficulty,
   setNewsTopic,
+  loadNews,
   loadArticle,
   handleReaderScroll,
   finishReading,
   translateArticle,
   normalizeLookupWord,
+  isLookupWord,
+  activeReaderWord,
+  focusNavigationWord,
+  navigateReaderWords,
   showTooltip,
   focusLookupActions,
   scheduleHideTooltip,
@@ -53,7 +64,7 @@ const { activeSection, chatBusy } = toRefs(props);
     class="section"
     :class="{
       active: activeSection === 'news',
-      'is-browsing': newsLibraryOpen,
+      'is-browsing': isPhone ? !phoneArticle : newsLibraryOpen,
     }"
   >
     <div class="news-layout">
@@ -63,7 +74,7 @@ const { activeSection, chatBusy } = toRefs(props);
           <span class="news-library-count"
             >{{ readingState.newsList.length }} 篇</span
           >
-          <button
+          <button v-if="!isPhone"
             ref="newsLibraryCloseRef"
             class="reading-library-close text-button"
             type="button"
@@ -112,7 +123,7 @@ const { activeSection, chatBusy } = toRefs(props);
                 :aria-expanded="showAllNewsTopics"
                 @click="showAllNewsTopics = !showAllNewsTopics"
               >
-                {{ showAllNewsTopics ? "收起主题" : "更多主题 +" }}
+                {{ showAllNewsTopics ? "收起" : "更多" }}
               </button>
             </div>
           </div>
@@ -121,8 +132,8 @@ const { activeSection, chatBusy } = toRefs(props);
           <article
             tabindex="0"
             role="button"
-            @keydown.enter="loadArticle(article.id)"
-            @keydown.space.prevent="loadArticle(article.id)"
+            @keydown.enter="selectArticle(article.id)"
+            @keydown.space.prevent="selectArticle(article.id)"
             v-for="article in readingState.newsList"
             :key="article.id"
             class="news-item"
@@ -130,7 +141,7 @@ const { activeSection, chatBusy } = toRefs(props);
               'is-active': readingState.currentArticle?.id === article.id,
             }"
             :aria-pressed="readingState.currentArticle?.id === article.id"
-            @click="loadArticle(article.id)"
+            @click="selectArticle(article.id)"
           >
             <div class="news-item-topline">
               <span>{{
@@ -156,7 +167,13 @@ const { activeSection, chatBusy } = toRefs(props);
               <AppIcon name="arrow" />
             </div>
           </article>
-          <p v-if="!readingState.newsList.length" class="news-empty">
+          <p v-if="isPhone && readingState.newsListStatus === 'error'" class="phone-reader-status" role="status">
+            选文加载失败 <button type="button" @click="loadNews()">重试</button>
+          </p>
+          <p v-else-if="isPhone && readingState.newsListStatus === 'loading' && !readingState.newsList.length" class="news-empty" role="status">
+            正在读取选文…
+          </p>
+          <p v-else-if="!readingState.newsList.length" class="news-empty">
             暂无匹配文章
           </p>
         </div>
@@ -166,6 +183,11 @@ const { activeSection, chatBusy } = toRefs(props);
         :class="{ 'is-reading-focus': readerFocus }"
         :aria-busy="readingState.articleBusy"
       >
+        <div v-if="isPhone && !readingState.currentArticle" class="phone-reader-status" role="status">
+          {{ readingState.articleError || "正在读取文章…" }}
+          <button v-if="readingState.articleError" type="button" @click="loadArticle(phoneArticle)">重试</button>
+        </div>
+        <template v-else>
         <header class="reader-cover">
           <div class="reader-cover-meta">
             <span class="reader-source">{{
@@ -204,19 +226,22 @@ const { activeSection, chatBusy } = toRefs(props);
                 >
               </div>
             </div>
-            <div class="reader-cover-art">
-              <ReadingArt
-                :active="readerFocus"
-                :disabled="
-                  !readingState.currentArticle || readingState.articleBusy
-                "
-                @toggle="toggleReaderFocus"
-              />
-            </div>
           </div>
         </header>
         <div class="reader-tools">
+          <div v-if="canResumeReading" class="reader-position-actions" role="group" aria-label="阅读位置">
+            <button type="button" aria-label="继续阅读" :disabled="readingState.articleBusy" @click="resumeReading">续读</button>
+            <button type="button" aria-label="从头阅读" :disabled="readingState.articleBusy" @click="startReadingOver">从头</button>
+          </div>
           <div class="reader-toolbar">
+            <button
+              class="reader-focus-action"
+              type="button"
+              :aria-pressed="readerFocus"
+              aria-label="句子聚焦"
+              :disabled="!readingState.currentArticle || readingState.articleBusy"
+              @click="toggleReaderFocus"
+            >聚焦</button>
             <button
               class="reader-discuss"
               type="button"
@@ -227,9 +252,10 @@ const { activeSection, chatBusy } = toRefs(props);
               "
               @click="discussArticle"
             >
-              <AppIcon name="chat" />和 AI 讨论
+              <AppIcon name="chat" />讨论
             </button>
             <button
+              v-if="!isPhone"
               ref="newsLibraryButtonRef"
               class="reading-library-toggle settings-secondary"
               type="button"
@@ -237,9 +263,10 @@ const { activeSection, chatBusy } = toRefs(props);
               :aria-expanded="newsLibraryOpen"
               @click="newsLibraryOpen = true"
             >
-              更换文章
+              换一篇
             </button>
             <button
+              v-if="!isPhone"
               class="translate-btn"
               type="button"
               :disabled="
@@ -249,18 +276,18 @@ const { activeSection, chatBusy } = toRefs(props);
               "
               @click="translateArticle"
             >
-              <span class="reader-translate-symbol" aria-hidden="true">译</span>
               {{
                 readingState.translateBusy
                   ? "翻译中…"
                   : readingState.translation.contentCn ||
                       readingState.translation.titleCn
                     ? "收起译文"
-                    : "全文翻译"
+                    : "翻译"
               }}
             </button>
           </div>
         </div>
+        <span id="reader-keyboard-hint" class="reader-keyboard-hint">方向键选词，回车查词。</span>
         <div
           ref="readerRef"
           class="reader-scroll-area"
@@ -271,11 +298,8 @@ const { activeSection, chatBusy } = toRefs(props);
             class="reader-content"
             aria-label="英文正文，可点选单词查词"
           >
-            <p
-              v-for="(paragraph, index) in articleParagraphs"
-              :key="index"
-              class="reader-paragraph"
-            >
+            <template v-for="(paragraph, index) in articleParagraphs" :key="index">
+            <p class="reader-paragraph">
               <template v-for="token in paragraph" :key="token.key">
                 <span
                   v-if="token.word"
@@ -283,18 +307,22 @@ const { activeSection, chatBusy } = toRefs(props);
                   :class="{
                     'is-looked-up':
                       readingState.tooltip.visible &&
+                      (!isPhone || activeReaderWord === token.key) &&
                       readingState.tooltip.lookupKey ===
                         normalizeLookupWord(token.text),
                     'reader-art-dim': dimReaderToken(token),
                   }"
-                  tabindex="0"
+                  :role="isLookupWord(token.text) ? 'button' : undefined"
+                  :tabindex="isLookupWord(token.text) ? (activeReaderWord === token.key ? 0 : -1) : undefined"
+                  :aria-describedby="activeReaderWord === token.key ? 'reader-keyboard-hint' : undefined"
+                  :data-reader-key="isLookupWord(token.text) ? token.key : undefined"
                   :data-sentence="token.sentence"
-                  @focus="focusReaderWord(token, $event)"
+                  @focus="focusNavigationWord(token)"
                   @blur="scheduleHideTooltip"
                   @click="showTooltip(token.text, $event)"
-                  @keydown.enter.prevent="
-                    focusLookupActions(token.text, $event)
-                  "
+                  @keydown="navigateReaderWords($event, token)"
+                  @keydown.enter.prevent="focusLookupActions(token.text, $event)"
+                  @keydown.space.prevent="focusLookupActions(token.text, $event)"
                   @mouseenter="focusReaderWord(token, $event)"
                   @mouseleave="scheduleHideTooltip"
                   >{{ token.text }}</span
@@ -306,18 +334,13 @@ const { activeSection, chatBusy } = toRefs(props);
                 >
               </template>
             </p>
+            <ParagraphTranslation v-if="isPhone" :text="paragraph.map(token => token.text).join('')" />
+            </template>
           </article>
           <div
-            v-if="readingState.currentArticle"
-            class="reader-endmark"
-            aria-hidden="true"
-          >
-            <span></span>✦<span></span>
-          </div>
-          <div
-            v-if="
+            v-if="!isPhone && (
               readingState.translation.titleCn ||
-              readingState.translation.contentCn
+              readingState.translation.contentCn)
             "
             class="translation-area"
           >
@@ -360,6 +383,7 @@ const { activeSection, chatBusy } = toRefs(props);
             }}
           </button>
         </footer>
+        </template>
       </section>
     </div>
   </section>

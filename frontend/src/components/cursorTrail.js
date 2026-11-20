@@ -1,6 +1,8 @@
 const TAIL_LIFETIME = 190;
+const PAPER_TAIL_LIFETIME = 110;
+const PAPER_TAIL_LENGTH = 32;
 const SCRAP_LIFETIME = 460;
-const MAX_POINTS = 14;
+const MAX_SEGMENTS = 13;
 const MAX_SCRAPS = 3;
 const MAX_SEGMENT = 48;
 const PALETTES = {
@@ -15,7 +17,7 @@ export function createCursorTrail(canvas) {
   const motion = window.matchMedia("(any-hover: hover) and (any-pointer: fine) and (prefers-reduced-motion: no-preference)");
   const listeners = new AbortController();
   const options = { passive: true, signal: listeners.signal };
-  let points = [];
+  let segments = [];
   let scraps = [];
   let previous;
   let lastScrapAt = -Infinity;
@@ -27,7 +29,7 @@ export function createCursorTrail(canvas) {
   function clear() {
     if (frame) cancelAnimationFrame(frame);
     frame = 0;
-    points = [];
+    segments = [];
     scraps = [];
     previous = undefined;
     lastScrapAt = -Infinity;
@@ -47,20 +49,27 @@ export function createCursorTrail(canvas) {
 
   function draw(now) {
     context.clearRect(0, 0, width, height);
-    points = points.filter((point) => now - point.time < TAIL_LIFETIME);
+    segments = segments.filter((segment) => now - segment.time < segment.lifetime);
     scraps = scraps.filter((scrap) => now - scrap.time < SCRAP_LIFETIME);
     const palette = PALETTES[document.documentElement.dataset.theme] ?? PALETTES.light;
 
     context.strokeStyle = palette.tail;
-    for (let index = 1; index < points.length; index += 1) {
-      const start = points[index - 1];
-      const end = points[index];
-      const remaining = 1 - Math.max(0, now - start.time) / TAIL_LIFETIME;
-      context.globalAlpha = remaining ** 2 * 0.43;
-      context.lineWidth = 0.7 + remaining * 0.8;
+    // Limit the paper trail by distance along the stroke, even through turns.
+    let paperLengthLeft = PAPER_TAIL_LENGTH;
+    for (let index = segments.length - 1; index >= 0; index--) {
+      const segment = segments[index];
+      let visibleLength = segment.length;
+      if (segment.paper) {
+        visibleLength = Math.min(visibleLength, paperLengthLeft);
+        if (!visibleLength) continue;
+        paperLengthLeft -= visibleLength;
+      }
+      const remaining = 1 - Math.max(0, now - segment.time) / segment.lifetime;
+      context.globalAlpha = remaining ** 2 * segment.opacity;
+      context.lineWidth = segment.paper ? 0.65 + remaining * 0.45 : 0.7 + remaining * 0.8;
       context.beginPath();
-      context.moveTo(start.x, start.y);
-      context.lineTo(end.x, end.y);
+      context.moveTo(segment.x - segment.unitX * visibleLength, segment.y - segment.unitY * visibleLength);
+      context.lineTo(segment.x, segment.y);
       context.stroke();
     }
 
@@ -84,7 +93,7 @@ export function createCursorTrail(canvas) {
     }
 
     context.globalAlpha = 1;
-    frame = points.length > 1 || scraps.length ? requestAnimationFrame(draw) : 0;
+    frame = segments.length || scraps.length ? requestAnimationFrame(draw) : 0;
   }
 
   function move(event) {
@@ -94,10 +103,11 @@ export function createCursorTrail(canvas) {
       return;
     }
 
-    const point = { x: event.clientX, y: event.clientY, time: performance.now() };
-    if (!previous || point.time - previous.time >= TAIL_LIFETIME) {
+    const paper = event.target instanceof Element && Boolean(event.target.closest('[data-cursor-trail="paper"]'));
+    const lifetime = paper ? PAPER_TAIL_LIFETIME : TAIL_LIFETIME;
+    const point = { x: event.clientX, y: event.clientY, time: performance.now(), paper };
+    if (!previous || previous.paper !== paper || point.time - previous.time >= lifetime) {
       previous = point;
-      points = [point];
       return;
     }
 
@@ -109,17 +119,16 @@ export function createCursorTrail(canvas) {
     const unitX = dx / distance;
     const unitY = dy / distance;
     const speed = distance / Math.max(8, point.time - previous.time);
-    if (distance > MAX_SEGMENT) {
-      points = [{
-        x: point.x - unitX * MAX_SEGMENT,
-        y: point.y - unitY * MAX_SEGMENT,
-        time: previous.time,
-      }];
-    }
-    points.push(point);
-    if (points.length > MAX_POINTS) points.shift();
+    if (!paper && distance > MAX_SEGMENT) segments = segments.filter(segment => segment.paper);
+    segments.push({
+      x: point.x, y: point.y, unitX, unitY, paper, lifetime,
+      length: Math.min(distance, MAX_SEGMENT),
+      time: previous.time,
+      opacity: paper ? 0.025 + 0.19 * Math.min(speed / 1.2, 1) : 0.43,
+    });
+    if (segments.length > MAX_SEGMENTS) segments.shift();
 
-    if (speed >= 0.72 && point.time - lastScrapAt >= 75) {
+    if (!paper && speed >= 0.72 && point.time - lastScrapAt >= 75) {
       const side = scrapIndex % 2 === 0 ? 1 : -1;
       scraps.push({
         x: point.x - unitX * 12 - unitY * side * 5,

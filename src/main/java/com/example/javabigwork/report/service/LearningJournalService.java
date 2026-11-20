@@ -3,6 +3,7 @@ package com.example.javabigwork.report.service;
 import com.example.javabigwork.auth.LoginActivityService;
 import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.auth.mapper.UserAccountMapper;
+import com.example.javabigwork.news.entity.ReadingRecord;
 import com.example.javabigwork.report.dto.LearningCalendarView;
 import com.example.javabigwork.report.dto.LearningJournalView;
 import java.time.DayOfWeek;
@@ -47,12 +48,13 @@ public class LearningJournalService {
                 FROM word_review_log WHERE user_id=? AND created_at<?
                 """, userId, today.plusDays(1));
         long attempts = number(wordTotals, "attempts");
+        var chatTotals = chatTotals(userId);
         var totals = new LearningJournalView.Totals(number(wordTotals, "studied"), number(wordTotals, "reviewed"),
                 scalar("SELECT COUNT(*) FROM user_word_progress WHERE user_id=? AND familiarity>=3 AND COALESCE(wrong_count,0)=0", userId),
                 number(wordTotals, "quizzes"), attempts, rate(number(wordTotals, "corrects"), attempts),
                 scalar("SELECT COUNT(*) FROM essay_submission WHERE user_id=?", userId),
                 scalar("SELECT COUNT(*) FROM reading_record WHERE user_id=? AND finished=TRUE", userId),
-                scalar("SELECT COUNT(*) FROM message m JOIN conversation c ON m.conversation_id=c.id WHERE c.user_id=? AND m.role='user'", userId),
+                number(chatTotals, "messages"),
                 sumEnglishWords("""
                         SELECT a.content
                         FROM news_article a
@@ -61,11 +63,32 @@ public class LearningJournalService {
                             WHERE r.article_id=a.id AND r.user_id=? AND r.finished=TRUE
                         )
                         """, userId),
-                sumEnglishWords("SELECT original_text FROM essay_submission WHERE user_id=?", userId));
+                sumEnglishWords("SELECT original_text FROM essay_submission WHERE user_id=?", userId),
+                number(chatTotals, "practice"));
         return new LearningJournalView(today, LoginActivityService.ZONE.getId(), account.nickname, joined,
                 Math.max(1, ChronoUnit.DAYS.between(joined, today) + 1), logins.isEmpty() ? null : logins.get(0),
                 logins.size(), streak(loginSet, today), longestStreak(logins), activity.size(), totals,
                 days(first, first.plusWeeks(12), daily, activity, loginSet));
+    }
+
+    private Map<String, Object> chatTotals(long userId) {
+        // Older conversations could mix modes. Only the immediate reply can identify an unmarked turn.
+        return jdbc.queryForMap("""
+                WITH messages_with_metadata AS (
+                    SELECT m.id, m.conversation_id, m.role,
+                           CASE WHEN JSON_VALID(m.metadata) THEN m.metadata END AS metadata
+                    FROM message m JOIN conversation c ON c.id=m.conversation_id
+                    WHERE c.user_id=?
+                ), turns AS (
+                    SELECT role, JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.mode')) AS mode,
+                           LEAD(role='assistant' AND JSON_TYPE(JSON_EXTRACT(metadata, '$.coaching'))='OBJECT')
+                               OVER (PARTITION BY conversation_id ORDER BY id) AS followed_by_coaching
+                    FROM messages_with_metadata
+                )
+                SELECT COUNT(*) AS messages,
+                       COUNT(CASE WHEN mode='practice' OR (mode IS NULL AND followed_by_coaching) THEN 1 END) AS practice
+                FROM turns WHERE role='user'
+                """, userId);
     }
 
     public LearningCalendarView calendar(String month) {
@@ -83,7 +106,8 @@ public class LearningJournalService {
         Map<LocalDate, Long> activity = first.isBefore(end) ? loadStudyEvents(userId, first, end) : Map.of();
         var monthDays = first.datesUntil(afterMonth).map(date -> {
             Counts value = daily.getOrDefault(date, new Counts());
-            return new LearningCalendarView.Day(date, value.newWords, value.reviews, activity.getOrDefault(date, 0L));
+            return new LearningCalendarView.Day(date, value.newWords, value.reviews, activity.getOrDefault(date, 0L),
+                    value.aiChatTurns, value.aiEssayReviews, value.readingsFinished);
         }).toList();
         return new LearningCalendarView(month, today, monthDays);
     }
@@ -149,12 +173,17 @@ public class LearningJournalService {
                     UNION ALL SELECT DATE(created_at) FROM essay_submission WHERE user_id=? AND created_at IS NOT NULL
                     UNION ALL SELECT DATE(m.created_at) FROM message m JOIN conversation c ON m.conversation_id=c.id
                       WHERE c.user_id=? AND m.role='user' AND m.created_at IS NOT NULL
-                    UNION ALL SELECT DATE(created_at) FROM reading_record WHERE user_id=? AND created_at IS NOT NULL
+                    UNION ALL SELECT DATE(COALESCE(started_at, created_at)) FROM reading_record
+                      WHERE user_id=? AND %s
+                    UNION ALL SELECT DATE(finished_at) FROM reading_record WHERE user_id=? AND finished=TRUE
+                      AND finished_at IS NOT NULL AND (COALESCE(started_at, created_at) IS NULL
+                        OR DATE(finished_at)<>DATE(COALESCE(started_at, created_at)))
                 ) events WHERE day<?
-                """ + (first == null ? "" : " AND day>=?") + " GROUP BY day";
+                """.formatted(ReadingRecord.HAS_ACTIVITY)
+                + (first == null ? "" : " AND day>=?") + " GROUP BY day";
         Object[] parameters = first == null
-                ? new Object[]{userId, userId, userId, userId, end}
-                : new Object[]{userId, userId, userId, userId, end, first};
+                ? new Object[]{userId, userId, userId, userId, userId, end}
+                : new Object[]{userId, userId, userId, userId, userId, end, first};
         Map<LocalDate, Long> activity = new HashMap<>();
         jdbc.query(sql, rs -> {
             activity.put(rs.getDate("day").toLocalDate(), rs.getLong("total"));

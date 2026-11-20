@@ -90,8 +90,9 @@
 }
 .review-workspace .review-prompt {
   display: grid;
+  align-content: start;
   gap: 12px;
-  min-height: 0;
+  min-height: 144px;
   padding: 18px clamp(16px, 4vw, 48px) 22px;
   border: 1px solid var(--review-line);
   border-radius: 13px;
@@ -157,11 +158,45 @@
 .review-workspace .review-input-grid {
   gap: 10px 16px;
 }
-.review-workspace .review-input-grid label > span {
-  margin-bottom: 6px;
+.review-answer-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+.review-answer-field > label {
+  color: var(--muted);
+  font-size: var(--text-secondary, 13px);
 }
 .review-workspace .review-input-grid input {
   padding: 12px 14px;
+}
+.review-workspace .review-input-grid input[data-result="correct"] {
+  border-color: var(--review-margin);
+  background: var(--review-paper);
+}
+.review-workspace .review-input-grid input[data-result="wrong"] {
+  border-color: color-mix(in srgb, var(--review-wrong-ink) 38%, var(--line));
+  background: var(--review-wrong-bg);
+}
+.review-answer-feedback {
+  min-height: 18px;
+  margin: 0;
+  font-size: var(--text-secondary, 13px);
+  overflow-wrap: anywhere;
+}
+.review-answer-correct {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--green-ink);
+}
+.review-answer-correct > svg {
+  width: 15px;
+  height: 15px;
+}
+.review-answer-wrong {
+  color: var(--review-wrong-ink);
 }
 .review-workspace .review-card-actions {
   flex-wrap: wrap;
@@ -185,60 +220,6 @@
   justify-content: center;
   gap: 8px;
 }
-.app-shell #review .review-result {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 22px;
-  padding: 12px 16px;
-  border: 1px solid var(--review-line);
-  color: var(--green-ink);
-  background: var(--review-paper);
-}
-.app-shell #review .review-result.is-wrong {
-  border-color: color-mix(in srgb, var(--review-wrong-ink) 22%, var(--line));
-  color: var(--review-wrong-ink);
-  background: var(--review-wrong-bg);
-}
-.review-result-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 7px;
-  background: color-mix(in srgb, currentColor 10%, transparent);
-  font-size: 13px;
-}
-.review-result-status svg {
-  width: 16px;
-  height: 16px;
-}
-.review-result-answers {
-  display: flex;
-  flex: 1 1 290px;
-  flex-wrap: wrap;
-  gap: 6px 24px;
-  min-width: 0;
-  margin: 0;
-  color: var(--ink);
-  overflow-wrap: anywhere;
-}
-.review-result-answers > div {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 2px 8px;
-  min-width: 0;
-}
-.review-result-answers dt {
-  color: var(--muted);
-  font-size: 13px;
-}
-.review-result-answers dd {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-}
 .review-workspace .review-state {
   display: grid;
   justify-items: center;
@@ -246,15 +227,6 @@
   padding: 28px 16px;
   border-color: var(--review-line);
   text-align: center;
-}
-.review-state-icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  color: var(--green-ink);
-  background: var(--green-soft);
 }
 .review-workspace .review-state h3 {
   margin: 0;
@@ -278,27 +250,6 @@
   color: var(--ink);
   font-size: 28px;
   font-weight: 650;
-}
-
-@media (min-width: 981px) and (min-height: 620px) {
-  .review-workspace:has(> .review-challenge-card) {
-    min-height: 100%;
-    grid-template-rows: auto 1fr auto;
-  }
-
-  .review-workspace .review-challenge-card {
-    grid-template-rows: auto minmax(min-content, 1fr) auto;
-    gap: clamp(12px, 1.9vh, 22px);
-  }
-
-  .review-workspace .review-prompt {
-    grid-template-rows: auto minmax(min-content, 1fr);
-    padding-block: clamp(18px, 2.5vh, 30px);
-  }
-
-  .review-workspace :is(.review-cloze, .review-filled-example) {
-    align-self: center;
-  }
 }
 
 .wordbank-scopes {
@@ -370,4 +321,48 @@
   .wordbank-layout .word-bank-grid {
     transition: none;
   }
+}
+
+@media (max-width: 760px), (max-width: 960px) and (max-height: 540px) and (pointer: coarse) {
+  .app-shell #review.active { overflow: visible; }
+  .review-workspace { gap: 10px; min-width: 0; }
+  .review-workspace:has(.review-challenge-card) {
+    grid-template-rows: auto minmax(min-content, 1fr) auto;
+    min-height: calc(var(--mobile-viewport, 100dvh) - var(--mobile-header-height, 56px) - 24px - env(safe-area-inset-bottom));
+    padding-bottom: 0;
+  }
+  .review-workspace .review-toolbar { gap: 4px; }
+  .review-workspace .review-mode-switch { gap: 0; padding: 2px; }
+  .review-workspace .review-mode-switch > button { min-height: 44px; padding: 6px 8px; }
+  .review-workspace .evidence-open { min-height: 44px; }
+  .review-workspace .review-challenge-card { grid-template-rows: auto minmax(min-content,1fr) auto; gap: 14px; padding: 14px; }
+  .review-workspace .review-prompt {
+    min-height: clamp(142px, 24svh, 214px);
+    align-content: center;
+    padding: 15px 12px 16px 24px;
+  }
+  .review-workspace .review-prompt-meta { gap: 4px 8px; }
+  .review-workspace .review-filled-example > p { font-size: clamp(22px, 5.9vw, 28px); line-height: 1.4; }
+  .review-workspace .review-input-grid { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .review-workspace .review-input-grid input {
+    height: 46px;
+    font-size: 16px;
+    scroll-margin-block: calc(var(--mobile-header-height, 56px) + 12px) 80px;
+  }
+  .review-answer-field { gap: 4px; }
+  .review-answer-feedback { min-height: 0; font-size: 14px; }
+  .review-answer-feedback:empty { display: none; }
+  .app-shell .review-workspace .review-nav {
+    position: sticky;
+    z-index: 2;
+    bottom: env(safe-area-inset-bottom, 0px);
+    grid-template-columns: minmax(0, 1fr);
+    justify-self: stretch;
+    padding: 2px;
+    border: 0;
+    background: var(--surface);
+  }
+  .review-workspace .review-nav .quiz-nav-actions,
+  .app-shell #review .review-nav .quiz-primary { width: 100%; }
+  .app-shell #review .review-nav .quiz-primary { min-height: 46px; font-size: 16px; }
 }

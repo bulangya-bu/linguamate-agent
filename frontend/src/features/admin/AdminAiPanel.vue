@@ -2,7 +2,7 @@
 import AdminSketchIcon from "@/components/AdminSketchIcon.vue";
 import { runAction } from "./admin-utils";
 const props = defineProps({ controller: { type: Object, required: true } });
-const { state, fetchModels, saveAiSettings } = props.controller;
+const { state, keyHint, fetchModels, saveAiSettings } = props.controller;
 </script>
 
 <template>
@@ -26,22 +26,24 @@ const { state, fetchModels, saveAiSettings } = props.controller;
                 ><span>模型地址（兼容 OpenAI）</span
                 ><input
                   v-model="state.ai.baseUrl"
+                  :disabled="state.aiBusy"
                   autocomplete="off"
                   placeholder="https://api.openai.com/v1" /></label
               ><label class="settings-field"
                 ><span>API 密钥</span
                 ><input
                   v-model="state.ai.apiKey"
+                  :disabled="state.aiBusy"
                   type="password"
                   autocomplete="off"
-                  placeholder="留空则沿用已保存密钥"
+                  :placeholder="keyHint"
               /></label>
               <div class="admin-model-row">
                 <label class="settings-field admin-model-select"
                   ><span>模型名称</span
                   ><select
                     v-model="state.ai.chatModel"
-                    :disabled="!state.ai.models.length"
+                    :disabled="state.aiBusy || !state.ai.models.length"
                   >
                     <option v-if="!state.ai.models.length" value="">
                       请先获取模型列表
@@ -57,7 +59,7 @@ const { state, fetchModels, saveAiSettings } = props.controller;
                 ><button
                   class="settings-secondary"
                   type="button"
-                  :disabled="state.aiBusy"
+                  :disabled="state.aiBusy || !state.ai.baseUrl.trim()"
                   @click="runAction(fetchModels)"
                 >
                   获取模型
@@ -67,7 +69,7 @@ const { state, fetchModels, saveAiSettings } = props.controller;
                 <button
                   class="settings-primary"
                   type="button"
-                  :disabled="state.aiBusy"
+                  :disabled="state.aiBusy || !state.ai.baseUrl.trim()"
                   @click="runAction(saveAiSettings)"
                 >
                   保存并应用
@@ -81,11 +83,11 @@ const { state, fetchModels, saveAiSettings } = props.controller;
 
             <div class="admin-ai-identity">
               <span class="admin-user-avatar">{{
-                (state.user?.nickname || "管").slice(0, 1)
+                (controller.user?.nickname || "管").slice(0, 1)
               }}</span
               ><span
-                ><strong>{{ state.user?.nickname || "管理员" }}</strong
-                ><small>@{{ state.user?.username }}</small></span
+                ><strong>{{ controller.user?.nickname || "管理员" }}</strong
+                ><small>@{{ controller.user?.username }}</small></span
               >
             </div>
           </aside>

@@ -1,30 +1,44 @@
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
+import { watch } from "vue";
 import { phonetic } from "../vocabulary/wordPresentation";
 const props = defineProps({
   reading: Object,
 });
 const {
   state: readingState,
+  isPhone,
   tooltipRef,
   tooltipHasDefinition,
   scheduleHideTooltip,
   cancelTooltipHide,
   handleTooltipFocusOut,
+  closeKeyboardLookup,
   openPendingLibrary,
   saveReaderWord,
   explainReaderWord,
 } = props.reading;
+
+watch([() => readingState.tooltip.visible, isPhone], ([visible, phone]) => {
+  if (visible && phone && tooltipRef.value && !tooltipRef.value.open) tooltipRef.value.showModal();
+}, { flush: "post" });
+
+function dismissBackdrop(event) {
+  if (!isPhone.value || event.target !== tooltipRef.value) return;
+  const bounds = tooltipRef.value.getBoundingClientRect();
+  if (event.clientY < bounds.top || event.clientX < bounds.left || event.clientX > bounds.right) closeKeyboardLookup();
+}
 </script>
 
 <template>
-  <div
+  <component :is="isPhone ? 'dialog' : 'div'"
     v-if="readingState.tooltip.visible"
     ref="tooltipRef"
     class="word-tooltip visible"
     role="dialog"
+    tabindex="-1"
     :aria-label="readingState.tooltip.data.word + ' 的释义'"
-    :style="{
+    :style="isPhone ? undefined : {
       left: readingState.tooltip.x + 'px',
       top: readingState.tooltip.y + 'px',
     }"
@@ -32,13 +46,17 @@ const {
     @mouseleave="scheduleHideTooltip"
     @focusin="cancelTooltipHide"
     @focusout="handleTooltipFocusOut"
-    @keydown.esc.stop="readingState.tooltip.visible = false"
+    @keydown.esc.stop="closeKeyboardLookup"
+    @cancel.prevent="closeKeyboardLookup"
+    @close="closeKeyboardLookup"
+    @click="dismissBackdrop"
   >
     <div class="tooltip-head">
       <strong>{{ readingState.tooltip.data.word }}</strong>
       <span v-if="readingState.tooltip.loading" class="tooltip-status"
         >查询中</span
       >
+      <button v-if="isPhone" class="tooltip-phone-close" type="button" aria-label="关闭释义" @click="closeKeyboardLookup"><AppIcon name="close" /></button>
     </div>
     <div
       v-if="
@@ -84,12 +102,12 @@ const {
       "
       @click="explainReaderWord"
     >
-      <AppIcon name="spark" />{{
+      {{
         readingState.tooltip.contextBusy
-          ? "正在解读语境…"
+          ? "查询中…"
           : readingState.tooltip.context
-            ? "重新解读语境"
-            : "AI 语境解读"
+            ? "重新解读"
+            : "看语境"
       }}
     </button>
     <small
@@ -150,5 +168,5 @@ const {
         保留本文原句<AppIcon name="arrow" />
       </button>
     </div>
-  </div>
+  </component>
 </template>

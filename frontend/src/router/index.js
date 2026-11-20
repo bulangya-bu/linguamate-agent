@@ -33,6 +33,12 @@ const routes = [
     meta: { section: "chat" },
   },
   {
+    path: "/practice",
+    name: "practice",
+    component: MainAppView,
+    meta: { section: "practice" },
+  },
+  {
     path: "/vocabulary",
     name: "vocabulary",
     component: MainAppView,
@@ -74,8 +80,8 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
-  scrollBehavior() {
-    return { top: 0 };
+  scrollBehavior(to, from, savedPosition) {
+    return savedPosition || { top: 0 };
   },
 });
 

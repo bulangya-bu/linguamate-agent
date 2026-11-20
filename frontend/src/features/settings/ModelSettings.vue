@@ -7,6 +7,7 @@ const props = defineProps({
 const {
   state: settingsState,
   settingsPanelRef,
+  keyHint,
   openSettings,
   fetchModels,
   testAiConnection,
@@ -74,53 +75,70 @@ const {
           :disabled="settingsState.aiBusy"
           type="password"
           autocomplete="off"
-          placeholder="留空则沿用已保存密钥"
+          :placeholder="keyHint"
         />
       </label>
-      <div class="settings-row">
+      <div class="settings-model-row">
+        <label class="settings-field">
+          <span>模型名</span>
+          <input
+            v-model.trim="settingsState.ai.chatModel"
+            list="available-ai-models"
+            placeholder="模型名称"
+            :disabled="settingsState.aiBusy"
+          />
+        </label>
+        <datalist id="available-ai-models">
+          <option v-for="model in settingsState.ai.models" :key="model" :value="model" />
+        </datalist>
         <button
           class="settings-secondary"
           type="button"
-          :disabled="settingsState.aiBusy"
+          :disabled="settingsState.aiBusy || !settingsState.ai.baseUrl.trim()"
           @click="fetchModels"
-        >
-          获取模型
-        </button>
-        <span class="settings-status">{{ settingsState.ai.status }}</span>
+        >获取模型</button>
       </div>
-      <label class="settings-field">
-        <span>模型名</span>
-        <input
-          v-model.trim="settingsState.ai.chatModel"
-          list="available-ai-models"
-          placeholder="模型名称"
-          :disabled="settingsState.aiBusy"
-        /><datalist id="available-ai-models">
-          <option
-            v-for="model in settingsState.ai.models"
-            :key="model"
-            :value="model"
-          />
-        </datalist>
-      </label>
       <div class="settings-actions">
         <button
           class="settings-secondary"
           type="button"
-          :disabled="settingsState.aiBusy || !settingsState.ai.chatModel"
+          :disabled="settingsState.aiBusy || !settingsState.ai.baseUrl.trim() || !settingsState.ai.chatModel"
           @click="testAiConnection"
         >
-          {{ settingsState.aiTesting ? "检测中…" : "测试连接" }}
+          {{ settingsState.aiTesting ? "测试中…" : "测试连接" }}
         </button>
         <button
           class="settings-primary"
           type="button"
-          :disabled="settingsState.aiBusy"
+          :disabled="settingsState.aiBusy || !settingsState.ai.baseUrl.trim()"
           @click="saveAiSettings"
         >
-          保存并应用
+          保存
         </button>
+      </div>
+      <div class="settings-feedback" role="status">
+        <span>{{ settingsState.ai.status }}</span>
+        <span v-if="settingsState.aiTestStatus" :class="{ connected: settingsState.aiTestPassed }">{{ settingsState.aiTestStatus }}</span>
       </div>
     </div>
   </aside>
 </template>
+
+<style scoped>
+.settings-model-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+.settings-model-row > button { align-self: end; min-height: 40px; }
+.settings-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  min-height: 1.4em;
+  color: var(--muted);
+  font-size: 13px;
+}
+.settings-feedback .connected { color: var(--green-ink); }
+</style>

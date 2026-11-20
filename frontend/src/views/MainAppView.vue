@@ -1,6 +1,9 @@
 <script setup>
 import AppIcon from "@/components/AppIcon.vue";
 import AppBrand from "@/components/AppBrand.vue";
+import MobileNavigation from "@/components/MobileNavigation.vue";
+import PracticeHub from "@/features/vocabulary/PracticeHub.vue";
+import { usePhoneLayout } from "@/composables/usePhoneLayout";
 import { BRAND_NAME, brandedPageTitle } from "@/brand";
 import {
   defineAsyncComponent,
@@ -17,7 +20,7 @@ import LearningEvidence from "@/components/LearningEvidence.vue";
 import UserAccountMenu from "@/components/UserAccountMenu.vue";
 import ThemeToggle from "@/components/ThemeToggle.vue";
 import { ElMessage } from "element-plus";
-import { useRoute, useRouter } from "vue-router";
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from "vue-router";
 import { authApi, learningApi } from "@/api/modules";
 import { useDashboard } from "@/features/dashboard/useDashboard";
 import { useVocabulary } from "@/features/vocabulary/useVocabulary";
@@ -48,6 +51,20 @@ const session = reactive({
 });
 
 const activeSection = computed(() => route.meta.section || "dashboard");
+const isPhone = usePhoneLayout();
+const mobileViewport = shallowRef(0);
+const composing = shallowRef(false);
+watch(isPhone, (phone, _, cleanUp) => {
+  const viewport = window.visualViewport;
+  if (!phone || !viewport) return;
+  function resize() {
+    // Pinch zoom should magnify the page without reflowing the application.
+    if (Math.abs(viewport.scale - 1) < .01) mobileViewport.value = Math.round(viewport.height);
+  }
+  resize();
+  viewport.addEventListener("resize", resize);
+  cleanUp(() => viewport.removeEventListener("resize", resize));
+}, { immediate: true });
 
 const settings = useAiSettings();
 const {
@@ -61,7 +78,8 @@ const {
 const dashboard = useDashboard({
   goSection,
   getDueWords: () => session.report.dueWords,
-  getConversations: () => chatState.conversations,
+  reloadReport: refreshSummary,
+  getConversations: () => loadConversations(),
   openDueReview,
   openChatPractice,
   resumePractice,
@@ -74,8 +92,12 @@ const {
   refreshTodayTasks,
 } = dashboard;
 const growthInitialTab = shallowRef("words");
+const growthDialog = shallowRef(null);
 
-const vocabulary = useVocabulary({ route, router, activeSection, loadReport });
+const vocabulary = useVocabulary({
+  route, router, activeSection, loadReport,
+  getAccountId: () => session.currentUser?.id,
+});
 const {
   state: vocabularyState,
   wordDialogRef,
@@ -93,13 +115,13 @@ const {
   state: chatState,
   openLearningAssistant,
   loadConversations,
-  newConversation,
   sendChatPrompt,
   loadCoachContext,
 } = chat;
 
 const reading = useReading({
   router,
+  getAccountId: () => session.currentUser?.id,
   loadReport,
   loadWordBankStats,
   isChatBusy,
@@ -121,10 +143,9 @@ const GrowthEvidence = defineAsyncComponent(
   () => import("@/components/GrowthEvidence.vue"),
 );
 
-function navigateJournal(section) {
-  if (section === "mastered")
-    router.push({ path: "/wordbank", query: { scope: "mastered" } });
-  else goSection(section);
+function navigateJournal(section, query) {
+  if (section === "chat") return openChatPractice();
+  return goSection(section, query);
 }
 
 function openGrowthEvidence(tab = "words") {
@@ -208,6 +229,7 @@ const navItems = [
 ];
 
 const sectionMeta = {
+  practice: "练习",
   dashboard: "学习概览",
   chat: "对话练习",
   vocabulary: "单词练习",
@@ -221,6 +243,43 @@ const sectionMeta = {
 const sectionTitle = computed(
   () => sectionMeta[activeSection.value] || sectionMeta.dashboard,
 );
+const mobileTabs = computed(() => ["dashboard", "practice", "journal"].includes(activeSection.value) ||
+  (activeSection.value === "chat" && !chat.activeThread.value.messages.length &&
+    !chat.activeThread.value.draft.trim() && !composing.value));
+const mobileRoot = computed(() => ["dashboard", "practice", "journal"].includes(activeSection.value));
+
+function mobileBack() {
+  const previous = router.options.history.state.back;
+  if (previous && router.resolve(previous).meta.section) {
+    router.back();
+    return;
+  }
+  router.replace(activeSection.value === "chat" ? "/" : activeSection.value === "news" && route.query.article ? "/news" : "/practice");
+}
+
+function dismissOverlayOnBack(to) {
+  if (!isPhone.value || router.options.history.state.current !== to.fullPath) return;
+  const learningSheet = document.querySelector("dialog[open].studio-coach, dialog[open].word-tooltip");
+  if (learningSheet) {
+    learningSheet.close();
+    return false;
+  }
+  if (settingsState.settingsOpen || wordDialogVisible.value || readingState.tooltip.visible) {
+    closeOverlays();
+    return false;
+  }
+  if (growthOpen.value) {
+    if (growthDialog.value) growthDialog.value.goBack();
+    else growthOpen.value = false;
+    return false;
+  }
+  if (evidenceOpen.value) {
+    evidenceOpen.value = false;
+    return false;
+  }
+}
+onBeforeRouteUpdate(dismissOverlayOnBack);
+onBeforeRouteLeave(dismissOverlayOnBack);
 
 const userName = computed(
   () =>
@@ -248,20 +307,17 @@ function openDueReview() {
 }
 
 function loadReviewsForRoute() {
-  if (activeSection.value === "review" && route.query.mode === "today") {
-    vocabularyState.reviewMode = "today";
-  }
-  return loadReviews();
+  const requestedMode = route.query.mode;
+  return activeSection.value === "review" && ["today", "mistakes"].includes(requestedMode)
+    ? loadReviews(requestedMode)
+    : loadReviews();
 }
 
 function openChatPractice() {
   if (chatState.chatBusy) {
     throw new Error("对话正在生成回复，请稍候");
   }
-  if (chatState.chatMode !== "practice") {
-    newConversation();
-    chatState.chatMode = "practice";
-  }
+  chat.selectMode("practice");
   return goSection("chat");
 }
 
@@ -287,12 +343,15 @@ async function logout() {
   }
 }
 
+async function refreshSummary() {
+  session.report = (await learningApi.report()) || {};
+}
+
 async function loadReport() {
-  const [report, level] = await Promise.all([
-    learningApi.report(),
+  const [, level] = await Promise.all([
+    refreshSummary(),
     learningApi.level(),
   ]);
-  session.report = report || {};
   session.level = level || {};
   if (activeSection.value === "dashboard" && !session.loading) {
     await refreshTodayTasks();
@@ -309,20 +368,39 @@ async function writingReviewed(result) {
 async function boot() {
   document.body.className = "";
   session.currentUser = await authApi.me();
-  await Promise.all([
-    loadReport(),
-    loadQuizCategories().then(loadQuizForRoute),
-    loadReviewsForRoute(),
-    loadNewsTopics().then(() => loadNews()),
-    loadConversations(),
-    loadAiSummary(),
-    loadCoachContext(),
-  ]);
-  if (activeSection.value === "wordbank") {
-    await loadWordBank();
-  }
   session.loading = false;
-  if (activeSection.value === "dashboard") refreshTodayTasks();
+  const summary = refreshSummary().catch(() => {});
+  learningApi.level().then(level => { session.level = level || {}; }).catch(() => {});
+  loadAiSummary();
+  loadSection(activeSection.value, summary);
+}
+
+async function loadSection(section, summary) {
+  try {
+    switch (section) {
+      case "dashboard":
+        await Promise.all([loadQuizForRoute(), refreshTodayTasks(summary)]);
+        break;
+      case "vocabulary":
+        await Promise.all([loadQuizCategories(), loadQuizForRoute()]);
+        break;
+      case "review":
+        await loadReviewsForRoute();
+        break;
+      case "wordbank":
+        await loadWordBank();
+        break;
+      case "chat":
+        await Promise.all([loadConversations(), loadCoachContext()]);
+        break;
+      case "news":
+        readingState.lookupCache = {};
+        await Promise.all([loadNewsTopics(), loadNews(route.query.article)]);
+        break;
+    }
+  } catch (error) {
+    if (activeSection.value === section) ElMessage.error(error.message || "页面内容加载失败，请重试");
+  }
 }
 
 function onModelConnected() {
@@ -335,10 +413,7 @@ function isChatBusy() {
   return chatState.chatBusy;
 }
 async function discussReading(article) {
-  newConversation();
-  chatState.chatMode = "practice";
-  chatState.chatScene = "reading";
-  chatState.chatReadingArticle = { id: article.id, title: article.title };
+  if (!chat.beginReadingDiscussion(article)) return;
   await router.push("/chat");
   await sendChatPrompt("我读完了这篇文章，想用英语聊聊其中的观点。");
 }
@@ -375,16 +450,10 @@ watch(
   { flush: "post" },
 );
 
-watch([activeSection, () => route.query.scope, () => route.query.mode], async ([section]) => {
+watch([activeSection, () => route.query.scope, () => route.query.mode, () => route.query.article], ([section]) => {
   document.title = brandedPageTitle(sectionTitle.value);
   readingState.tooltip.visible = false;
-  if (section === "news") readingState.lookupCache = {};
-  if (section === "vocabulary" && !session.loading) await loadQuizForRoute();
-  if (section === "review" && !session.loading && !vocabularyState.reviewBusy)
-    await loadReviewsForRoute();
-  if (section === "wordbank" && !session.loading) await loadWordBank();
-  if (section === "chat" && !session.loading) await loadCoachContext();
-  if (section === "dashboard" && !session.loading) await refreshTodayTasks();
+  if (!session.loading) loadSection(section);
 });
 
 onMounted(() => {
@@ -414,9 +483,12 @@ onBeforeUnmount(() => {
   <div
     v-else
     class="app-shell"
+    :style="isPhone && mobileViewport ? { '--mobile-viewport': mobileViewport + 'px' } : undefined"
     :class="[
       'page-' + activeSection,
       {
+        'phone-shell': isPhone,
+        'with-mobile-nav': isPhone && mobileTabs,
         'dashboard-expanded': dashboardExpanded,
         'has-writing-result': Boolean(session.writingResult),
       },
@@ -424,6 +496,7 @@ onBeforeUnmount(() => {
     @keydown.esc="closeOverlays"
   >
     <aside
+      v-if="!isPhone"
       class="side-nav"
       aria-label="学习导航"
       :inert="settingsState.settingsOpen || wordDialogVisible"
@@ -531,7 +604,15 @@ onBeforeUnmount(() => {
       tabindex="-1"
       :inert="settingsState.settingsOpen || wordDialogVisible"
     >
-      <header class="workspace-bar">
+      <header v-if="isPhone" class="mobile-heading" :class="{ 'mobile-root-heading': mobileRoot }">
+        <button v-if="!mobileRoot" class="mobile-back" type="button" aria-label="返回上一页" @click="mobileBack"><AppIcon name="arrow" /></button>
+        <template v-if="activeSection === 'dashboard'">
+          <img src="/assets/linguamate-icon.svg?v=bright" alt="" width="33" height="33" />
+          <h1>{{ BRAND_NAME }}</h1><time>{{ todayLabel }}</time>
+        </template>
+        <h1 v-else>{{ activeSection === "journal" ? "我的学习档案" : sectionTitle }}</h1>
+      </header>
+      <header v-else class="workspace-bar">
         <div class="workspace-location">
           <span class="workspace-location-icon" aria-hidden="true"
             ><AppIcon :name="activeSection"
@@ -562,7 +643,7 @@ onBeforeUnmount(() => {
           />
         </div>
       </header>
-      <header class="topbar">
+      <header v-if="!isPhone" class="topbar">
         <div class="hero-copy">
           <h1>
             {{
@@ -573,6 +654,7 @@ onBeforeUnmount(() => {
           </h1>
         </div>
       </header>
+      <PracticeHub v-if="activeSection === 'practice'" :due="session.report.dueWords" />
       <DashboardOverview
         :dashboard="dashboard"
         :active-section="activeSection"
@@ -593,12 +675,19 @@ onBeforeUnmount(() => {
           @navigate="navigateJournal"
           @evidence="openGrowthEvidence"
         />
+        <section v-if="isPhone && activeSection === 'journal'" class="phone-account" aria-label="账号与设置">
+          <div class="phone-account-name"><AppIcon name="person"/><strong>{{ userName }}</strong><ThemeToggle /></div>
+          <button type="button" @click="openSettings($event.currentTarget)"><AppIcon name="settings"/>模型配置<AppIcon class="shelf-arrow" name="arrow"/></button>
+          <RouterLink v-if="session.currentUser?.role === 'ADMIN'" to="/admin"><AppIcon name="overview"/>管理工作台<AppIcon class="shelf-arrow" name="arrow"/></RouterLink>
+          <button type="button" :disabled="session.logoutBusy" @click="logout"><AppIcon name="logout"/>退出登录</button>
+        </section>
       </section>
       <ChatWorkspace
         :chat="chat"
         :active-section="activeSection"
         :open-settings="openSettings"
-        :model-name="settingsState.aiSummary.modelName"
+        @focusin="composing = $event.target.matches('textarea, input')"
+        @focusout="composing = false"
       />
 
       <VocabularyPractice
@@ -636,6 +725,8 @@ onBeforeUnmount(() => {
 
       <WordBank :vocabulary="vocabulary" :active-section="activeSection" />
     </main>
+    <MobileNavigation v-if="isPhone && mobileTabs" :section="activeSection"
+      :inert="settingsState.settingsOpen || wordDialogVisible || growthOpen || evidenceOpen" />
 
     <ModelSettings :settings="settings" />
 
@@ -648,6 +739,7 @@ onBeforeUnmount(() => {
       @practice="goSection('review')"
     />
     <GrowthEvidence
+      ref="growthDialog"
       :open="growthOpen"
       :initial-tab="growthInitialTab"
       @close="growthOpen = false"

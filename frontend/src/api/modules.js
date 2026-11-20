@@ -58,6 +58,7 @@ export const learningApi = {
   newsRecommendations: (params) =>
     api(`/api/news/recommendations${query(params)}`),
   article: (id) => api(`/api/news/${id}`),
+  startArticle: (id) => api(`/api/news/${id}/start`, { method: "POST" }),
   articleProgress: (id, payload) =>
     api(`/api/news/${id}/progress`, {
       method: "POST",
@@ -82,6 +83,7 @@ export const learningApi = {
       body: JSON.stringify(payload),
     }),
   writingHistory: () => api("/api/writing/history"),
+  writingHistoryFeedback: (id, signal) => api(`/api/writing/history/${id}/feedback`, { signal }),
   translateArticle: (payload) =>
     api("/api/news/translate", {
       method: "POST",

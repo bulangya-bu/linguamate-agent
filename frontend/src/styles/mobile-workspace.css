@@ -1,0 +1,111 @@
+/* A practice collection also remains usable when a phone link is opened on a large screen. */
+.practice-hub { display: grid; align-content: start; gap: 18px; width: min(100%, 780px); margin-inline: auto; }
+.practice-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.practice-tile {
+  position: relative; display: flex; flex-direction: column; align-items: start; justify-content: end;
+  gap: 4px; min-height: 156px; padding: 18px; border-radius: 18px;
+  color: #f5f9ee; background: #245747;
+  background-image: linear-gradient(0deg, transparent 95%, #ffffff0a 95%),linear-gradient(90deg, transparent 95%, #ffffff0a 95%);
+  background-size: 22px 22px;
+}
+.practice-tile > svg:first-child { margin-bottom: auto; width: 25px; height: 25px; }
+.practice-tile strong { font-size: 21px; }
+.practice-tile small { font-size: 13px; }
+.practice-tile .tile-arrow { position: absolute; top: 18px; right: 14px; opacity: .75; width: 16px; }
+.tile-review { background-color: var(--surface); background-image: repeating-linear-gradient(transparent 0 21px, color-mix(in srgb, var(--green-ink) 8%, transparent) 21px 22px); color: var(--green-ink); border: 1px solid var(--line); }
+.practice-shelf,.phone-account { display: grid; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); padding: 0 16px; }
+.practice-shelf a,.phone-account > :is(a,button),.phone-account-name { display: flex; align-items: center; gap: 13px; min-height: 62px; text-align: start; color: var(--ink); font-size: 16px; }
+.practice-shelf a + a,.phone-account > * + * { border-top: 1px solid var(--line); }
+.practice-mark { display: grid; place-items: center; width: 37px; height: 37px; border-radius: 11px; background: color-mix(in srgb, var(--blue-ink) 8%, var(--surface)); color: var(--blue-ink); }
+.practice-shelf a:nth-child(2) .practice-mark { background: color-mix(in srgb, var(--amber) 13%, var(--surface)); color: var(--ink); }
+.practice-shelf a:nth-child(3) .practice-mark { background: color-mix(in srgb, var(--green) 10%, var(--surface)); color: var(--green-ink); }
+.shelf-arrow { margin-inline-start: auto; width: 16px; color: var(--muted); }
+
+.app-shell.phone-shell {
+  --mobile-header-height: calc(54px + env(safe-area-inset-top, 0px));
+  --mobile-nav-height: calc(60px + env(safe-area-inset-bottom, 0px));
+  display: block; height: auto; min-height: 100dvh; margin: 0; padding: 0;
+  overflow: visible; font-size: 16px;
+}
+.app-shell.phone-shell > .workspace {
+  display: block; height: auto; min-height: 0; width: 100%; overflow: visible; margin: 0;
+  padding: 0 max(14px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+}
+.app-shell.phone-shell.with-mobile-nav > .workspace { padding-bottom: calc(var(--mobile-nav-height) + 16px); }
+.phone-shell .mobile-heading {
+  display: flex; align-items: center; gap: 9px; flex-shrink: 0; box-sizing: border-box;
+  min-height: var(--mobile-header-height); padding-top: env(safe-area-inset-top); margin: 0 0 8px;
+}
+.mobile-heading h1 { margin: 0; font-size: 19px; line-height: 1.25; color: var(--ink); letter-spacing: -.025em; }
+.mobile-root-heading h1 { font-size: 23px; font-weight: 720; }
+.mobile-heading time { margin-left: auto; color: var(--muted); font-size: 13px; }
+.mobile-heading .mobile-back { margin-left: -6px; width: 44px; height: 44px; display: grid; place-items: center; color: var(--ink); }
+.mobile-back svg { transform: rotate(180deg); }
+.mobile-nav {
+  position: fixed; inset: auto 0 0; z-index: 30; display: grid; grid-template-columns: repeat(4,minmax(0,1fr));
+  padding: 3px max(8px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(8px,env(safe-area-inset-left));
+  height: var(--mobile-nav-height); border-top: 1px solid var(--line); background: var(--surface);
+}
+.mobile-nav a { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 2px; color: var(--muted); font-size: 12px; font-weight: 570; }
+.mobile-nav-symbol { display: grid; place-content: center; width: 46px; height: 26px; border-radius: 10px; }
+.mobile-nav a[aria-current="page"] { color: var(--green-ink); }
+.mobile-nav a[aria-current="page"] .mobile-nav-symbol { background: color-mix(in srgb, var(--green) 14%, var(--surface)); }
+.phone-shell .settings-fab { display: none; }
+.phone-shell .settings-panel { max-width: 100%; max-height: var(--mobile-viewport, 100dvh); overflow-y: auto; }
+.phone-shell .settings-panel input { font-size: 16px; }
+.phone-shell .phone-account { margin-block: 16px 0; }
+.phone-account-name .theme-toggle { margin-left: auto; height: 44px; width: 44px; }
+.phone-shell .phone-account > button { padding: 0; }
+.phone-account-name strong { min-width: 0; overflow-wrap: anywhere; }
+.phone-shell #journal.active { display: block; }
+.phone-shell #dashboard.study-overview.active { display: grid; grid-template-columns: minmax(0,1fr); height: auto; gap: 16px; overflow: visible; }
+.phone-shell #dashboard .dashboard-details-toggle { display: none; }
+.phone-shell #dashboard .study-summary { display: flex; }
+.phone-shell #dashboard .study-words { display: block; }
+.phone-shell #dashboard .study-footprint { display: grid; }
+.phone-shell #dashboard .study-start,.phone-shell #dashboard .study-todo-start,.phone-shell .study-word-actions button { min-height: 44px; }
+.phone-shell #dashboard .study-todo-start { padding-inline: 10px; }
+.phone-shell #dashboard .study-word-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.phone-shell #dashboard .study-word { min-width: 0; padding: 13px; }
+.phone-shell #dashboard .study-word strong { overflow-wrap: anywhere; white-space: normal; }
+.phone-shell:where(.page-chat) { min-height: 0; }
+.app-shell.phone-shell.page-chat > .workspace {
+  display: flex; flex-direction: column; height: var(--mobile-viewport,100dvh); min-height: 0; overflow: hidden;
+  padding-bottom: max(6px, env(safe-area-inset-bottom));
+}
+.app-shell.phone-shell.page-chat.with-mobile-nav > .workspace { padding-bottom: var(--mobile-nav-height); }
+.phone-shell #chat.active { flex: 1; min-height: 0; margin-top: 0; }
+.phone-shell .section.active { animation: none; }
+.phone-shell .learning-journal .archive-spread { display: flex; flex-direction: column; }
+.phone-shell .archive-calendar { order: -1; }
+.phone-shell .archive-ledger { display: grid; grid-template-columns: 1fr; }
+.phone-shell .ledger-subjects { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.phone-shell .archive-cover { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 22px; border-radius: 18px 18px 0 0; padding: 16px 18px; }
+.phone-shell .archive-cover::after { right: 12px; width: 9px; height: 15px; }
+.phone-shell .cover-total { grid-column: 1; }
+.phone-shell .cover-total strong { font-size: 39px; }
+.phone-shell .cover-week { grid-column: 2; grid-row: 1 / 3; margin: 0; }
+.phone-shell .archive-cover h2 { font-size: 14px; }
+.phone-shell .calendar-grid { grid-template-rows: 24px repeat(6,40px); }
+.phone-shell .calendar-paging button,.phone-shell .ledger-actions button { min-width: 44px; min-height: 44px; }
+.phone-shell .calendar-paging { grid-template-columns: auto 44px 44px; }
+.phone-shell .trend-head { flex-wrap: wrap; }
+.phone-shell .trend-period button { min-height: 40px; }
+.growth-evidence.phone-evidence {
+  width: 100%; max-width: 100%; height: var(--mobile-viewport,100dvh); max-height: 100dvh;
+  border: 0; border-radius: 0; margin: 0 auto; padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+}
+.phone-evidence .growth-content.has-records { grid-template-columns: minmax(0,1fr); }
+.phone-evidence .growth-heading { padding: 10px 14px; }
+.phone-evidence .growth-heading button { min-width: 44px; min-height: 44px; }
+.phone-evidence .growth-heading h2 { font-size: 20px; }
+.phone-evidence .growth-tabs { gap: 3px; padding-inline: 12px; }
+.phone-evidence .growth-tabs button { justify-content: center; padding-inline: 2px; }
+.phone-evidence .growth-tab-count { display: none; }
+.phone-evidence .growth-index { padding: 12px 14px; border: 0; overflow-y: auto; }
+.phone-evidence .growth-pagination button { width: 44px; height: 44px; }
+.phone-evidence .growth-footer { padding: 8px 14px; }
+.phone-shell:is(.page-review,.page-vocabulary) {
+  background: radial-gradient(ellipse at 0% 18%, color-mix(in srgb, var(--green) 5%, transparent),transparent 52%),
+    radial-gradient(ellipse at 100% 72%,color-mix(in srgb, var(--blue) 5%,transparent),transparent 55%);
+}

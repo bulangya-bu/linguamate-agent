@@ -1,8 +1,15 @@
 <script setup>
+import AdminMobileDetails from "./AdminMobileDetails.vue";
+import { useAdminRecordPane } from "./useAdminRecordPane";
 import AdminSketchIcon from "@/components/AdminSketchIcon.vue";
 import { formatDate, runAction } from "./admin-utils";
 const props = defineProps({ controller: { type: Object, required: true } });
 const { state, uploadKnowledge } = props.controller;
+const { pane, selected, open, finish, back } = useAdminRecordPane(() => state.knowledge);
+async function submit() {
+  await uploadKnowledge();
+  if (pane.value === "edit") await finish();
+}
 </script>
 
 <template>
@@ -11,13 +18,14 @@ const { state, uploadKnowledge } = props.controller;
         class="section active"
         aria-label="知识库管理"
       >
-        <div class="admin-two-column">
+        <div class="admin-two-column" :data-pane="pane">
           <section class="panel admin-list-panel">
             <header class="admin-panel-heading">
               <div>
                 <h2><AdminSketchIcon name="knowledge" />知识文档</h2>
                 <p>共 {{ state.knowledge.length }} 篇</p>
               </div>
+              <button class="admin-mobile-action" type="button" @click="open('edit')">导入</button>
             </header>
             <div class="admin-table">
               <div class="admin-row admin-row-head">
@@ -34,6 +42,7 @@ const { state, uploadKnowledge } = props.controller;
                 ><span
                   ><mark class="neutral">{{ doc.sourceType }}</mark></span
                 ><span>{{ doc.tags }}</span>
+                <button class="admin-row-open" type="button" :aria-label="'查看' + doc.title" @click="open('detail', doc)"><AdminSketchIcon name="arrow" /></button>
               </div>
               <div v-if="!state.knowledge.length" class="admin-empty-state">
                 <AdminSketchIcon name="knowledge" />
@@ -41,7 +50,11 @@ const { state, uploadKnowledge } = props.controller;
               </div>
             </div>
           </section>
+          <AdminMobileDetails v-if="pane === 'detail' && selected" :title="selected.title"
+            :fields="[['类型', selected.sourceType], ['标签', selected.tags], ['导入时间', formatDate(selected.createdAt)], ['内容', selected.content]]" @back="back">
+          </AdminMobileDetails>
           <section class="panel admin-editor-panel">
+            <button class="admin-mobile-back" type="button" @click="back"><AdminSketchIcon name="arrow" />返回</button>
             <header class="admin-panel-heading">
               <div>
                 <h2><AdminSketchIcon name="plus" />导入知识</h2>
@@ -49,7 +62,7 @@ const { state, uploadKnowledge } = props.controller;
             </header>
             <form
               class="admin-form"
-              @submit.prevent="runAction(uploadKnowledge)"
+              @submit.prevent="runAction(submit)"
             >
               <div class="admin-form-fields">
                 <label class="admin-field span-all"

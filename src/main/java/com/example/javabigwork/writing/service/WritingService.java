@@ -83,6 +83,19 @@ public class WritingService {
                 .orderByDesc("created_at"));
     }
 
+    public List<SentenceFeedbackView> historyFeedback(Long essayId) {
+        if (!submissionMapper.exists(Wrappers.<EssaySubmission>query()
+                .eq("id", essayId).eq("user_id", userContext.userId()))) {
+            throw new IllegalArgumentException("未找到这篇作文");
+        }
+        return feedbackMapper.selectList(Wrappers.<EssayFeedback>query()
+                        .eq("essay_id", essayId).orderByAsc("id"))
+                .stream()
+                .map(item -> new SentenceFeedbackView(item.category, item.originalSentence, item.suggestion,
+                        item.correctedSentence))
+                .toList();
+    }
+
     private EssaySubmission persistSubmission(EssayReviewRequest request, EssayReviewDraft draft) {
         EssaySubmission submission = new EssaySubmission();
         submission.userId = userContext.userId();

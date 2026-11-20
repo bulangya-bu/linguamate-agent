@@ -40,7 +40,6 @@ const showSection = (id) => emit("navigate", id);
                 >
               </header>
               <AdminTrendChart
-                v-if="state.section === 'overview'"
                 :points="state.summary.dailyWordStats || []"
               />
               <div class="admin-activity-totals">

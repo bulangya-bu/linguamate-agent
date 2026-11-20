@@ -9,6 +9,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.zip.GZIPInputStream;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class OfflineDictionaryService {
     private static final Logger log = LoggerFactory.getLogger(OfflineDictionaryService.class);
+    private static final Pattern ENGLISH_TOKEN = Pattern.compile("[A-Za-z]+(?:['’\\-][A-Za-z]+)*");
     public static final String SOURCE_TAG = "reading-dictionary";
     private final Map<String, Entry> entries;
     private final Map<String, String> forms;
@@ -60,6 +63,18 @@ public class OfflineDictionaryService {
         word.exampleCn = "";
         word.levelTag = SOURCE_TAG;
         return Optional.of(word);
+    }
+
+    public List<String> inflectionsInExamples(String headword, String... examples) {
+        if (headword == null || headword.isBlank()) return List.of();
+        String base = headword.trim().toLowerCase(Locale.ROOT);
+        return Stream.of(examples)
+                .filter(example -> example != null && !example.isBlank())
+                .flatMap(example -> ENGLISH_TOKEN.matcher(example).results())
+                .map(match -> match.group().toLowerCase(Locale.ROOT).replace('’', '\''))
+                .filter(token -> base.equals(forms.get(token)))
+                .distinct()
+                .toList();
     }
 
     private record Entry(String word, String phonetic, String meaningCn, String partOfSpeech, String lemma) {}

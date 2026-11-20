@@ -44,7 +44,8 @@ export function learningMessageFromHistory(message = {}) {
   if (!metadata || typeof metadata !== "object") metadata = {};
   const reading = metadata.readingArticle;
   const readingArticle = reading && Number.isSafeInteger(reading.id) && typeof reading.title === 'string' ? {id:reading.id,title:reading.title} : null;
-  return { ...message, ...learningMessageFromResponse({ ...metadata, messageId: message.id, reply: message.content }), role: message.role, readingArticle };
+  const mode = metadata.mode === "practice" || metadata.mode === "assistant" ? metadata.mode : null;
+  return { ...message, ...learningMessageFromResponse({ ...metadata, messageId: message.id, reply: message.content }), role: message.role, mode, readingArticle };
 }
 
 export function nextVocabularyPage(card, direction) {

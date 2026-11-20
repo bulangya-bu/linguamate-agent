@@ -81,6 +81,11 @@ class LearningJournalTests {
         log(user, 4, "QUIZ", true, february.plusMonths(1));
         jdbc.update("INSERT INTO user_login_day(user_id,login_date,first_seen_at) VALUES(?,?,?)",
                 user, february, february.atTime(12,0));
+        jdbc.update("""
+                INSERT INTO reading_record(user_id,article_id,created_at,finished,finished_at)
+                VALUES(?,?,?,TRUE,?), (?,?,?,TRUE,?)
+                """, user, 1, february.minusDays(1).atStartOfDay(), february.plusDays(1).atTime(10,0),
+                user, 2, february.plusDays(1).atTime(9,0), february.plusDays(1).atTime(11,0));
 
         var response = mvc.perform(get("/api/report/journal/calendar").param("month", "2024-02").session(session))
                 .andExpect(status().isOk())
@@ -96,8 +101,12 @@ class LearningJournalTests {
         assertEquals(1, firstDay.required("reviewWords").asInt());
         assertEquals(2, firstDay.required("studyEvents").asInt());
         assertFalse(firstDay.has("loggedIn"));
-        assertEquals(0, day(calendar, february.plusDays(1)).required("studyEvents").asInt());
-        assertEquals(84, journal(session).required("days").size());
+        JsonNode readingDay = day(calendar, february.plusDays(1));
+        assertEquals(2, readingDay.required("studyEvents").asInt());
+        assertEquals(2, readingDay.required("readingsFinished").asInt());
+        JsonNode history = journal(session);
+        assertEquals(84, history.required("days").size());
+        assertEquals(4, history.required("activeDays").asInt());
     }
 
     @Test void successfulVisitsAreDeduplicatedAndSessionRolloverIsRecorded() throws Exception {
@@ -147,6 +156,29 @@ class LearningJournalTests {
         assertEquals(0, empty.required("writtenWords").asLong());
     }
 
+    @Test void practiceTurnsRequireAnExplicitModeOrTheCorrespondingPracticeReply() throws Exception {
+        MockHttpSession session = account("practiceTotals" + System.nanoTime());
+        long chat = conversation(userId(session));
+        long otherChat = conversation(userId(account("otherTurns" + System.nanoTime())));
+        LocalDateTime time = today.atTime(12, 0);
+        String coaching = "{\"coaching\":{\"source\":\"fallback\"}}";
+        message(chat, "user", "{\"mode\":\"practice\"}", time);
+        message(chat, "assistant", null, time);
+        message(chat, "user", "{\"mode\":\"assistant\"}", time);
+        message(chat, "assistant", coaching, time);
+        message(chat, "user", null, time);
+        message(chat, "user", null, time);
+        message(chat, "assistant", coaching, time);
+        message(chat, "user", "legacy metadata", time);
+        message(chat, "assistant", "{\"coaching\":null}", time);
+        message(chat, "user", null, time);
+        message(otherChat, "user", "{\"mode\":\"practice\"}", time);
+
+        JsonNode totals = journal(session).required("totals");
+        assertEquals(6, totals.required("chatTurns").asLong());
+        assertEquals(2, totals.required("practiceTurns").asLong());
+    }
+
     @Test void dailyTasksCountOwnedModelResultsByDate() throws Exception {
         MockHttpSession session = account("journalAi" + System.nanoTime());
         MockHttpSession other = account("journalOtherAi" + System.nanoTime());
@@ -177,6 +209,45 @@ class LearningJournalTests {
         JsonNode yesterday = day(result, today.minusDays(1));
         assertEquals(1, yesterday.required("aiChatTurns").asInt());
         assertEquals(1, yesterday.required("aiEssayReviews").asInt());
+    }
+
+    @Test void onlyIntentionalReadingAppearsInGrowthAndStudyDays() throws Exception {
+        var session = account("readStart" + System.nanoTime());
+        long user = userId(session);
+        var articles = jdbc.queryForList("SELECT id FROM news_article ORDER BY id LIMIT 2", Long.class);
+        long legacy = articles.get(0);
+        String legacyPath = "/api/news/" + legacy;
+        mvc.perform(get("/api/news/recommendations").session(session)).andExpect(status().isOk());
+        mvc.perform(get(legacyPath).session(session)).andExpect(status().isOk());
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM reading_record WHERE user_id=?", Integer.class, user));
+
+        jdbc.update("""
+                INSERT INTO reading_record(user_id, article_id, read_progress, looked_up_words, finished, created_at)
+                VALUES(?,?,0,0,FALSE,?)
+                """, user, legacy, today.minusDays(3).atTime(12,0));
+        assertEquals(0, journal(session).required("activeDays").asInt());
+        mvc.perform(get("/api/report/growth").session(session))
+                .andExpect(jsonPath("$.data.readings.length()").value(0));
+
+        for (int visit = 0; visit < 2; visit++) {
+            mvc.perform(post(legacyPath + "/start").session(session)).andExpect(status().isOk());
+        }
+        JsonNode result = journal(session);
+        assertEquals(1, result.required("activeDays").asInt());
+        assertEquals(0, day(result, today.minusDays(3)).required("studyEvents").asInt());
+        assertEquals(1, day(result, today).required("studyEvents").asInt());
+        mvc.perform(get("/api/report/growth").session(session))
+                .andExpect(jsonPath("$.data.readings.length()").value(1))
+                .andExpect(jsonPath("$.data.readings[0].readProgress").value(0))
+                .andExpect(jsonPath("$.data.readings[0].finished").value(false));
+
+        mvc.perform(get("/api/news/" + articles.get(1) + "/lookup").param("word", "learning").session(session))
+                .andExpect(status().isOk());
+        readingProgress(session, legacy, 100, true).andExpect(jsonPath("$.data.finished").value(true));
+        result = journal(session);
+        assertEquals(1, result.required("activeDays").asInt());
+        assertEquals(2, day(result, today).required("studyEvents").asInt());
+        assertEquals(1, day(result, today).required("readingsFinished").asInt());
     }
 
     @Test void dailyReadingRecordsTheFirstCompletionWithoutInferringLegacyDates() throws Exception {

@@ -102,28 +102,6 @@
           Aa
         </text>
       </g>
-      <g v-if="bloomCount" :key="bloomCount" class="garden-burst">
-        <circle
-          class="garden-burst-ring"
-          cx="245"
-          cy="171"
-          r="110"
-          stroke="var(--green)"
-        />
-        <circle
-          class="garden-burst-ring garden-burst-ring--second"
-          cx="245"
-          cy="171"
-          r="110"
-          stroke="var(--blue)"
-        />
-        <g class="garden-burst-stars" fill="currentColor">
-          <path d="m245 16 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" />
-          <path d="m388 171 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" />
-          <path d="m245 296 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" />
-          <path d="m90 171 3 9 9 3-9 3-3 9-3-9-9-3 9-3Z" />
-        </g>
-      </g>
       <path
         class="garden-spark"
         d="m367 48 4 12 12 4-12 4-4 12-4-12-12-4 12-4Z"
@@ -138,7 +116,7 @@
       />
     </svg>
     <span class="auth-garden-caption">
-      <Transition name="garden-word" mode="out-in">
+      <Transition :key="playing" name="garden-word" :mode="playing ? 'out-in' : undefined" :css="playing">
         <span :key="word.en" class="auth-garden-word"
           ><strong>{{ word.en }}</strong
           ><span>{{ word.cn }}</span></span
@@ -155,19 +133,13 @@
 </template>
 
 <script setup>
-import { onBeforeUnmount, ref, shallowRef, watch } from "vue";
+import { ref, shallowRef } from "vue";
 import AppIcon from "./AppIcon.vue";
 import { shuffledWords } from "@/learning-art";
 import { useArtMotion } from "@/composables/useArtMotion";
 
 const root = ref(null);
-const { playing, reducedMotion } = useArtMotion(root);
-const bloomCount = ref(0);
-let petalAnimations = [];
-function cancelBloom() {
-  petalAnimations.forEach((animation) => animation.cancel());
-  petalAnimations = [];
-}
+const { playing } = useArtMotion(root);
 let deck = shuffledWords();
 const word = shallowRef(deck.shift());
 const announcement = ref("");
@@ -175,32 +147,5 @@ function nextWord() {
   if (!deck.length) deck = shuffledWords(word.value.en);
   word.value = deck.shift();
   announcement.value = `${word.value.en}，${word.value.cn}`;
-  cancelBloom();
-  if (reducedMotion.value) return;
-  bloomCount.value += 1;
-  petalAnimations = Array.from(
-    root.value.querySelectorAll(".garden-petal"),
-    (petal, index) =>
-      petal.animate(
-        [
-          { transform: "scale(1)" },
-          { transform: "scale(.86)", offset: 0.2 },
-          { transform: "scale(1.16)", offset: 0.56 },
-          { transform: "scale(1)" },
-        ],
-        {
-          duration: 1100,
-          delay: index * 35,
-          easing: "cubic-bezier(.22,1,.36,1)",
-        },
-      ),
-  );
 }
-watch(playing, (value) => {
-  if (!value) {
-    cancelBloom();
-    bloomCount.value = 0;
-  }
-});
-onBeforeUnmount(cancelBloom);
 </script>

@@ -2,6 +2,7 @@ import { wordDefinitionGroups } from "@/word-definitions";
 import { ElMessage } from "element-plus";
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { learningApi } from "@/api/modules";
+import { createReviewRoundStore } from "./reviewRoundStore";
 
 function createQuizRound() {
   return reactive({
@@ -17,7 +18,7 @@ function createQuizRound() {
   });
 }
 
-export function useVocabulary({ route, router, activeSection, loadReport }) {
+export function useVocabulary({ route, router, activeSection, getAccountId, loadReport }) {
   const state = reactive({
     quizCategory: "",
     quizCategories: [],
@@ -73,8 +74,8 @@ export function useVocabulary({ route, router, activeSection, loadReport }) {
   let quizAnimations = [];
 
   async function openLibraryReview() {
-    state.reviewMode = state.wordBank.scope === "review" ? "mistakes" : "today";
-    await router.push("/review");
+    const mode = state.wordBank.scope === "review" ? "mistakes" : "today";
+    await router.push({ path: "/review", query: { mode } });
   }
 
   const wordDialogRef = ref(null);
@@ -456,30 +457,61 @@ export function useVocabulary({ route, router, activeSection, loadReport }) {
 
   async function setReviewMode(mode) {
     if (state.reviewBusy || state.reviewLoading || mode === state.reviewMode) return;
-    try {
-      await loadReviews(mode);
-    } catch (error) {
-      ElMessage.error(error.message || "加载复习题失败，请重试");
-    }
+    if (route.query.mode === mode) await loadReviews(mode);
+    else await router.replace({ path: "/review", query: { ...route.query, mode } });
   }
 
+  const reviewRounds = createReviewRoundStore();
+  let reviewAccountId = null;
   let reviewLoadRequest = 0;
 
-  async function loadReviews(mode = state.reviewMode) {
-    if (state.reviewBusy) return;
+  function saveReviewRound() {
+    if (reviewAccountId == null || reviewAccountId !== getAccountId()) return;
+    reviewRounds.write(reviewAccountId, state.reviewMode, state.reviewWords.length ? {
+      words: state.reviewWords,
+      total: state.reviewTotal,
+      mistakes: state.reviewMistakes,
+      form: state.reviewForm,
+      result: state.lastReviewResult,
+    } : null);
+  }
+
+  function activateReviewRound(accountId, mode, round) {
+    reviewAccountId = null;
+    state.reviewMode = mode;
+    state.reviewWords = round.words;
+    state.reviewTotal = round.total ?? round.words.length;
+    state.reviewMistakes = round.mistakes ?? 0;
+    state.lastReviewResult = round.result ?? null;
+    state.reviewCompleted = false;
+    state.reviewForm.spellingAnswer = round.form?.spellingAnswer ?? "";
+    state.reviewForm.meaningAnswer = round.form?.meaningAnswer ?? "";
+    reviewAccountId = accountId;
+  }
+
+  watch(
+    () => [state.reviewForm.spellingAnswer, state.reviewForm.meaningAnswer],
+    saveReviewRound,
+    { flush: "sync" },
+  );
+
+  async function loadReviews(requestedMode) {
+    const accountId = getAccountId();
+    if (activeSection.value !== "review" || accountId == null || state.reviewBusy) return;
+    const mode = requestedMode ?? reviewRounds.lastMode(accountId);
+    if (accountId === reviewAccountId && mode === state.reviewMode &&
+        state.reviewWords.length && !state.reviewLoading) return;
     const request = ++reviewLoadRequest;
     state.reviewLoading = true;
     try {
-      const words = await learningApi.reviews(mode, 8);
-      if (request !== reviewLoadRequest) return;
-      state.reviewMode = mode;
-      state.reviewWords = words;
-      state.reviewTotal = words.length;
-      state.reviewMistakes = 0;
-      state.lastReviewResult = null;
-      state.reviewCompleted = false;
-      state.reviewForm.spellingAnswer = "";
-      state.reviewForm.meaningAnswer = "";
+      const saved = reviewRounds.read(accountId, mode);
+      const round = saved ?? { words: await learningApi.reviews(mode, 8) };
+      if (request !== reviewLoadRequest || accountId !== getAccountId()) return;
+      activateReviewRound(accountId, mode, round);
+      reviewRounds.rememberMode(accountId, mode);
+      if (!saved) saveReviewRound();
+    } catch (error) {
+      if (request === reviewLoadRequest) ElMessage.error(error.message || "加载复习题失败，请重试");
     } finally {
       if (request === reviewLoadRequest) state.reviewLoading = false;
     }
@@ -498,14 +530,18 @@ export function useVocabulary({ route, router, activeSection, loadReport }) {
       ElMessage.warning("请同时填写英文拼写和中文释义");
       return;
     }
+    const accountId = reviewAccountId;
     state.reviewBusy = true;
     try {
-      state.lastReviewResult = await learningApi.submitReview(
+      const result = await learningApi.submitReview(
         word.id,
         { ...state.reviewForm },
       );
-      applyWordProgress(word.id, state.lastReviewResult);
+      if (accountId !== getAccountId()) return;
+      state.lastReviewResult = result;
+      applyWordProgress(word.id, result);
       if (!state.lastReviewResult.correct) state.reviewMistakes++;
+      saveReviewRound();
       await loadReport();
     } catch (error) {
       if (!state.lastReviewResult) {
@@ -527,6 +563,7 @@ export function useVocabulary({ route, router, activeSection, loadReport }) {
     if (!state.reviewWords.length) {
       state.reviewCompleted = true;
     }
+    saveReviewRound();
   }
 
   let wordBankSearchTimer;

@@ -3,7 +3,7 @@ import { onBeforeUnmount, onMounted, useTemplateRef, watch } from "vue";
 import { useArtMotion } from "@/composables/useArtMotion";
 import { createPaperField } from "./ambient/paperField";
 
-const props = defineProps({ contained: Boolean });
+const props = defineProps({ contained: Boolean, quiet: Boolean });
 const layer = useTemplateRef("layer");
 const canvas = useTemplateRef("canvas");
 const { playing, reducedMotion } = useArtMotion(layer);
@@ -11,9 +11,11 @@ let field;
 
 onMounted(() => {
   field = createPaperField(canvas.value, { contained: props.contained });
+  field.setQuiet(props.quiet);
   field.setMotion(playing.value, reducedMotion.value);
 });
 
+watch(() => props.quiet, (quiet) => field?.setQuiet(quiet));
 watch([playing, reducedMotion], ([active, reduced]) => {
   field?.setMotion(active, reduced);
 });

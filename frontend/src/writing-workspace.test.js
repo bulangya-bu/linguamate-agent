@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { annotatedText,revisionDiff,wordCount } from './writing-workspace.js';
+import { annotatedText,editableSentenceRanges,revisionDiff,wordCount } from './writing-workspace.js';
 import { readingTokens } from './reading-context.js';
 import { learningMessageFromHistory } from './learning-advisor.js';
 test('annotations preserve original text and handle overlapping or absent suggestions',()=>{
@@ -17,6 +17,16 @@ test('revision diff reconstructs both versions including punctuation and whitesp
     assert.equal(parts.filter(p=>p.type!=='delete').map(p=>p.text).join(''),after);
   }
   assert.equal(wordCount("I'm learning. It's a well-known idea."),6);
+});
+test('sentence editing selects the matching text in the live draft and skips ambiguous or stale advice', () => {
+  const source = 'Hello.\r\nI has a book.\r\nAgain. Again.';
+  const draft = 'New first line.\nI has a book.\nAgain.';
+  const feedback = ['I has a book.', 'Hello.', 'Again.', 'Never written.'].map(originalSentence => ({ originalSentence }));
+  const [range, ...missing] = editableSentenceRanges(source, draft, feedback);
+  assert.equal(draft.slice(range.start, range.end), 'I has a book.');
+  assert.deepEqual(missing, [null, null, null]);
+  assert.deepEqual(editableSentenceRanges(source, source, [{ originalSentence: 'Hello.\nI has a book.' }]),
+    [{ start: 0, end: 'Hello.\nI has a book.'.length }]);
 });
 test('reading tokens retain the exact selected sentence including curly apostrophes',()=>{
   const text='Scientists share ideas. It’s useful!\nTry again.';

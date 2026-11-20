@@ -155,6 +155,7 @@ CREATE TABLE IF NOT EXISTS reading_record (
     read_progress INT,
     looked_up_words INT,
     finished BOOLEAN,
+    started_at DATETIME,
     finished_at DATETIME,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,

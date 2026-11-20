@@ -45,7 +45,10 @@ export async function api(url, options = {}, config = {}) {
   const ok = response.ok && payload?.success !== false;
   if (!ok) {
     if (response.status === 401 && config.redirectOnUnauthorized !== false) {
-      window.location.href = "/login";
+      const { pathname, search, hash } = window.location;
+      if (pathname !== "/login" && pathname !== "/register") {
+        window.location.assign("/login" + query({ next: pathname + search + hash }));
+      }
       return null;
     }
     if (response.status === 403 && config.redirectOnForbidden !== false) {

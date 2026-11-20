@@ -174,7 +174,8 @@ public class AdminService {
         long wrongReviewLogs = reviewLogMapper.selectCount(Wrappers.<WordReviewLog>query()
                 .eq("user_id", userId)
                 .eq("correct", false));
-        long readings = readingRecordMapper.selectCount(Wrappers.<ReadingRecord>query().eq("user_id", userId));
+        long readings = readingRecordMapper.selectCount(Wrappers.<ReadingRecord>query().eq("user_id", userId)
+                .apply(ReadingRecord.HAS_ACTIVITY));
         long finishedReadings = readingRecordMapper.selectCount(Wrappers.<ReadingRecord>query()
                 .eq("user_id", userId)
                 .eq("finished", true));
@@ -268,6 +269,7 @@ public class AdminService {
         }
         return readingRecordMapper.selectList(Wrappers.<ReadingRecord>query()
                         .eq("user_id", userId)
+                        .apply(ReadingRecord.HAS_ACTIVITY)
                         .orderByDesc("updated_at")
                         .orderByDesc("created_at")
                         .last("LIMIT 100"))
@@ -544,7 +546,7 @@ public class AdminService {
                     record.readProgress,
                     record.lookedUpWords,
                     record.finished,
-                    record.createdAt,
+                    record.startedAt == null ? record.createdAt : record.startedAt,
                     record.updatedAt
             );
         }

@@ -89,7 +89,7 @@ const progressPercent = computed(() => Math.min(100, Math.round(experience.value
 
 function updatePosition() {
   if (!opened.value || !triggerRef.value) return;
-  if (window.innerWidth < 981) { closeMenu(false); return; }
+  if (!triggerRef.value.getClientRects().length) { closeMenu(false); return; }
   const rect = triggerRef.value.getBoundingClientRect();
   position.top = rect.bottom + 10;
   position.left = Math.max(12, Math.min(rect.right - 268, window.innerWidth - 280));

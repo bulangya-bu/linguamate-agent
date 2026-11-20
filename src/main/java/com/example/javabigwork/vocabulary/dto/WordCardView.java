@@ -19,12 +19,13 @@ public record WordCardView(
         String sourceSentence,
         String sourceTitle,
         String sourceWord,
-        Long sourceArticleId
+        Long sourceArticleId,
+        List<String> exampleInflections
 ) {
     public WordCardView(Long id, String word, String phoneticUs, String phoneticUk, String meaningCn,
                         String partOfSpeech, String exampleEn, String exampleCn, String levelTag,
                         Integer familiarity, Integer wrongCount, Boolean favorite, List<WordDefinition> definitions) {
         this(id, word, phoneticUs, phoneticUk, meaningCn, partOfSpeech, exampleEn, exampleCn, levelTag,
-                familiarity, wrongCount, favorite, definitions, null, null, null, null);
+                familiarity, wrongCount, favorite, definitions, null, null, null, null, List.of());
     }
 }

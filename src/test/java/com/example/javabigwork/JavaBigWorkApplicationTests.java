@@ -74,6 +74,12 @@ class JavaBigWorkApplicationTests {
                 .andExpect(jsonPath("$.data.coaching.targetWords[0].id").value(reviewWord.wordId()))
                 .andReturn();
         long id = objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("conversationId").asLong();
+        mockMvc.perform(get("/api/conversations").session(reviewWord.session()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[?(@.id == %s)].mode", id).value(org.hamcrest.Matchers.hasItem("practice")));
+        mockMvc.perform(post("/api/chat").session(reviewWord.session()).contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("conversationId", id, "mode", "assistant", "message", "Give me a study plan."))))
+                .andExpect(status().isBadRequest());
         MvcResult history = mockMvc.perform(get("/api/conversations/" + id + "/messages").session(reviewWord.session()))
                 .andExpect(status().isOk()).andReturn();
         JsonNode messages = objectMapper.readTree(history.getResponse().getContentAsString()).path("data");
@@ -604,15 +610,31 @@ class JavaBigWorkApplicationTests {
                 }
                 """;
 
-        mockMvc.perform(post("/api/writing/review")
-                        .session(studentSession())
+        MockHttpSession session = studentSession();
+        MvcResult review = mockMvc.perform(post("/api/writing/review")
+                        .session(session)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.totalScore").isNumber())
                 .andExpect(jsonPath("$.data.feedback.length()", greaterThan(0)))
-                .andExpect(jsonPath("$.data.reviewSource").isNotEmpty());
+                .andExpect(jsonPath("$.data.reviewSource").isNotEmpty())
+                .andReturn();
+
+        JsonNode submission = objectMapper.readTree(review.getResponse().getContentAsString()).path("data");
+        long essayId = submission.path("essayId").asLong();
+        mockMvc.perform(get("/api/writing/history/{essayId}/feedback", essayId).session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(submission.path("feedback").size()))
+                .andExpect(jsonPath("$.data[0].originalSentence")
+                        .value(submission.path("feedback").path(0).path("originalSentence").asText()));
+
+        String otherUser = "otheressay" + System.nanoTime();
+        registerUser(otherUser, "Other Writer");
+        mockMvc.perform(get("/api/writing/history/{essayId}/feedback", essayId)
+                        .session(login(otherUser, "userpass123")))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

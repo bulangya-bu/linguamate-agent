@@ -63,6 +63,13 @@ export function useAdminUsers() {
       return;
     }
     const status = user.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
+    if (status === "DISABLED") {
+      await ElMessageBox.confirm(`停用 @${user.username}？该用户将无法登录。`, "停用账号", {
+        confirmButtonText: "停用",
+        cancelButtonText: "取消",
+        type: "warning",
+      });
+    }
     await adminApi.updateUserStatus(user.id, status);
     ElMessage.success(status === "ACTIVE" ? "用户已启用" : "用户已禁用");
     await loadUsers();
@@ -74,10 +81,12 @@ export function useAdminUsers() {
       return;
     }
     const { value } = await ElMessageBox.prompt(
-      "输入新密码，至少 6 位",
+      `为 @${user.username} 输入新密码`,
       "重置密码",
       {
-        inputValue: "student123",
+        inputType: "password",
+        inputPattern: /^[\s\S]{6,64}$/,
+        inputErrorMessage: "密码须为 6–64 位",
         confirmButtonText: "重置",
         cancelButtonText: "取消",
       },

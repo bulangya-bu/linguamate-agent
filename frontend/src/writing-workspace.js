@@ -2,6 +2,21 @@ export function wordCount(text = '') {
   return (text.match(/[A-Za-z]+(?:['’-][A-Za-z]+)*/g) || []).length;
 }
 
+export function editableSentenceRanges(reviewed, draft, feedback = []) {
+  // Textarea selection offsets use LF, including for older drafts stored with CRLF.
+  const original = (reviewed || '').replace(/\r\n?/g, '\n');
+  const current = (draft || '').replace(/\r\n?/g, '\n');
+  return (feedback || []).map(item => {
+    const phrase = item.originalSentence?.trim().replace(/\r\n?/g, '\n');
+    if (!phrase) return null;
+    const sourceIndex = original.indexOf(phrase);
+    const start = current.indexOf(phrase);
+    if (sourceIndex < 0 || start < 0 || original.lastIndexOf(phrase) !== sourceIndex
+      || current.lastIndexOf(phrase) !== start) return null;
+    return { start, end: start + phrase.length };
+  });
+}
+
 export function annotatedText(text = '', feedback = []) {
   const matches = feedback.flatMap((item, index) => {
     const phrase = item.originalSentence?.trim();

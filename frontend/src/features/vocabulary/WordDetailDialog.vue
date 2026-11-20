@@ -231,3 +231,26 @@ const {
     </div>
   </aside>
 </template>
+
+<style scoped>
+@media (max-width: 760px), (max-width: 960px) and (max-height: 540px) and (pointer: coarse) {
+  .wordbank-dialog {
+    inset: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(var(--mobile-viewport, 100dvh) - 32px);
+    padding: 18px 20px calc(18px + env(safe-area-inset-bottom));
+    border-radius: 22px 22px 0 0;
+    transform: translateY(20px);
+    overscroll-behavior: contain;
+  }
+  .wordbank-dialog.is-open { transform: translateY(0); }
+  .wordbank-dialog-head { align-items: flex-start; padding-bottom: 12px; }
+  .wordbank-dialog-actions { gap: 2px; }
+  .wordbank-dialog-actions > button, .wordbank-dialog-detail-actions button { min-width: 44px; min-height: 44px; }
+  .wordbank-dialog-head h2 { margin: 0 0 6px; font-size: 30px; }
+  .wordbank-dialog-meaning, .wordbank-dialog-example { padding: 14px 0; }
+  .wordbank-dialog-example small { font-size: 15px; }
+  .wordbank-dialog .quiz-ai-detail { max-height: none; overflow: visible; }
+}
+</style>

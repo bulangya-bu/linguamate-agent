@@ -25,6 +25,7 @@ import "./styles/auth-studio.css";
 import "./styles/auth-motion.css";
 import "./styles/competition-refinements.css";
 import "./styles/folded-cursor.css";
+import "./styles/mobile-workspace.css";
 
 initializeTheme();
 createApp(App).use(router).use(ElementPlus).mount("#app");

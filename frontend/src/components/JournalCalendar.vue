@@ -1,347 +1,336 @@
 <script setup>
-import { computed, shallowRef, watch } from "vue";
+import { computed, nextTick, shallowRef, toRef, watch } from "vue";
 import AppIcon from "./AppIcon.vue";
 import { learningApi } from "@/api/modules";
-import { dayIntensity, journalMonthLayout, shiftJournalMonth } from "@/learning-journal";
+import { hasStudyActivity, journalMonthLayout, shiftJournalMonth } from "@/learning-journal";
 
 const props = defineProps({
   days: { type: Array, required: true },
   today: { type: String, required: true },
+  month: { type: String, required: true },
   selectedDate: { type: String, required: true },
 });
-const emit = defineEmits(["select"]);
+const emit = defineEmits(["browse", "select"]);
 const weekdays = ["一", "二", "三", "四", "五", "六", "日"];
-const dayButtons = [];
-const dateFormat = new Intl.DateTimeFormat("zh-CN", {
-  month: "long",
-  day: "numeric",
-  weekday: "short",
-  timeZone: "UTC",
+const dayFormat = new Intl.DateTimeFormat("zh-CN", {
+  month: "long", day: "numeric", weekday: "short", timeZone: "UTC",
 });
 
+const selection = toRef(props, "selectedDate");
+const month = toRef(props, "month");
 const currentMonth = computed(() => props.today.slice(0, 7));
-const month = shallowRef(currentMonth.value);
-const previousMonth = computed(() => shiftJournalMonth(month.value, -1));
-const nextMonth = computed(() => shiftJournalMonth(month.value, 1));
 const monthLabel = computed(() => month.value.slice(0, 4) + "年" + Number(month.value.slice(5)) + "月");
 const layout = computed(() => journalMonthLayout(month.value));
-const history = shallowRef(null);
-const loading = shallowRef(false);
-const failed = shallowRef(false);
+const history = shallowRef([]);
+const state = shallowRef("ready");
 const retry = shallowRef(0);
-const unavailable = computed(() => loading.value || failed.value);
+const dayButtons = [];
+const previousMonthButton = shallowRef(null);
+const focusedDate = shallowRef("");
+const tabDate = computed(() => focusedDate.value || selection.value ||
+  (month.value === currentMonth.value ? props.today : layout.value.dates[0]));
 
-const entries = computed(() => {
-  const records = month.value === currentMonth.value ? props.days : history.value ?? [];
-  const dates = new Map(records.map(day => [day.date, day]));
-  return layout.value.dates.map(date =>
-    dates.get(date) ?? { date, newWords: 0, reviewWords: 0, studyEvents: 0 });
-});
-const lastDay = computed(() => entries.value.findLastIndex(day => day.date <= props.today));
-const selectedDay = computed(() => {
-  const fallback = month.value === currentMonth.value ? props.today : layout.value.dates[0];
-  return entries.value.find(day => day.date === props.selectedDate && day.date <= props.today)
-    ?? entries.value.find(day => day.date === fallback);
-});
-const hasActivity = computed(() =>
-  selectedDay.value && (selectedDay.value.studyEvents || selectedDay.value.newWords || selectedDay.value.reviewWords));
+watch([month, selection], () => { focusedDate.value = ""; });
 
-watch(currentMonth, (next, old) => {
-  if (month.value === old || month.value > next) showMonth(next);
-});
+watch([month, () => props.days, currentMonth, retry], async ([target], _, onCleanup) => {
+  history.value = [];
+  if (target === currentMonth.value) {
+    state.value = "ready";
+    return;
+  }
 
-watch([month, () => props.days, retry], async ([target], _, onCleanup) => {
-  history.value = null;
-  failed.value = false;
-  loading.value = target !== currentMonth.value;
-  if (!loading.value) return;
-
+  state.value = "loading";
   const request = new AbortController();
   onCleanup(() => request.abort());
   try {
     const result = await learningApi.journalCalendar(target, request.signal);
     if (request.signal.aborted) return;
     if (result?.month !== target || !Array.isArray(result.days)) {
-      failed.value = true;
+      state.value = "error";
       return;
     }
     history.value = result.days;
+    state.value = "ready";
   } catch {
-    if (!request.signal.aborted) failed.value = true;
-  } finally {
-    if (!request.signal.aborted) loading.value = false;
+    if (!request.signal.aborted) state.value = "error";
   }
 }, { immediate: true });
 
-function showMonth(target) {
-  if (target === month.value || target > currentMonth.value || target < "0001-01") return;
-  month.value = target;
-  emit("select", target === currentMonth.value ? props.today : target + "-01");
+const entries = computed(() => {
+  const source = month.value === currentMonth.value ? props.days : history.value;
+  const records = new Map(source.map(day => [day.date, day]));
+  return layout.value.dates.map(date => records.get(date)
+    ?? { date, newWords: 0, reviewWords: 0, studyEvents: 0 });
+});
+const lastAvailable = computed(() => entries.value.findLastIndex(day => day.date <= props.today));
+const activeDays = computed(() => entries.value.filter(day => day.date <= props.today && hasStudyActivity(day)).length);
+const selectedDay = computed(() => entries.value.find(day => day.date === selection.value));
+const selectedLabel = computed(() => selectedDay.value
+  ? dayFormat.format(new Date(selectedDay.value.date + "T00:00:00Z")) : "");
+const selectedActivity = computed(() => activityLabels(selectedDay.value));
+
+function activityLabels(day) {
+  if (!day) return [];
+  const labels = [];
+  if (day.newWords > 0) labels.push("新学 " + day.newWords + " 词");
+  if (day.reviewWords > 0) labels.push("复习 " + day.reviewWords + " 词");
+  if (day.aiChatTurns > 0) labels.push("AI 对话 " + day.aiChatTurns + " 轮");
+  if (day.aiEssayReviews > 0) labels.push("AI 批改 " + day.aiEssayReviews + " 次");
+  if (day.readingsFinished > 0) labels.push("读完 " + day.readingsFinished + " 篇");
+  if (!labels.length && day.studyEvents > 0) labels.push(day.studyEvents + " 条学习记录");
+  return labels;
+}
+
+async function browse(target, event) {
+  if (target > currentMonth.value || target < "0001-01") return;
+  emit("browse", target);
+  if (target === currentMonth.value && event.detail === 0) {
+    await nextTick();
+    previousMonthButton.value?.focus({ preventScroll: true });
+  }
 }
 
 function selectDay(day) {
-  if (!unavailable.value && day.date <= props.today) emit("select", day.date);
+  if (day.date !== selection.value && state.value === "ready" && day.date <= props.today) {
+    emit("select", day.date);
+  }
 }
 
-function focusDay(index) {
-  const target = dayButtons[Math.max(0, Math.min(lastDay.value, index))];
-  if (target && !target.disabled) target.focus();
+function focusDay(target) {
+  dayButtons[Math.max(0, Math.min(lastAvailable.value, target))]?.focus({ preventScroll: true });
 }
 
 function dayLabel(day) {
   const date = day.date.replaceAll("-", ".");
   if (day.date > props.today) return date + "，未来日期";
-  if (unavailable.value) return date;
-  return date + "，" + day.studyEvents + " 条学习记录，新学 " + day.newWords + " 词，复习 " + day.reviewWords + " 词";
+  if (state.value !== "ready") return date;
+  const labels = activityLabels(day);
+  return date + "，" + (labels.length ? labels.join("，") : "暂无学习记录");
 }
 </script>
 
 <template>
-  <section class="journal-calendar" aria-labelledby="journal-calendar-heading">
-    <header class="journal-section-heading">
+  <section class="archive-calendar" aria-labelledby="journal-calendar-heading">
+    <header class="calendar-heading">
       <h2 id="journal-calendar-heading">学习日历</h2>
-      <div class="journal-month-controls" role="group" aria-label="切换月份">
+      <span v-if="state === 'ready' && selectedDay" class="calendar-active-total">本月学习 <b>{{ activeDays }}</b> 天</span>
+    </header>
+
+    <div class="calendar-month-row">
+      <time class="calendar-month" :datetime="month" aria-live="polite">{{ monthLabel }}</time>
+      <div class="calendar-paging" role="group" aria-label="切换月份">
         <button
-          v-if="month !== currentMonth"
-          class="journal-return-month"
-          type="button"
-          @click="showMonth(currentMonth)"
+          v-if="month !== currentMonth" class="calendar-return" type="button"
+          @click="browse(currentMonth, $event)"
         >回到本月</button>
-        <button type="button" aria-label="上个月" title="上个月" :disabled="month === '0001-01'" @click="showMonth(previousMonth)">
-          <AppIcon class="journal-previous-arrow" name="arrow" />
+        <button ref="previousMonthButton" type="button" aria-label="上个月" title="上个月" :disabled="month === '0001-01'"
+          @click="browse(shiftJournalMonth(month, -1), $event)">
+          <AppIcon name="arrow" class="previous-arrow" />
         </button>
-        <time class="journal-calendar-month" :datetime="month" aria-live="polite">{{ monthLabel }}</time>
-        <button type="button" aria-label="下个月" title="下个月" :disabled="month >= currentMonth" @click="showMonth(nextMonth)">
+        <button type="button" aria-label="下个月" title="下个月" :disabled="month >= currentMonth"
+          @click="browse(shiftJournalMonth(month, 1), $event)">
           <AppIcon name="arrow" />
         </button>
       </div>
-    </header>
+    </div>
 
-    <div class="journal-day-grid" role="group" aria-label="当月学习日历" :aria-busy="loading">
-      <span v-for="label in weekdays" :key="label" class="journal-calendar-weekday" aria-hidden="true">周{{ label }}</span>
+    <div class="calendar-grid" role="group" aria-label="当月学习日历" :aria-busy="state === 'loading'">
+      <span v-for="weekday in weekdays" :key="weekday" class="calendar-weekday" aria-hidden="true">周{{ weekday }}</span>
       <button
-        v-for="(day, index) in entries"
-        :key="day.date"
+        v-for="(day, index) in entries" :key="day.date"
         :ref="element => dayButtons[index] = element"
-        type="button"
-        :style="{ gridColumn: (layout.offset + index) % 7 + 1, gridRow: Math.floor((layout.offset + index) / 7) + 2 }"
-        :data-intensity="dayIntensity(day)"
-        :tabindex="selectedDay?.date === day.date && !unavailable ? 0 : -1"
-        :aria-pressed="selectedDay?.date === day.date && !unavailable"
+        type="button" class="calendar-day" :class="{ 'has-study': hasStudyActivity(day) }"
+        :style="index === 0 ? { gridColumnStart: layout.offset + 1 } : undefined"
+        :tabindex="day.date === tabDate && state === 'ready' ? 0 : -1"
+        :aria-pressed="day.date === selection && state === 'ready'"
         :aria-current="day.date === today ? 'date' : undefined"
-        :disabled="unavailable || day.date > today"
-        :aria-label="dayLabel(day)"
-        :title="dayLabel(day)"
-        @mouseenter="selectDay(day)"
-        @focus="selectDay(day)"
-        @click="selectDay(day)"
-        @keydown.left.prevent="focusDay(index - 1)"
-        @keydown.right.prevent="focusDay(index + 1)"
-        @keydown.up.prevent="focusDay(index - 7)"
-        @keydown.down.prevent="focusDay(index + 7)"
-      >{{ index + 1 }}</button>
+        :disabled="state !== 'ready' || day.date > today"
+        :aria-label="dayLabel(day)" :title="dayLabel(day)"
+        @focus="focusedDate = day.date" @click="selectDay(day)"
+        @keydown.left.prevent="focusDay(index - 1)" @keydown.right.prevent="focusDay(index + 1)"
+        @keydown.up.prevent="focusDay(index - 7)" @keydown.down.prevent="focusDay(index + 7)"
+        @keydown.home.prevent="focusDay(0)" @keydown.end.prevent="focusDay(lastAvailable)"
+      ><span>{{ index + 1 }}</span></button>
     </div>
 
-    <div class="journal-calendar-footer">
-      <div class="journal-selected-note" aria-live="polite">
-        <span v-if="loading">正在加载本月记录…</span>
-        <template v-else-if="failed">
-          <span>本月记录加载失败</span>
-          <button class="journal-calendar-retry" type="button" @click="retry++">重新加载</button>
-        </template>
-        <template v-else-if="selectedDay">
-          <div class="journal-selected-date">
-            <AppIcon name="calendar" />
-            <time :datetime="selectedDay.date">
-              {{ dateFormat.format(new Date(selectedDay.date + "T00:00:00Z")) }}
-            </time>
-            <span v-if="selectedDay.date === today" class="journal-selected-today">今天</span>
-          </div>
-          <div v-if="hasActivity" class="journal-day-activity">
-            <span>新学 <b>{{ selectedDay.newWords }}</b> 词</span>
-            <span>复习 <b>{{ selectedDay.reviewWords }}</b> 词</span>
-            <span>学习记录 <b>{{ selectedDay.studyEvents }}</b> 条</span>
-          </div>
-          <span v-else>当天暂无学习记录</span>
-        </template>
-      </div>
-      <div class="journal-calendar-key" role="img" aria-label="学习量由浅到深">
-        <span>少</span>
-        <i v-for="level in [0, 1, 2, 3, 4]" :key="level" :data-intensity="level" aria-hidden="true"></i>
-        <span>多</span>
-      </div>
-    </div>
+    <footer class="calendar-detail" aria-live="polite">
+      <span v-if="state === 'loading'">正在读取本月记录…</span>
+      <template v-else-if="state === 'error'">
+        <span>本月记录加载失败</span>
+        <button type="button" @click="retry++">重试</button>
+      </template>
+      <template v-else-if="selectedDay">
+        <time :datetime="selection">{{ selectedLabel }}<span v-if="selection === today">今天</span></time>
+        <p v-if="selectedActivity.length">
+          <span v-for="label in selectedActivity" :key="label">{{ label }}</span>
+        </p>
+        <p v-else>当天暂无学习记录</p>
+      </template>
+      <span v-else-if="activeDays">本月学习 {{ activeDays }} 天</span>
+      <span v-else>{{ Number(month.slice(5)) }} 月暂无学习记录</span>
+    </footer>
   </section>
 </template>
 
 <style scoped>
-.journal-calendar {
-  --j-day-surface: color-mix(in srgb, var(--j-cell) 66%, var(--j-paper));
-  --j-day-border: color-mix(in srgb, var(--j-cell-line) 24%, transparent);
-  --j-day-active-ink: #3a5036;
-  padding-block: 16px;
+.archive-calendar {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--j-panel-padding, 22px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 
-:global(:root[data-theme="dark"] .journal-calendar) {
-  --j-day-active-ink: color-mix(in srgb, var(--j-ink) 86%, var(--j-green-ink));
-}
-
-.journal-month-controls {
-  display: inline-flex;
+.calendar-heading, .calendar-month-row, .calendar-paging {
+  display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  gap: 10px;
+}
+.calendar-heading, .calendar-month-row { justify-content: space-between; }
+.calendar-heading h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 680;
+  letter-spacing: -.03em;
+  line-height: 1.4;
+}
+.calendar-active-total {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.calendar-active-total::before {
+  content: "";
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  margin-right: 3px;
+  border-radius: 50%;
+  background: var(--green-ink);
+}
+.calendar-active-total b { color: var(--green-ink); }
+.calendar-paging .calendar-return, .calendar-detail button {
+  width: auto;
+  padding: 3px;
+  color: var(--green-ink);
+  background: transparent;
+  border: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.calendar-month-row { margin: 15px 0 8px; min-height: 28px; }
+.calendar-month { font-size: 15px; font-weight: 650; }
+.calendar-paging {
+  display: grid;
+  grid-template-columns: 60px 28px 28px;
+  justify-items: end;
   gap: 4px;
 }
-
-.journal-month-controls > button {
-  display: inline-grid;
+.calendar-paging button:nth-last-child(2) { grid-column: 2; }
+.calendar-paging button:last-child { grid-column: 3; }
+.calendar-paging button {
+  display: grid;
   place-items: center;
-  min-width: 32px;
-  min-height: 32px;
-  padding: 3px 6px;
-  border: 1px solid color-mix(in srgb, var(--j-rule) 62%, transparent);
-  border-radius: 9px;
-  background: var(--j-day-surface);
-  color: var(--j-muted);
-  font-size: 13px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
 }
+.calendar-paging button:hover:not(:disabled) { color: var(--ink); background: var(--surface-hover, #edf3f2); }
+.calendar-paging button:disabled { opacity: .4; }
+.calendar-paging svg { width: 15px; height: 15px; }
+.previous-arrow { transform: rotate(180deg); }
 
-.journal-month-controls > button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--j-green-ink) 38%, transparent);
-  background: color-mix(in srgb, var(--j-green) 13%, var(--j-paper));
-  color: var(--j-green-ink);
-}
-.journal-month-controls > button > svg { width: 15px; height: 15px; }
-.journal-previous-arrow { rotate: 180deg; }
-.journal-month-controls .journal-return-month { margin-inline-end: 4px; }
-.journal-calendar-month {
-  min-width: 104px;
-  color: color-mix(in srgb, var(--j-ink) 72%, var(--j-muted));
-  font-size: 15px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.journal-day-grid {
+.calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-template-rows: auto repeat(6, 23px);
-  gap: 4px clamp(3px, .45vw, 8px);
-  margin: 10px 0 11px;
-  min-width: 0;
+  grid-template-rows: 24px repeat(6, 30px);
+  gap: 2px 3px;
+  align-content: start;
+  margin-bottom: 12px;
 }
-
-.journal-calendar-weekday {
-  padding-bottom: 2px;
-  color: var(--j-muted);
+.calendar-weekday {
+  align-self: center;
+  color: var(--muted);
   font-size: 12px;
-  line-height: 1.4;
   text-align: center;
 }
-
-.journal-day-grid > button {
-  position: relative;
+.calendar-day {
+  display: grid;
+  place-items: center;
   min-width: 0;
   padding: 0;
-  border: 1px solid var(--j-day-border);
-  border-radius: 6px;
-  background: var(--j-heat, var(--j-day-surface));
-  color: var(--j-day-ink, var(--j-muted));
-  font-size: 13px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 14px;
   font-weight: 500;
-  transition: background-color 150ms ease, border-color 150ms ease;
+  line-height: 1;
 }
-
-.journal-day-grid > button[aria-current="date"]::after {
+.calendar-day span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(34px, 100%);
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+}
+.calendar-day.has-study span {
+  color: var(--green-ink);
+  background: color-mix(in srgb, var(--green) 18%, var(--surface));
+  font-weight: 650;
+}
+.calendar-day.has-study span::after {
+  content: "";
   position: absolute;
-  inset-block-start: 4px;
-  inset-inline-end: 5px;
-  width: 4px;
-  height: 4px;
+  bottom: 2px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
   background: currentColor;
-  content: "";
 }
-.journal-day-grid > button[aria-current="date"][data-intensity="0"] {
-  background-color: color-mix(in srgb, var(--j-green) 15%, var(--j-paper));
-  color: var(--j-green-ink);
+.calendar-day[aria-current="date"] { color: var(--ink); font-weight: 700; }
+.calendar-day:hover:not(:disabled) span { background-color: color-mix(in srgb, var(--muted) 12%, var(--surface)); }
+.calendar-day[aria-pressed="true"] span { border-color: var(--green-ink); color: var(--green-ink); }
+.calendar-day:disabled { opacity: 1; color: color-mix(in srgb, var(--muted) 60%, var(--surface)); }
+.calendar-day:focus-visible { outline: none; }
+.calendar-day:focus-visible span, .calendar-paging button:focus-visible, .calendar-return:focus-visible,
+.calendar-detail button:focus-visible { outline: 2px solid var(--green-ink); outline-offset: 1px; }
+@media (prefers-reduced-motion: no-preference) {
+  .calendar-day span { animation: calendar-date-in 140ms ease-out; }
 }
-.journal-day-grid > button:hover:not(:disabled),
-.journal-day-grid > button[aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--j-green-ink) 74%, var(--j-paper));
-}
-.journal-day-grid > button[data-intensity="4"][aria-pressed="true"] {
-  border-color: var(--j-day-ink);
-}
-.journal-day-grid > button:focus-visible {
-  outline: 2px solid var(--j-green-ink);
-  outline-offset: 1px;
-}
-.journal-day-grid > button:disabled {
-  opacity: 1;
-  border-color: transparent;
-  background: color-mix(in srgb, var(--j-cell) 24%, var(--j-paper));
-  color: color-mix(in srgb, var(--j-muted) 62%, var(--j-paper));
+@keyframes calendar-date-in {
+  from { opacity: .5; }
+  to { opacity: 1; }
 }
 
-[data-intensity="1"] { --j-heat: color-mix(in srgb, var(--j-cell-1) 80%, var(--j-paper)); }
-[data-intensity="2"] { --j-heat: color-mix(in srgb, var(--j-cell-2) 66%, var(--j-paper)); }
-[data-intensity="3"] { --j-heat: color-mix(in srgb, var(--j-cell-3) 54%, var(--j-paper)); }
-[data-intensity="4"] {
-  --j-heat: color-mix(in srgb, var(--j-cell-4) 80%, var(--j-paper));
-  --j-day-ink: #233a20;
-}
-.journal-day-grid > button:is([data-intensity="1"], [data-intensity="2"], [data-intensity="3"]) {
-  --j-day-ink: var(--j-day-active-ink);
-}
-.journal-calendar-key > i {
-  background: var(--j-heat, var(--j-day-surface));
-}
-
-.journal-calendar-footer {
+.calendar-detail {
   display: flex;
-  align-items: center;
-  gap: 5px 12px;
+  align-content: flex-start;
+  align-items: baseline;
   flex-wrap: wrap;
-}
-.journal-calendar-key {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-inline-start: auto;
-  color: var(--j-muted);
+  gap: 3px 10px;
+  box-sizing: border-box;
+  /* Reserve the date line and two lines of activities, including loading and retry states. */
+  min-block-size: calc(3lh + 18px);
+  margin-top: auto;
+  border-block-start: 1px solid var(--line);
+  padding-top: 10px;
   font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
 }
-.journal-calendar-key > i { width: 11px; height: 11px; border: 1px solid var(--j-day-border); border-radius: 4px; }
-
-.journal-selected-note,
-.journal-selected-date,
-.journal-day-activity {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.journal-selected-note {
-  flex: 1 1 auto;
-  min-height: 38px;
-  padding: 7px 10px;
-  gap: 5px 15px;
-  border: 1px solid color-mix(in srgb, var(--j-rule) 56%, transparent);
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--j-soft) 45%, var(--j-paper));
-  color: var(--j-muted);
-  font-size: 14px;
-}
-.journal-selected-date { gap: 6px; color: var(--j-ink); font-weight: 650; }
-.journal-selected-date > svg { width: 16px; height: 16px; color: var(--j-blue-ink); }
-.journal-selected-today {
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--j-green) 13%, var(--j-paper));
-  color: var(--j-green-ink);
-  font-size: 12px;
-}
-.journal-day-activity { gap: 4px 12px; }
-.journal-day-activity b { color: var(--j-ink); }
-.journal-calendar-retry { padding: 0; color: var(--j-green-ink); font-weight: 600; }
+.calendar-detail time { font-size: 13px; font-weight: 650; color: var(--ink); }
+.calendar-detail time span { margin-left: 6px; color: var(--green-ink); font-size: 12px; }
+.calendar-detail p { display: flex; flex-wrap: wrap; gap: 1px 9px; margin: 0; line-height: inherit; }
 </style>

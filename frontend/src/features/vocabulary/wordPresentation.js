@@ -52,21 +52,49 @@ function wordCardExampleCn(word) {
   );
 }
 
-function reviewCloze(word) {
-  const example =
-    word?.sourceSentence ||
-    word?.exampleEn ||
-    `Use ${word?.word || "this word"} in a complete sentence.`;
-  const term = word?.sourceWord || word?.word;
-  if (!term) return escapeHtml(example);
-  return String(example)
-    .split(new RegExp(`(\\b${escapeRegExp(term)}\\b)`, "gi"))
-    .map((piece) =>
-      piece.toLowerCase() === term.toLowerCase()
-        ? '<mark class="review-blank">_____</mark>'
-        : escapeHtml(piece),
-    )
-    .join("");
+function spellingHint(headword) {
+  const letters = [...headword];
+  const letterCount = letters.filter((letter) => /[a-z]/i.test(letter)).length;
+  if (letterCount === 1 && /^[a-z]$/i.test(headword)) {
+    return `字母表第 ${headword.toUpperCase().charCodeAt(0) - 64} 位`;
+  }
+  let letterIndex = 0;
+  return letters.map((letter) => {
+    if (!/[a-z]/i.test(letter)) return letter;
+    letterIndex += 1;
+    return letterIndex % 3 === 2 || letterCount === 1 ? "＿" : letter;
+  }).join("");
+}
+
+function reviewPrompt(word) {
+  const headword = word?.word?.trim() || "";
+  const knownForms = [headword, ...(word?.exampleInflections || [])];
+  const translation = word?.exampleCn?.trim() || "";
+  const examples = [
+    { text: word?.sourceSentence, forms: [...knownForms, word?.sourceWord], translation: "" },
+    {
+      text: meaningfulExample(word) ? word.exampleEn : "",
+      forms: knownForms,
+      translation: /^单词“.+”在英语练习中很有用。$/.test(translation) ? "" : translation,
+    },
+  ];
+  for (const { text, forms, translation } of examples) {
+    if (!text?.trim()) continue;
+    const terms = [...new Set(forms.filter(Boolean))].sort((a, b) => b.length - a.length);
+    if (!terms.length) continue;
+    const alternatives = terms.map((term) => escapeRegExp(term).replace(/['’]/g, "['’]")).join("|");
+    const pattern = new RegExp(`(?<![A-Za-z0-9_-])(${alternatives})(?![A-Za-z0-9_-])`, "gi");
+    // Captured entries retain their original spelling for the marked answer after submission.
+    const parts = text.split(pattern);
+    if (parts.length > 1) {
+      return {
+        parts,
+        translation,
+        inflected: parts.some((part, index) => index % 2 === 1 && part.toLowerCase() !== headword.toLowerCase()),
+      };
+    }
+  }
+  return { hint: spellingHint(headword) };
 }
 
 function highlightTerm(text, term) {
@@ -108,7 +136,7 @@ export {
   wordCardExampleEn,
   meaningfulExample,
   wordCardExampleCn,
-  reviewCloze,
+  reviewPrompt,
   highlightTerm,
   escapeHtml,
   escapeRegExp,

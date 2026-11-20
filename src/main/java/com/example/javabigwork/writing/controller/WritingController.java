@@ -3,11 +3,13 @@ package com.example.javabigwork.writing.controller;
 import com.example.javabigwork.common.ApiResponse;
 import com.example.javabigwork.writing.dto.EssayReviewRequest;
 import com.example.javabigwork.writing.dto.EssayReviewResponse;
+import com.example.javabigwork.writing.dto.SentenceFeedbackView;
 import com.example.javabigwork.writing.entity.EssaySubmission;
 import com.example.javabigwork.writing.service.WritingService;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,5 +32,10 @@ public class WritingController {
     @GetMapping("/history")
     public ApiResponse<List<EssaySubmission>> history() {
         return ApiResponse.ok(writingService.history());
+    }
+
+    @GetMapping("/history/{essayId}/feedback")
+    public ApiResponse<List<SentenceFeedbackView>> historyFeedback(@PathVariable Long essayId) {
+        return ApiResponse.ok(writingService.historyFeedback(essayId));
     }
 }

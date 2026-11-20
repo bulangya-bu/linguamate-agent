@@ -1,6 +1,5 @@
 package com.example.javabigwork.chat.service;
 
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.example.javabigwork.auth.UserContext;
 import com.example.javabigwork.chat.dto.ConversationView;
 import com.example.javabigwork.chat.entity.Conversation;
@@ -38,12 +37,7 @@ public class ConversationService {
     }
 
     public List<ConversationView> list() {
-        return conversationMapper.selectList(Wrappers.<Conversation>query()
-                        .eq("user_id", userContext.userId())
-                        .orderByDesc("updated_at"))
-                .stream()
-                .map(item -> new ConversationView(item.id, item.scene, item.title, item.updatedAt))
-                .toList();
+        return conversationMapper.selectViews(userContext.userId());
     }
 
     public Conversation requireOwned(Long conversationId) {

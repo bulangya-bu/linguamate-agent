@@ -2,6 +2,8 @@ import { readingTokens, readingParagraphs } from "@/reading-context";
 import { ElMessage } from "element-plus";
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { learningApi } from "@/api/modules";
+import { usePhoneLayout } from "@/composables/usePhoneLayout";
+import { createReadingPositionStore, visibleParagraph } from "./readingPosition";
 import {
   splitArticleTopics,
   newsTopicLabel,
@@ -10,18 +12,26 @@ import {
 
 export function useReading({
   router,
+  getAccountId = () => null,
   loadReport,
   loadWordBankStats,
   isChatBusy,
   discussReading,
 }) {
+  const isPhone = usePhoneLayout();
+  const phoneArticle = computed(() => {
+    const id = Number(router.currentRoute.value.query.article);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+  });
   const state = reactive({
     newsTopics: [],
     newsList: [],
+    newsListStatus: "loading",
     newsDifficulty: "",
     newsTopic: "",
     currentArticle: null,
     articleBusy: false,
+    articleError: "",
     readingBusy: false,
     readerProgress: 0,
     progressTimer: null,
@@ -48,6 +58,11 @@ export function useReading({
   });
 
   const readerRef = ref(null);
+  const bookmark = ref(null);
+  const activeWord = ref("");
+  const positionStore = createReadingPositionStore(getAccountId);
+  let programmaticScroll = null;
+  let keyboardLookupAnchor = null;
 
   const tooltipRef = ref(null);
 
@@ -85,17 +100,26 @@ export function useReading({
     return topics;
   });
 
-  const readerProgress = computed(
-    () => state.currentArticle?.readProgress ?? state.readerProgress ?? 0,
-  );
+  const readerProgress = computed(() => state.readerProgress);
 
   const articleTokens = computed(() =>
     readingTokens(state.currentArticle?.content || ""),
   );
 
   const articleParagraphs = computed(() =>
-    readingParagraphs(state.currentArticle?.content || ""),
+    readingParagraphs(state.currentArticle?.content || "").map((paragraph) => {
+      const tail = paragraph.at(-1);
+      if (!tail || tail.word) return paragraph;
+      return [...paragraph.slice(0, -1), { ...tail, text: tail.text.trimEnd() }];
+    }),
   );
+  const readerWords = computed(() => articleTokens.value.filter(token => token.word && isLookupWord(token.text)));
+  const activeReaderWord = computed(() => activeWord.value || readerWords.value[0]?.key);
+  const canResumeReading = computed(() => {
+    if (!state.currentArticle) return false;
+    if (bookmark.value) return bookmark.value.paragraph > 0 || bookmark.value.offset > 0;
+    return !state.currentArticle.finished && state.currentArticle.readProgress > 0;
+  });
 
   const readerFocus = ref(false);
 
@@ -104,7 +128,7 @@ export function useReading({
   function toggleReaderFocus() {
     readerFocus.value = !readerFocus.value;
     focusedSentence.value = readerFocus.value
-      ? articleTokens.value.find((token) => token.word)?.sentence || ""
+      ? readerWords.value.find((token) => token.key === activeReaderWord.value)?.sentence || ""
       : "";
   }
 
@@ -118,6 +142,7 @@ export function useReading({
   }
 
   function focusReaderWord(token, event) {
+    if (isPhone.value) return;
     if (readerFocus.value) focusedSentence.value = token.sentence;
     showTooltip(token.text, event);
   }
@@ -146,14 +171,37 @@ export function useReading({
 
   let newsRequestId = 0;
 
-  async function loadNews() {
+  async function loadNews(preferredArticle) {
     const requestId = ++newsRequestId;
-    const articles = await learningApi.newsRecommendations({
-      difficulty: state.newsDifficulty,
-      topic: state.newsTopic,
-    });
-    if (requestId !== newsRequestId) return;
+    const initialArticleRequest = articleRequestId;
+    const target = Number(preferredArticle);
+    const hasTarget = Number.isSafeInteger(target) && target > 0;
+    if (isPhone.value && hasTarget) {
+      await loadArticle(target);
+      return;
+    }
+    const requestedArticle = hasTarget ? loadArticle(target) : null;
+    state.newsListStatus = "loading";
+    let articles;
+    try {
+      articles = await learningApi.newsRecommendations({
+        difficulty: state.newsDifficulty,
+        topic: state.newsTopic,
+      });
+    } catch (error) {
+      if (requestId === newsRequestId) state.newsListStatus = "error";
+      if (!isPhone.value) throw error;
+      return;
+    }
+    if (requestId !== newsRequestId || router.currentRoute.value.name !== "news") return;
     state.newsList = articles;
+    state.newsListStatus = "ready";
+    if (isPhone.value && !hasTarget) return;
+    if (hasTarget) {
+      await requestedArticle;
+      return;
+    }
+    if (initialArticleRequest !== articleRequestId) return;
     const currentVisible = state.newsList.some(
       (article) => article.id === state.currentArticle?.id,
     );
@@ -165,54 +213,138 @@ export function useReading({
       state.currentArticle = null;
       state.translation = {};
       state.readerProgress = 0;
+      bookmark.value = null;
+      activeWord.value = "";
       return;
     }
     if (!currentVisible) {
       await loadArticle(state.newsList[0].id);
+    } else {
+      markVisibleArticleStarted(state.currentArticle.id);
     }
   }
 
   let articleRequestId = 0;
+  const startedArticles = new Set();
+
+  function markVisibleArticleStarted(id) {
+    if (!articleVisible(id) || startedArticles.has(id)) return;
+    startedArticles.add(id);
+    learningApi.startArticle(id).catch(() => {
+      startedArticles.delete(id);
+    });
+  }
+
+  function articleVisible(id) {
+    return router.currentRoute.value.name === "news" && (!isPhone.value || phoneArticle.value === Number(id));
+  }
+
+  function selectArticle(id) {
+    return isPhone.value ? returnToArticle(id) : loadArticle(id);
+  }
 
   async function loadArticle(id) {
     const requestId = ++articleRequestId;
     clearTimeout(state.progressTimer);
     state.tooltip.visible = false;
+    keyboardLookupAnchor = null;
     state.articleBusy = true;
+    state.articleError = "";
+    if (isPhone.value && state.currentArticle?.id !== id) state.currentArticle = null;
     try {
       const article = await learningApi.article(id);
-      if (requestId !== articleRequestId) return;
+      if (requestId !== articleRequestId || !articleVisible(id)) return;
       state.currentArticle = article;
       newsLibraryOpen.value = false;
       state.translation = {};
       state.readerProgress = article.readProgress || 0;
+      bookmark.value = positionStore.get(article.id);
+      activeWord.value = "";
       await nextTick();
-      if (readerRef.value) readerRef.value.scrollTop = 0;
+      if (requestId === articleRequestId && articleVisible(id)) {
+        resumeReading();
+        markVisibleArticleStarted(article.id);
+      }
     } catch (error) {
-      if (requestId === articleRequestId)
-        ElMessage.error(error.message || "文章加载失败，请重试");
+      if (requestId === articleRequestId && articleVisible(id)) {
+        state.articleError = error.message || "文章加载失败，请重试";
+        ElMessage.error(state.articleError);
+      }
     } finally {
       if (requestId === articleRequestId) state.articleBusy = false;
     }
   }
 
-  function calculateReaderProgress() {
+  function readerTop(el) {
+    return isPhone.value ? Math.max(0, -el.getBoundingClientRect().top) : el.scrollTop;
+  }
+
+  function readingRange(el) {
+    const article = el.querySelector(".reader-content");
+    if (!article) return 0;
+    const viewport = isPhone.value ? window.innerHeight : el.clientHeight;
+    return Math.max(0, article.offsetTop + article.offsetHeight - viewport);
+  }
+
+  function scrollReaderTo(top) {
     const el = readerRef.value;
-    if (!el || !state.currentArticle) return state.readerProgress;
-    const max = el.scrollHeight - el.clientHeight;
-    if (max <= 0) return state.readerProgress;
-    return Math.min(
-      100,
-      Math.max(state.readerProgress, Math.round((el.scrollTop / max) * 100)),
-    );
+    if (!el?.clientHeight) return;
+    if (isPhone.value) {
+      const pageTop = top > 0 ? window.scrollY + el.getBoundingClientRect().top + top : 0;
+      window.scrollTo({ top: pageTop, behavior: "instant" });
+    } else {
+      el.scrollTop = top;
+    }
+    programmaticScroll = readerTop(el);
+    const paragraphs = Array.from(el.querySelectorAll(".reader-paragraph"));
+    const paragraph = paragraphs[visibleParagraph(paragraphs, programmaticScroll)];
+    const firstWord = paragraph?.querySelector("[data-reader-key]");
+    activeWord.value = firstWord?.dataset.readerKey || "";
+  }
+
+  function startReadingOver() {
+    scrollReaderTo(0);
+  }
+
+  function resumeReading() {
+    const el = readerRef.value;
+    if (!el?.clientHeight || !state.currentArticle) return;
+    const paragraph = bookmark.value && el.querySelectorAll(".reader-paragraph")[bookmark.value.paragraph];
+    if (paragraph && canResumeReading.value) {
+      const top = paragraph.offsetTop + paragraph.offsetHeight * bookmark.value.offset;
+      scrollReaderTo(Math.min(top, readingRange(el)));
+    } else if (canResumeReading.value) {
+      scrollReaderTo(readingRange(el) * state.currentArticle.readProgress / 100);
+    } else {
+      startReadingOver();
+    }
   }
 
   function handleReaderScroll() {
-    if (!state.currentArticle || state.articleBusy) return;
-    const nextProgress = calculateReaderProgress();
+    const el = readerRef.value;
+    if (!state.currentArticle || !articleVisible(state.currentArticle.id) || state.articleBusy || !el?.clientHeight) return;
+    const scrollTop = readerTop(el);
+    const alreadyPositioned = programmaticScroll === scrollTop;
+    programmaticScroll = null;
+    if (alreadyPositioned) return;
+    const max = readingRange(el);
+    const top = Math.min(scrollTop, max);
+    const articleId = state.currentArticle.id;
+    const paragraphs = Array.from(el.querySelectorAll(".reader-paragraph"));
+    const index = visibleParagraph(paragraphs, top);
+    const paragraph = paragraphs[index];
+    if (paragraph && max > 0 && scrollTop <= max + 1) {
+      const offset = Math.min(1, Math.max(0, (top - paragraph.offsetTop) / Math.max(1, paragraph.offsetHeight)));
+      bookmark.value = { paragraph: index, offset };
+      positionStore.set(articleId, bookmark.value);
+      if (!el.contains(document.activeElement)) {
+        activeWord.value = paragraph.querySelector("[data-reader-key]")?.dataset.readerKey || activeWord.value;
+      }
+    }
+    const nextProgress = max > 0 ? Math.round(top / max * 100) : state.readerProgress;
+    if (nextProgress <= state.readerProgress || state.currentArticle.finished) return;
     state.readerProgress = nextProgress;
     clearTimeout(state.progressTimer);
-    const articleId = state.currentArticle.id;
     state.progressTimer = setTimeout(
       () =>
         updateReadingProgress(nextProgress, false, articleId).catch(() => {}),
@@ -233,7 +365,7 @@ export function useReading({
     if (state.currentArticle?.id === articleId) {
       state.currentArticle.readProgress = result.readProgress;
       state.currentArticle.finished = result.finished;
-      state.readerProgress = result.readProgress;
+      state.readerProgress = Math.max(state.readerProgress, result.readProgress);
     }
     const listed = state.newsList.find((article) => article.id === articleId);
     if (listed)
@@ -321,7 +453,27 @@ export function useReading({
       .replace(/^[^a-z]+|[^a-z]+$/g, "");
   }
 
+  function isLookupWord(text) {
+    const word = normalizeLookupWord(text);
+    return Boolean(word && !lookupStopWords.has(word));
+  }
+
+  function focusNavigationWord(token) {
+    activeWord.value = token.key;
+    if (readerFocus.value) focusedSentence.value = token.sentence;
+  }
+
+  function navigateReaderWords(event, token) {
+    const step = { ArrowLeft: -1, ArrowRight: 1, Home: -Infinity, End: Infinity }[event.key];
+    if (step === undefined || !readerWords.value.length) return;
+    event.preventDefault();
+    const index = readerWords.value.findIndex(word => word.key === token.key);
+    const next = readerWords.value[Math.min(readerWords.value.length - 1, Math.max(0, index + step))];
+    readerRef.value?.querySelector(`[data-reader-key="${CSS.escape(next.key)}"]`)?.focus();
+  }
+
   function placeTooltip(event) {
+    if (isPhone.value) return;
     if (event?.currentTarget) {
       const rect = event.currentTarget.getBoundingClientRect();
       state.tooltip.anchor = {
@@ -354,6 +506,11 @@ export function useReading({
     if (state.tooltip.saving) return;
     const normalized = normalizeLookupWord(word);
     if (!normalized || lookupStopWords.has(normalized)) return;
+    if (isPhone.value) {
+      keyboardLookupAnchor = event?.currentTarget || null;
+      activeWord.value = keyboardLookupAnchor?.dataset.readerKey || activeWord.value;
+      if (readerFocus.value) focusedSentence.value = keyboardLookupAnchor?.dataset.sentence || "";
+    }
     cancelTooltipHide();
     placeTooltip(event);
     const sentence = event?.currentTarget?.dataset?.sentence || "";
@@ -400,14 +557,25 @@ export function useReading({
   }
 
   async function focusLookupActions(word, event) {
-    if (lookupStopWords.has(normalizeLookupWord(word))) return;
+    if (!isLookupWord(word)) return;
+    const anchor = event.currentTarget;
+    keyboardLookupAnchor = anchor;
     await showTooltip(word, event);
     await nextTick();
-    tooltipRef.value?.querySelector("button:not(:disabled)")?.focus();
+    if (document.activeElement !== anchor || keyboardLookupAnchor !== anchor) return;
+    const panel = tooltipRef.value;
+    (panel?.querySelector("button:not(:disabled)") || panel)?.focus();
+  }
+
+  function closeKeyboardLookup() {
+    state.tooltip.visible = false;
+    keyboardLookupAnchor?.focus({ preventScroll: true });
+    keyboardLookupAnchor = null;
   }
 
   function scheduleHideTooltip() {
     clearTimeout(state.tooltipTimer);
+    if (isPhone.value) return;
     if (
       state.tooltip.contextBusy ||
       state.tooltip.saving ||
@@ -519,8 +687,9 @@ export function useReading({
 
   async function returnToArticle(id) {
     if (!id) return;
-    await router.push("/news");
-    await loadArticle(id);
+    const route = router.currentRoute.value;
+    if (route.name === "news" && String(route.query.article) === String(id)) return loadArticle(id);
+    await router.push({ path: "/news", query: { article: String(id) } });
   }
 
   watch(
@@ -537,6 +706,20 @@ export function useReading({
     (open ? newsLibraryCloseRef.value : newsLibraryButtonRef.value)?.focus();
   });
 
+  watch([readerRef, () => router.currentRoute.value.name], ([element, name]) => {
+    if (element && name === "news" && !state.articleBusy) resumeReading();
+  }, { flush: "post" });
+
+  watch(isPhone, phone => {
+    state.tooltip.visible = false;
+    if (!phone && router.currentRoute.value.name === "news") loadNews(router.currentRoute.value.query.article).catch(() => {});
+  });
+  watch(() => isPhone.value && router.currentRoute.value.name === "news" && phoneArticle.value, (active, previous, onCleanup) => {
+    if (!active) return;
+    window.addEventListener("scroll", handleReaderScroll, { passive: true });
+    onCleanup(() => window.removeEventListener("scroll", handleReaderScroll));
+  }, { immediate: true });
+
   onBeforeUnmount(() => {
     clearTimeout(state.tooltipTimer);
     clearTimeout(state.progressTimer);
@@ -544,6 +727,9 @@ export function useReading({
 
   return {
     state,
+    isPhone,
+    phoneArticle,
+    selectArticle,
     readerRef,
     tooltipRef,
     newsLibraryOpen,
@@ -554,6 +740,9 @@ export function useReading({
     newsTopicOptions,
     visibleNewsTopics,
     readerProgress,
+    canResumeReading,
+    resumeReading,
+    startReadingOver,
     articleParagraphs,
     readerFocus,
     toggleReaderFocus,
@@ -569,8 +758,13 @@ export function useReading({
     finishReading,
     translateArticle,
     normalizeLookupWord,
+    isLookupWord,
+    activeReaderWord,
+    focusNavigationWord,
+    navigateReaderWords,
     showTooltip,
     focusLookupActions,
+    closeKeyboardLookup,
     scheduleHideTooltip,
     cancelTooltipHide,
     handleTooltipFocusOut,

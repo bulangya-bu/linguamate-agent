@@ -6,11 +6,12 @@ import UserAccountMenu from "@/components/UserAccountMenu.vue";
 import ThemeToggle from "@/components/ThemeToggle.vue";
 import { brandedPageTitle } from "@/brand";
 import { ElMessage } from "element-plus";
-import { onMounted, reactive } from "vue";
-import { useRouter } from "vue-router";
+import { computed, onMounted, reactive, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { authApi } from "@/api/modules";
 import { runAction } from "@/features/admin/admin-utils";
 import "@/styles/admin-studio.css";
+import "@/styles/admin-mobile.css";
 import AdminOverviewPanel from "@/features/admin/AdminOverviewPanel.vue";
 import { useAdminOverview } from "@/features/admin/useAdminOverview";
 import AdminUsersPanel from "@/features/admin/AdminUsersPanel.vue";
@@ -50,13 +51,14 @@ const dateLabel = new Intl.DateTimeFormat("zh-CN", {
 }).format(new Date());
 
 const router = useRouter();
+const route = useRoute();
+const section = computed(() => sections.find(item => item.id === route.query.section)?.id || 'overview');
 
 const state = reactive({
 logoutBusy: false,
 loading: true,
 bootError: "",
-user: null,
-section: "overview"
+user: null
 });
 
 const overview = useAdminOverview();
@@ -65,17 +67,18 @@ const words = useAdminWords();
 const knowledge = useAdminKnowledge(overview.loadSummary);
 const news = useAdminNews(overview.loadSummary);
 const ai = useAdminAi();
+const aiController = { ...ai, get user() { return state.user; } };
 
-const controllers = { overview, users, words, knowledge, news, ai };
+const controllers = { overview, users, words, knowledge, news, ai: aiController };
 const panels = { overview:AdminOverviewPanel, users:AdminUsersPanel, words:AdminWordsPanel, knowledge:AdminKnowledgePanel, news:AdminNewsPanel, ai:AdminAiPanel };
 
 const refreshSummary = overview.refreshSummary;
 
-async function showSection(id) {
-  if (!Object.hasOwn(controllers, id)) return;
-  state.section = id;
-  await runAction({ overview:overview.loadSummary, users:users.loadUsers, words:words.loadWords, knowledge:knowledge.loadKnowledge, news:news.loadNews, ai:ai.loadAiSettings }[id]);
+function showSection(id) {
+  if (Object.hasOwn(controllers, id)) router.push({ path: "/admin", query: id === "overview" ? {} : { section: id } });
 }
+const loaders = { overview:overview.loadSummary, users:users.loadUsers, words:words.loadWords, knowledge:knowledge.loadKnowledge, news:news.loadNews, ai:ai.loadAiSettings };
+watch(section, id => { if (!state.loading && state.user?.role === "ADMIN") runAction(loaders[id]); });
 
 async function logout() {
   if (state.logoutBusy) return;
@@ -97,7 +100,7 @@ async function boot() {
     router.replace("/");
     return;
   }
-  await overview.loadSummary();
+  await loaders[section.value]();
   state.loading = false;
 }
 
@@ -128,14 +131,14 @@ onMounted(() => { document.title = brandedPageTitle("管理工作台"); retryBoo
       <AppBrand to="/admin" />
       <nav aria-label="后台功能">
         <span
-          v-if="state.section !== 'ai'"
+          v-if="section !== 'ai'"
           class="nav-active-indicator"
           :style="{
             '--nav-index': sections.findIndex(
-              (item) => item.id === state.section,
+              (item) => item.id === section,
             ),
             '--nav-section-offset':
-              sections.findIndex((item) => item.id === state.section) >= 3
+              sections.findIndex((item) => item.id === section) >= 3
                 ? 1
                 : 0,
           }"
@@ -146,10 +149,10 @@ onMounted(() => { document.title = brandedPageTitle("管理工作台"); retryBoo
           :key="item.id"
           class="nav-item"
           :class="{
-            active: state.section === item.id,
+            active: section === item.id,
             'nav-group-start': index === 3,
           }"
-          :aria-current="state.section === item.id ? 'page' : undefined"
+          :aria-current="section === item.id ? 'page' : undefined"
           type="button"
           @click="showSection(item.id)"
         >
@@ -160,9 +163,9 @@ onMounted(() => { document.title = brandedPageTitle("管理工作台"); retryBoo
       <div class="sidebar-bottom">
         <button
           class="sidebar-model-config"
-          :class="{ 'is-selected': state.section === 'ai' }"
+          :class="{ 'is-selected': section === 'ai' }"
           type="button"
-          :aria-current="state.section === 'ai' ? 'page' : undefined"
+          :aria-current="section === 'ai' ? 'page' : undefined"
           @click="showSection('ai')"
         >
           <span class="sidebar-model-icon"><AdminSketchIcon name="ai" /></span
@@ -175,9 +178,12 @@ onMounted(() => { document.title = brandedPageTitle("管理工作台"); retryBoo
 
     <main id="admin-main" class="workspace">
       <header class="workspace-bar">
+        <select class="admin-phone-section" :value="section" aria-label="切换管理页面" @change="showSection($event.target.value)">
+          <option v-for="item in sections" :key="item.id" :value="item.id">{{ item.label }}</option>
+        </select>
         <div class="workspace-location">
           <span class="workspace-location-icon" aria-hidden="true"
-            ><AdminSketchIcon :name="state.section" /></span
+            ><AdminSketchIcon :name="section" /></span
           ><span class="workspace-context"
             ><strong>管理空间</strong></span
           >
@@ -196,10 +202,10 @@ onMounted(() => { document.title = brandedPageTitle("管理工作台"); retryBoo
       </header>
       <header class="topbar admin-topbar">
         <div>
-          <h1>{{ adminSectionTitles[state.section] }}</h1>
+          <h1>{{ adminSectionTitles[section] }}</h1>
         </div>
         <button
-          v-if="state.section === 'overview'"
+          v-if="section === 'overview'"
           class="admin-secondary admin-refresh"
           type="button"
           :disabled="overview.state.summaryBusy"
@@ -213,8 +219,8 @@ onMounted(() => { document.title = brandedPageTitle("管理工作台"); retryBoo
       </header>
 
       <component
-        :is="panels[state.section]"
-        :controller="controllers[state.section]"
+        :is="panels[section]"
+        :controller="controllers[section]"
         @navigate="showSection"
       />
 

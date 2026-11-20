@@ -35,7 +35,7 @@ public class AiSettingsService {
                 effectiveProvider(setting),
                 effectiveBaseUrl(setting),
                 effectiveChatModel(setting),
-                setting != null && StringUtils.hasText(setting.apiKey)
+                StringUtils.hasText(effectiveApiKey(setting))
         );
     }
 
@@ -50,11 +50,11 @@ public class AiSettingsService {
     }
 
     public AiRuntimeSettings resolveConnection(AiConnectionRequest request) {
-        AiRuntimeSettings current = currentRuntime();
-        String baseUrl = pick(request == null ? null : request.baseUrl(), current.baseUrl());
-        String apiKey = pick(request == null ? null : request.apiKey(), current.apiKey());
-        return new AiRuntimeSettings(current.provider(), normalizeBaseUrl(baseUrl), apiKey,
-                pick(request == null ? null : request.chatModel(), current.chatModel()));
+        AiSetting setting = load();
+        String baseUrl = normalizeBaseUrl(pick(request == null ? null : request.baseUrl(), effectiveBaseUrl(setting)));
+        String key = personalKeyFor(setting, baseUrl, request == null ? null : request.apiKey());
+        return new AiRuntimeSettings(effectiveProvider(setting), baseUrl, runtimeKey(baseUrl, key),
+                pick(request == null ? null : request.chatModel(), effectiveChatModel(setting)));
     }
 
     public AiSettingsView save(AiSettingsRequest request) {
@@ -67,14 +67,14 @@ public class AiSettingsService {
             setting.userId = userId;
         }
 
-        String baseUrl = pick(request == null ? null : request.baseUrl(), effectiveBaseUrl(setting));
-        String apiKey = pick(request == null ? null : request.apiKey(), existing ? effectiveApiKey(setting) : defaults.apiKey());
+        String baseUrl = normalizeBaseUrl(pick(request == null ? null : request.baseUrl(), effectiveBaseUrl(setting)));
+        String apiKey = personalKeyFor(setting, baseUrl, request == null ? null : request.apiKey());
         String chatModel = pick(request == null ? null : request.chatModel(), effectiveChatModel(setting));
 
         setting.provider = effectiveProvider(setting);
         setting.userId = userId;
-        setting.baseUrl = normalizeBaseUrl(baseUrl);
-        setting.apiKey = apiKey == null ? "" : apiKey.trim();
+        setting.baseUrl = baseUrl;
+        setting.apiKey = apiKey;
         setting.chatModel = chatModel == null || chatModel.isBlank() ? defaults.chatModel() : chatModel.trim();
         setting.updatedAt = LocalDateTime.now();
 
@@ -108,11 +108,45 @@ public class AiSettingsService {
     }
 
     private String effectiveBaseUrl(AiSetting setting) {
-        return normalizeBaseUrl(setting != null && StringUtils.hasText(setting.baseUrl) ? setting.baseUrl : defaults.baseUrl());
+        String address = setting != null && StringUtils.hasText(setting.baseUrl) ? setting.baseUrl : defaults.baseUrl();
+        try {
+            return normalizeBaseUrl(address);
+        } catch (IllegalArgumentException ignored) {
+            // A legacy invalid address can still be opened and corrected in settings.
+            return "";
+        }
     }
 
     private String effectiveApiKey(AiSetting setting) {
-        return setting != null && StringUtils.hasText(setting.apiKey) ? setting.apiKey.trim() : defaults.apiKey();
+        return runtimeKey(effectiveBaseUrl(setting), storedPersonalKey(setting));
+    }
+
+    private String storedPersonalKey(AiSetting setting) {
+        String key = setting == null ? "" : pick(setting.apiKey, "");
+        // Older versions could copy the deployment credential into a personal settings row.
+        return key.equals(pick(defaults.apiKey(), "")) ? "" : key;
+    }
+
+    private String runtimeKey(String destination, String personalKey) {
+        if (destination.isEmpty()) return "";
+        if (!personalKey.isEmpty()) return personalKey;
+        return destination.equals(effectiveBaseUrl(null)) ? pick(defaults.apiKey(), "") : "";
+    }
+
+    private String personalKeyFor(AiSetting setting, String destination, String suppliedKey) {
+        if (destination.isEmpty()) throw new IllegalArgumentException("请填写模型服务地址");
+        boolean defaultAddress = destination.equals(effectiveBaseUrl(null));
+        if (StringUtils.hasText(suppliedKey)) {
+            String key = suppliedKey.trim();
+            if (!key.equals(pick(defaults.apiKey(), ""))) return key;
+            if (defaultAddress) return "";
+            throw new IllegalArgumentException("请填写新服务对应的 API 密钥");
+        }
+        if (destination.equals(effectiveBaseUrl(setting))) return storedPersonalKey(setting);
+        if (!defaultAddress && StringUtils.hasText(effectiveApiKey(setting))) {
+            throw new IllegalArgumentException("模型地址已更改，请填写新服务对应的 API 密钥");
+        }
+        return "";
     }
 
     private String effectiveChatModel(AiSetting setting) {
@@ -124,21 +158,17 @@ public class AiSettingsService {
     }
 
     private String normalizeBaseUrl(String baseUrl) {
-        if (!StringUtils.hasText(baseUrl)) {
-            return defaults.baseUrl();
-        }
+        if (!StringUtils.hasText(baseUrl)) return "";
         String trimmed = baseUrl.trim().replaceAll("/+$", "");
-        if (trimmed.matches(".*?/v\\d+$")) {
-            return trimmed;
-        }
         try {
             URI uri = URI.create(trimmed);
-            if (!StringUtils.hasText(uri.getPath()) || "/".equals(uri.getPath())) {
-                return trimmed + "/v1";
+            if (uri.getHost() != null && ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                    && uri.getRawUserInfo() == null && uri.getRawQuery() == null && uri.getRawFragment() == null) {
+                return uri.getRawPath().isEmpty() ? trimmed + "/v1" : trimmed;
             }
-        } catch (Exception ignored) {
-            return trimmed;
+        } catch (IllegalArgumentException ignored) {
+            // Show the same field-level message for malformed and unsupported addresses.
         }
-        return trimmed;
+        throw new IllegalArgumentException("请填写有效的 HTTP 或 HTTPS 模型服务地址");
     }
 }

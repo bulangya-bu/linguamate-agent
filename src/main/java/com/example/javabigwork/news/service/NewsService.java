@@ -82,15 +82,24 @@ public class NewsService {
         return new ArrayList<>(topics);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public NewsArticleView detail(Long id) {
         NewsArticle article = articleMapper.selectById(id);
         if (article == null) {
             throw new IllegalArgumentException("News article does not exist.");
         }
-        ReadingRecord record = ensureReadingRecord(article.id);
-        evictUserRecommendationCache(record.userId);
-        return toView(article, record);
+        return toView(article, readingRecordMapper.selectOne(Wrappers.<ReadingRecord>query()
+                .eq("user_id", userContext.userId()).eq("article_id", id)));
+    }
+
+    @Transactional
+    public void startReading(Long id) {
+        if (!articleMapper.exists(Wrappers.<NewsArticle>query().eq("id", id))) {
+            throw new IllegalArgumentException("News article does not exist.");
+        }
+        Long userId = userContext.userId();
+        readingRecordMapper.markStarted(userId, id, LocalDateTime.now(LoginActivityService.ZONE));
+        evictUserRecommendationCache(userId);
     }
 
     @Transactional
@@ -160,41 +169,10 @@ public class NewsService {
 
     private ReadingRecord ensureReadingRecord(Long articleId) {
         Long userId = userContext.userId();
-        ReadingRecord record = findReadingRecord(userId, articleId);
-        if (record != null) {
-            if (record.updatedAt == null) {
-                record.updatedAt = record.createdAt == null ? LocalDateTime.now() : record.createdAt;
-                readingRecordMapper.update(null, Wrappers.<ReadingRecord>update()
-                        .eq("id", record.id)
-                        .isNull("updated_at")
-                        .set("updated_at", record.updatedAt));
-            }
-            return record;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        record = new ReadingRecord();
-        record.userId = userId;
-        record.articleId = articleId;
-        record.readProgress = 0;
-        record.lookedUpWords = 0;
-        record.finished = false;
-        record.createdAt = now;
-        record.updatedAt = now;
-        readingRecordMapper.insert(record);
-        return record;
-    }
-
-    private ReadingRecord findReadingRecord(Long userId, Long articleId) {
-        return readingRecordMapper.selectList(Wrappers.<ReadingRecord>query()
-                        .eq("user_id", userId)
-                        .eq("article_id", articleId)
-                        .orderByDesc("updated_at")
-                        .orderByDesc("id")
-                        .last("LIMIT 1"))
-                .stream()
-                .findFirst()
-                .orElse(null);
+        readingRecordMapper.markStarted(userId, articleId, LocalDateTime.now(LoginActivityService.ZONE));
+        // The initial article lookup may have opened a snapshot before a concurrent start committed.
+        return readingRecordMapper.selectOne(Wrappers.<ReadingRecord>query()
+                .eq("user_id", userId).eq("article_id", articleId).last("FOR UPDATE"));
     }
 
     private int compareRecommendations(
@@ -250,6 +228,7 @@ public class NewsService {
         Map<String, Integer> weights = new HashMap<>();
         readingRecordMapper.selectList(Wrappers.<ReadingRecord>query()
                         .eq("user_id", userId)
+                        .apply(ReadingRecord.HAS_ACTIVITY)
                         .orderByDesc("updated_at")
                         .orderByDesc("id")
                         .last("LIMIT 50"))
@@ -274,7 +253,8 @@ public class NewsService {
 
     private Map<Long, ReadingRecord> readingRecordMap(Long userId) {
         Map<Long, ReadingRecord> records = new HashMap<>();
-        readingRecordMapper.selectList(Wrappers.<ReadingRecord>query().eq("user_id", userId))
+        readingRecordMapper.selectList(Wrappers.<ReadingRecord>query().eq("user_id", userId)
+                        .apply(ReadingRecord.HAS_ACTIVITY))
                 .forEach(record -> {
                     if (record.articleId == null) {
                         return;

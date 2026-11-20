@@ -147,7 +147,8 @@ public class GrowthEvidenceService {
 
     private List<ReadingEvidence> readings(Long userId) {
         var recent = readingRecords.selectList(Wrappers.<ReadingRecord>query().eq("user_id", userId)
-                .isNotNull("article_id").orderByDesc("updated_at", "id").last("LIMIT 18"));
+                .apply(ReadingRecord.HAS_ACTIVITY).isNotNull("article_id")
+                .orderByDesc("updated_at", "id").last("LIMIT 18"));
         if (recent.isEmpty()) return List.of();
 
         Map<Long, NewsArticle> articles = newsArticles.selectList(Wrappers.<NewsArticle>query()

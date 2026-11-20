@@ -7,10 +7,13 @@ const props = defineProps({
   chat: Object,
   activeSection: String,
   openSettings: Function,
-  modelName: String,
 });
 const {
   state: chatState,
+  activeThread,
+  canStartNew,
+  visibleConversations,
+  selectMode,
   handleLearningAction,
   loadLearningCardPage,
   handleConversationSelect,
@@ -18,7 +21,7 @@ const {
   sendChatPrompt,
   sendChat,
 } = props.chat;
-const { activeSection, openSettings, modelName } = toRefs(props);
+const { activeSection, openSettings } = toRefs(props);
 </script>
 
 <template>
@@ -28,27 +31,29 @@ const { activeSection, openSettings, modelName } = toRefs(props);
     :class="{ active: activeSection === 'chat' }"
   >
     <ChatStudio
-      :messages="chatState.messages"
-      :conversations="chatState.conversations"
-      :conversation-id="chatState.conversationId"
-      :scene="chatState.chatScene"
+      :active="activeSection === 'chat'"
+      :messages="activeThread.messages"
+      :conversations="visibleConversations"
+      :conversation-id="activeThread.id"
+      :can-start-new="canStartNew"
+      :scene="activeThread.scene"
       :mode="chatState.chatMode"
-      v-model:draft="chatState.chatInput"
-      :busy="chatState.chatBusy"
-      :error="chatState.chatError"
-      :model-name="modelName"
+      v-model:draft="activeThread.draft"
+      :busy="chatState.sending"
+      :loading-history="chatState.loadingHistory"
+      :error="activeThread.error"
       :context-words="chatState.coachWords"
-      :trace="chatState.trace"
+      :trace="activeThread.trace"
       @send="sendChat"
       @prompt="sendChatPrompt"
-      @mode="chatState.chatMode = $event"
-      @scene="chatState.chatScene = $event"
+      @mode="selectMode"
+      @scene="activeThread.scene = $event"
       @history="handleConversationSelect"
       @new="newConversation"
       @settings="openSettings"
       @review="router.push({ path: '/wordbank', query: { scope: 'review' } })"
     >
-      <template #message-extra="{ message, index }">
+      <template #message-extra="{ message, index, showActions }">
         <section
           v-if="message.learningCard"
           class="learning-advisor-card"
@@ -121,7 +126,7 @@ const { activeSection, openSettings, modelName } = toRefs(props);
             </button>
           </footer>
         </section>
-        <div v-if="message.actions?.length" class="learning-card-actions">
+        <div v-if="showActions && message.actions?.length" class="learning-card-actions">
           <button
             v-for="action in message.actions"
             :key="action.id"
@@ -131,6 +136,16 @@ const { activeSection, openSettings, modelName } = toRefs(props);
             {{ action.label }}<span>→</span>
           </button>
         </div>
+      </template>
+      <template #assistant-actions="{ actions }">
+        <button
+          v-for="action in actions"
+          :key="action.id"
+          type="button"
+          @click="handleLearningAction(action)"
+        >
+          {{ action.label }}<span aria-hidden="true">→</span>
+        </button>
       </template>
     </ChatStudio>
   </section>

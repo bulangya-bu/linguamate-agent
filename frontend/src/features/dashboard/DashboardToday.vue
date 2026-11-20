@@ -6,7 +6,7 @@ const props = defineProps({
   loading: Boolean,
   busy: Boolean,
 });
-defineEmits(["start"]);
+defineEmits(["start", "retry"]);
 
 const taskCount = computed(() =>
   props.tasks?.filter((task) => task.status !== "skipped").length ?? 0,
@@ -82,9 +82,10 @@ const statusLabels = { done: "已完成", skipped: "无需复习" };
         </svg>
       </li>
     </ul>
-    <p v-else class="study-todo-unavailable" role="status">
-      {{ loading ? "正在读取今日进度…" : "今日进度暂时无法读取" }}
-    </p>
+    <div v-else class="study-todo-unavailable">
+      <span role="status">{{ loading ? "正在读取今日进度…" : "今日进度暂时无法读取" }}</span>
+      <button v-if="!loading" class="study-todo-start" type="button" @click="$emit('retry')">重试</button>
+    </div>
   </section>
 </template>
 
@@ -314,6 +315,10 @@ const statusLabels = { done: "已完成", skipped: "无需复习" };
 }
 
 .study-todo-unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   margin: 20px 0;
   color: var(--todo-note);
 }

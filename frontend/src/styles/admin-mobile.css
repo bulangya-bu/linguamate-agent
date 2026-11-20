@@ -1,0 +1,149 @@
+.admin-shell :is(.admin-phone-section, .admin-mobile-back, .admin-row-open, .admin-mobile-action,
+  .admin-mobile-user-actions, .admin-mobile-cell),
+.admin-shell .admin-two-column > .admin-mobile-details {
+  display: none;
+}
+
+@media (max-width: 760px), (max-width: 960px) and (max-height: 540px) and (pointer: coarse) {
+  body.admin-page { overflow-y: auto; }
+  .admin-page .app-shell.admin-shell { display: block; height: auto; min-height: 100dvh; overflow: visible; }
+  .admin-shell > .side-nav { display: none; }
+  .admin-shell > .workspace {
+    display: block;
+    height: auto;
+    padding: 0 max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    overflow: visible;
+  }
+  .admin-shell .workspace-bar {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: max(6px, env(safe-area-inset-top)) 0 6px;
+    margin: 0;
+    background: var(--page);
+  }
+  .admin-shell .workspace-bar :is(.today-date, .workspace-location),
+  .admin-shell .account-trigger :is(.account-trigger-info, .account-chevron) { display: none; }
+  .admin-shell .workspace-bar .workspace-tools { display: flex; gap: 6px; align-items: center; margin: 0; }
+  .admin-shell .workspace-bar .account-control { display: block; }
+  .admin-shell .workspace-bar :is(.theme-toggle, .account-trigger) { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; }
+  .admin-shell .admin-phone-section {
+    display: block;
+    width: auto;
+    min-height: 44px;
+    padding: 6px 26px 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background-color: var(--surface);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .admin-shell .workspace > .admin-topbar { padding: 10px 0 16px; }
+  .admin-shell .admin-topbar h1 { margin: 0; font-size: 25px; }
+  .admin-shell .section.active,
+  .admin-shell :is(.admin-two-column, .admin-ai-workspace, .admin-overview-body, .admin-overview-rail) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    gap: 14px;
+  }
+  .admin-shell .admin-two-column > .panel,
+  .admin-shell :is(.admin-ai-panel, .admin-trend-panel, .admin-status-panel, .admin-assets-panel) {
+    padding: 16px;
+    border-radius: 16px;
+    overflow: visible;
+  }
+  .admin-shell :is(.admin-form, .admin-table, .admin-form-fields, .admin-profile) { overflow: visible; max-height: none; }
+  .admin-shell .admin-overview-workspace { gap: 14px; }
+  .admin-shell .admin-metrics-band { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 0; padding: 16px; }
+  .admin-shell .admin-metrics-band > section { padding: 0 10px; }
+  .admin-shell .admin-metrics-band > section:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .admin-shell .admin-trend-canvas { min-height: 145px; }
+  .admin-shell .admin-panel-heading h2 { font-size: 17px; }
+  .admin-shell .admin-panel-heading p { font-size: 13px; }
+  .admin-shell .admin-panel-heading { flex-wrap: wrap; margin-bottom: 14px; gap: 8px; }
+  .admin-shell .admin-search-box { order: 1; min-height: 44px; width: 100%; max-width: none; }
+  .admin-shell .admin-phone-section:focus-visible,
+  .admin-shell .admin-row-open:focus-visible { outline: 2px solid var(--green-ink); outline-offset: -2px; }
+  .admin-shell .admin-two-column > .admin-mobile-details,
+  .admin-shell .admin-two-column[data-pane="detail"] > .admin-editor-panel,
+  .admin-shell .admin-two-column[data-pane="list"] > :is(.admin-profile-panel, .admin-editor-panel),
+  .admin-shell .admin-two-column:not([data-pane="list"]) > .admin-list-panel { display: none; }
+  .admin-shell .admin-two-column[data-pane="detail"] > .admin-mobile-details { display: flex; }
+  .admin-shell .admin-mobile-back,
+  .admin-shell .admin-mobile-action,
+  .admin-shell .admin-mobile-user-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    align-self: flex-start;
+    min-height: 44px;
+    padding: 6px 12px;
+    color: var(--green-ink);
+    background: var(--admin-soft-green);
+    border-radius: 9px;
+    font-weight: 600;
+  }
+  .admin-shell .admin-mobile-back { padding-inline: 0 12px; background: transparent; }
+  .admin-shell .admin-mobile-back svg { width: 16px; height: 16px; transform: rotate(180deg); }
+  .admin-shell .admin-mobile-user-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+  .admin-shell .admin-row .admin-mobile-cell { display: contents; }
+  .admin-shell .admin-list-panel .admin-row .admin-actions,
+  .admin-shell .admin-editor-panel > .admin-panel-heading > .admin-text-link,
+  .admin-shell .admin-list-panel .admin-row-head { display: none; }
+  .admin-shell .admin-list-panel .admin-row:not(.admin-row-head) {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 64px;
+    padding: 10px 26px 10px 0;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .admin-shell .admin-list-panel .admin-row > span:first-child { flex: 1; min-width: 0; }
+  .admin-shell .admin-row :is(strong, .admin-word-title) { font-size: 16px; }
+  .admin-shell .admin-row small { font-size: 12px; }
+  .admin-shell :is(#words, #news, #knowledge) .admin-list-panel .admin-row > span:nth-child(3) { display: none; }
+  .admin-shell #words .admin-list-panel .admin-row > span:nth-child(2) { flex: 1; }
+  .admin-shell .admin-row-open {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    padding: 4px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+  }
+  .admin-shell .admin-row-open svg { width: 15px; height: 15px; }
+  .admin-shell .admin-mobile-details { overflow-wrap: anywhere; }
+  .admin-shell .admin-mobile-details h2 { margin: 8px 0; font-size: 22px; }
+  .admin-shell .admin-mobile-details dl { margin: 0 0 16px; }
+  .admin-shell .admin-mobile-details dl > div { margin-top: 16px; }
+  .admin-shell .admin-mobile-details dt { color: var(--muted); font-size: 13px; }
+  .admin-shell .admin-mobile-details dd { white-space: pre-line; margin: 4px 0 0; color: var(--ink); font-size: 16px; line-height: 1.65; }
+  .admin-shell .admin-form-fields { grid-template-columns: minmax(0, 1fr); gap: 14px; padding-right: 0; }
+  .admin-shell .admin-form .admin-field :is(input, select, textarea),
+  .admin-shell .admin-search-box input,
+  .admin-shell .settings-form :is(input, select) { font-size: 16px; }
+  .admin-shell .admin-field > span { font-size: 14px; }
+  .admin-shell :is(.admin-form-actions, .admin-pagination, .admin-model-row) > button,
+  .admin-shell .admin-refresh { min-height: 44px; font-size: 14px; }
+  .admin-shell .admin-profile-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .admin-shell .admin-readings .admin-row { display: grid; grid-template-columns: minmax(0,1fr) auto auto; }
+  .admin-shell .admin-readings .admin-row > span:last-child { grid-column: 1/-1; }
+  .admin-shell .admin-readings .admin-row-head { display: none; }
+  .admin-shell .admin-readings .admin-row:not(.admin-row-head) > span:nth-child(3)::before { content: "查词 "; }
+  body.admin-page .el-message-box { width: min(92vw, 420px); }
+}

@@ -15,6 +15,7 @@ const STUDY_GOALS = [
 export function useDashboard({
   goSection,
   getDueWords,
+  reloadReport,
   getConversations,
   openDueReview,
   openChatPractice,
@@ -88,10 +89,15 @@ export function useDashboard({
   }
 
   async function loadRecentPractice(request) {
-    // The summary has no mode. Use the same saved-feedback rule as chat history.
-    const candidates = (getConversations() || []).slice(0, RECENT_CONVERSATION_LIMIT);
+    const candidates = ((await getConversations()) || [])
+      .filter(conversation => conversation.mode !== "assistant")
+      .slice(0, RECENT_CONVERSATION_LIMIT);
     for (const conversation of candidates) {
       if (request !== overviewRequest) return;
+      if (conversation.mode === "practice") {
+        recentPractice.value = conversation;
+        return;
+      }
       try {
         const messages = await learningApi.messages(conversation.id);
         if (request !== overviewRequest) return;
@@ -108,12 +114,29 @@ export function useDashboard({
     }
   }
 
-  async function refreshTodayTasks() {
+  async function refreshTodayTasks(summary) {
     const request = ++overviewRequest;
     recentPractice.value = null;
-    await loadHomeJournal(request);
+    await Promise.all([loadHomeJournal(request), summary]);
     if (request === overviewRequest && nextAction.value === "journal") {
-      await loadRecentPractice(request);
+      try {
+        await loadRecentPractice(request);
+      } catch {
+        // All daily goals remain visible when previous conversations are unavailable.
+      }
+    }
+  }
+
+  async function retryTodayTasks() {
+    if (todayTasksLoading.value) return;
+    todayTasksLoading.value = true;
+    try {
+      await reloadReport();
+      await refreshTodayTasks();
+    } catch {
+      // Keep the retry action available if the summary is still unavailable.
+    } finally {
+      todayTasksLoading.value = false;
     }
   }
 
@@ -167,5 +190,6 @@ export function useDashboard({
     openGrowth,
     openStudyAction,
     refreshTodayTasks,
+    retryTodayTasks,
   };
 }

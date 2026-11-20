@@ -42,4 +42,11 @@ class OfflineDictionaryServiceTests {
         assertNull(second.id);
         assertTrue(second.meaningCn.contains("语言"));
     }
+
+    @Test void reviewUsesWholeDictionaryFormsFromTheActualExample() {
+        assertEquals(List.of("scratched"), dictionary.inflectionsInExamples("scratch",
+                null, "John yawned and scratched his leg.", "A scratched-out word on a scratchpad."));
+        assertEquals(List.of("went", "gone"), dictionary.inflectionsInExamples("go", "He WENT home.", "He has gone."));
+        assertTrue(dictionary.inflectionsInExamples("art", "An artist at the party.").isEmpty());
+    }
 }

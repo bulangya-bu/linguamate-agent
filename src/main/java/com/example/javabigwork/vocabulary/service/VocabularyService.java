@@ -3,8 +3,10 @@ package com.example.javabigwork.vocabulary.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.javabigwork.auth.LoginActivityService;
 import com.example.javabigwork.auth.UserContext;
+import com.example.javabigwork.dictionary.service.OfflineDictionaryService;
 import com.example.javabigwork.dictionary.service.OnlineWordService;
 import com.example.javabigwork.vocabulary.dto.WordCardView;
+import com.example.javabigwork.vocabulary.dto.WordDefinition;
 import com.example.javabigwork.vocabulary.dto.WordQuizRequest;
 import com.example.javabigwork.vocabulary.dto.WordQuizResult;
 import com.example.javabigwork.vocabulary.dto.WordReviewRequest;
@@ -15,6 +17,8 @@ import com.example.javabigwork.vocabulary.mapper.UserWordProgressMapper;
 import com.example.javabigwork.vocabulary.mapper.WordMapper;
 import com.example.javabigwork.vocabulary.mapper.WordReviewLogMapper;
 import java.time.LocalDateTime;
+import java.text.Normalizer;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -31,6 +35,7 @@ public class VocabularyService {
     private final ExperienceService experienceService;
     private final UserContext userContext;
     private final WordDefinitionService definitionService;
+    private final OfflineDictionaryService dictionary;
 
     public VocabularyService(
             OnlineWordService onlineWordService,
@@ -39,7 +44,8 @@ public class VocabularyService {
             WordReviewLogMapper logMapper,
             ExperienceService experienceService,
             UserContext userContext,
-            WordDefinitionService definitionService
+            WordDefinitionService definitionService,
+            OfflineDictionaryService dictionary
     ) {
         this.onlineWordService = onlineWordService;
         this.wordMapper = wordMapper;
@@ -48,6 +54,7 @@ public class VocabularyService {
         this.experienceService = experienceService;
         this.userContext = userContext;
         this.definitionService = definitionService;
+        this.dictionary = dictionary;
     }
 
     public List<WordCardView> todayWords(int limit) {
@@ -189,7 +196,7 @@ public class VocabularyService {
             throw new IllegalArgumentException("单词不存在");
         }
         boolean spellingCorrect = isSpellingCorrect(word, request.spellingAnswer());
-        boolean meaningCorrect = isMeaningCorrect(word.meaningCn, request.meaningAnswer());
+        boolean meaningCorrect = acceptsReviewMeaning(definitionService.definitionsFor(word), request.meaningAnswer());
         boolean correct = spellingCorrect && meaningCorrect;
         LocalDateTime now = LocalDateTime.now();
 
@@ -239,6 +246,8 @@ public class VocabularyService {
 
     public WordCardView toView(Word word) {
         UserWordProgress progress = findProgress(word.id);
+        String sourceSentence = progress == null ? null : progress.sourceSentence;
+        String exampleEn = WordExampleFallback.english(word);
         return new WordCardView(
                 word.id,
                 word.word,
@@ -246,17 +255,18 @@ public class VocabularyService {
                 word.phoneticUk,
                 word.meaningCn,
                 word.partOfSpeech,
-                WordExampleFallback.english(word),
+                exampleEn,
                 WordExampleFallback.chinese(word),
                 word.levelTag,
                 progress == null ? 0 : value(progress.familiarity),
                 progress == null ? 0 : value(progress.wrongCount),
                 progress != null && Boolean.TRUE.equals(progress.favorite),
                 definitionService.definitionsFor(word),
-                progress == null ? null : progress.sourceSentence,
+                sourceSentence,
                 progress == null ? null : progress.sourceTitle,
                 progress == null ? null : progress.sourceWord,
-                progress == null ? null : progress.sourceArticleId
+                progress == null ? null : progress.sourceArticleId,
+                dictionary.inflectionsInExamples(word.word, sourceSentence, exampleEn)
         );
     }
 
@@ -275,57 +285,32 @@ public class VocabularyService {
         return !trimmed.isBlank() && word.word.equalsIgnoreCase(trimmed);
     }
 
-    private boolean isMeaningCorrect(String expectedMeaning, String answer) {
-        String normalizedExpected = normalizeMeaning(expectedMeaning);
-        String normalizedAnswer = normalizeMeaning(answer);
-        if (normalizedExpected.isBlank() || normalizedAnswer.isBlank()) {
-            return false;
-        }
-        if (normalizedAnswer.length() < 2) {
-            return normalizedAnswer.equals(normalizedExpected)
-                    || meaningKeywords(expectedMeaning).stream().anyMatch(normalizedAnswer::equals);
-        }
-        if (normalizedExpected.contains(normalizedAnswer) || normalizedAnswer.contains(normalizedExpected)) {
-            return true;
-        }
-        return meaningKeywords(expectedMeaning).stream()
-                .anyMatch(keyword -> keyword.contains(normalizedAnswer) || normalizedAnswer.contains(keyword));
-    }
-
-    private Set<String> meaningKeywords(String expectedMeaning) {
-        Set<String> keywords = new LinkedHashSet<>();
-        if (expectedMeaning == null) {
-            return keywords;
-        }
-        for (String part : expectedMeaning.split("[,，;；、/／|｜()（）\\[\\]【】\\s]+")) {
-            String normalized = normalizeMeaning(part);
-            if (normalized.length() >= 2) {
-                keywords.add(normalized);
+    static boolean acceptsReviewMeaning(List<WordDefinition> definitions, String answer) {
+        List<String> supplied = meaningParts(answer);
+        if (supplied.isEmpty()) return false;
+        Set<String> accepted = new LinkedHashSet<>();
+        for (WordDefinition definition : definitions) {
+            for (String sense : meaningParts(definition.meaningCn())) {
+                accepted.add(sense);
+                // Subject labels and parenthetical usage notes are optional in dictionary answers.
+                String plain = sense.replaceAll("\\[[^\\]]*\\]|【[^】]*】|\\([^)]*\\)", "");
+                if (!plain.isEmpty()) {
+                    accepted.add(plain);
+                    if (plain.endsWith("的") && plain.length() >= 3) {
+                        accepted.add(plain.substring(0, plain.length() - 1));
+                    }
+                }
             }
         }
-        return keywords;
+        return accepted.containsAll(supplied);
     }
 
-    private String normalizeMeaning(String value) {
-        if (value == null) {
-            return "";
-        }
-        StringBuilder builder = new StringBuilder();
-        value.toLowerCase(Locale.ROOT).codePoints()
-                .filter(codePoint -> !Character.isWhitespace(codePoint) && !isPunctuation(codePoint))
-                .forEach(builder::appendCodePoint);
-        return builder.toString();
-    }
-
-    private boolean isPunctuation(int codePoint) {
-        int type = Character.getType(codePoint);
-        return type == Character.CONNECTOR_PUNCTUATION
-                || type == Character.DASH_PUNCTUATION
-                || type == Character.START_PUNCTUATION
-                || type == Character.END_PUNCTUATION
-                || type == Character.INITIAL_QUOTE_PUNCTUATION
-                || type == Character.FINAL_QUOTE_PUNCTUATION
-                || type == Character.OTHER_PUNCTUATION;
+    private static List<String> meaningParts(String value) {
+        if (value == null || value.isBlank()) return List.of();
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFKC)
+                .toLowerCase(Locale.ROOT).replaceAll("\\s+", "").replaceAll("[。.!！]+$", "");
+        return Arrays.stream(normalized.split("[,;、/|]+(?![^()]*\\))"))
+                .filter(sense -> !sense.isEmpty()).toList();
     }
 
     private String joinReviewAnswer(WordReviewRequest request) {

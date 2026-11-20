@@ -9,9 +9,9 @@ export function chartScale(days) {
   return {maximum:step*4,ticks:[0,step,step*2,step*3,step*4]};
 }
 export function shortDate(value) { return `${Number(value.slice(5,7))}.${Number(value.slice(8,10))}`; }
-export function dayIntensity(day) {
-  const events=Number(day.studyEvents)||0;
-  return events===0?0:events<3?1:events<8?2:events<16?3:4;
+export function hasStudyActivity(day) {
+  // Older journals counted the start of an article but could omit a later completion.
+  return day.studyEvents > 0 || day.readingsFinished > 0;
 }
 
 export function shiftJournalMonth(month, step) {
@@ -29,11 +29,4 @@ export function journalMonthLayout(month) {
     dates: Array.from({ length: last.getUTCDate() }, (_, index) =>
       month + "-" + String(index + 1).padStart(2, "0")),
   };
-}
-
-export function journalReadingsThisWeek(journal) {
-  // The journal calendar starts on a Monday and includes future cells.
-  const todayIndex = journal.days.findIndex(day => day.date === journal.today);
-  const week = todayIndex < 0 ? [] : journal.days.slice(todayIndex - todayIndex % 7, todayIndex + 1);
-  return week.reduce((total, day) => total + (day.readingsFinished || 0), 0);
 }

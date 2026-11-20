@@ -55,6 +55,12 @@ public class ChatService {
                 .last("LIMIT 12"));
         Collections.reverse(history);
         boolean practice = "practice".equals(request.mode());
+        var latestUser = history.stream().filter(message -> "user".equals(message.role))
+                .reduce((previous, latest) -> latest).orElse(null);
+        String savedMode = savedMode(latestUser);
+        if (savedMode != null && !savedMode.equals(practice ? "practice" : "assistant")) {
+            throw new IllegalArgumentException("请切回原模式，或开启新对话");
+        }
         Long articleId = request.readingArticleId();
         if (articleId != null && (!practice || !"reading".equals(conversation.scene))) {
             throw new IllegalArgumentException("请在阅读讨论场景中使用文章");
@@ -86,6 +92,17 @@ public class ChatService {
     }
 
     public List<TargetWord> practiceContext() { return coach.context(); }
+
+    private String savedMode(Message message) {
+        if (message == null || message.metadata == null) return null;
+        try {
+            var metadata = json.readTree(message.metadata);
+            String mode = metadata == null ? "" : metadata.path("mode").asText();
+            return "practice".equals(mode) || "assistant".equals(mode) ? mode : null;
+        } catch (JsonProcessingException ignored) {
+            return null;
+        }
+    }
 
     private Long readingArticleId(Message message) {
         if (message == null || message.metadata == null) return null;

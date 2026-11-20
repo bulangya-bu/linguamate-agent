@@ -28,25 +28,27 @@
       v-for="(word, index) in words"
       :key="index"
       class="word-motion"
-      :class="['word-motion--' + index, { 'is-active': activeWord === index }]"
+      :class="['word-motion--' + index, { 'is-active': activeWord === index, 'is-near': hoveredWord === index }]"
       :style="motionStyles[index]"
     >
       <button
-        class="word-shard"
-        :class="['word-shard--' + slotTones[index], { 'is-revealed': activeWord === index, 'is-changing': changingSlot === index }]"
+        class="word-hit"
         type="button"
         :aria-expanded="activeWord === index"
         :aria-label="activeWord === index ? word.en + '：' + word.cn : word.en + '，查看中文释义'"
-        @mouseenter="activeWord = index"
-        @focus="activeWord = index"
-        @mouseleave="leaveWord($event, index)"
-        @blur="leaveWord($event, index)"
-        @click="activeWord = index"
-        @keydown.esc.stop="activeWord = null"
+        @pointerenter="enterWord($event, index)"
+        @pointerleave="leaveWord($event, index)"
+        @focus="focusWord(index)"
+        @blur="focusedWord = null"
+        @click="focusWord(index)"
+        @keydown.esc.stop="dismissWord"
       >
-        <span class="word-shard-glint" aria-hidden="true"></span>
-        <span class="word-shard-en">{{ word.en }}</span>
-        <span class="word-shard-cn" :aria-hidden="activeWord !== index">{{ word.cn }}</span>
+        <span class="word-shard"
+          :class="['word-shard--' + slotTones[index], { 'is-revealed': activeWord === index, 'is-changing': changingSlot === index }]">
+          <span class="word-shard-glint" aria-hidden="true"></span>
+          <span class="word-shard-en">{{ word.en }}</span>
+          <span class="word-shard-cn" :aria-hidden="activeWord !== index">{{ word.cn }}</span>
+        </span>
       </button>
     </div>
   </div>
@@ -56,7 +58,10 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps({ variant: { type: String, default: 'auth' } });
-const activeWord = ref(null);
+const hoveredWord = ref(null);
+const revealedHover = ref(null);
+const focusedWord = ref(null);
+const activeWord = computed(() => revealedHover.value ?? focusedWord.value);
 const fieldRef = ref(null);
 const sleeping = ref(false);
 const focused = ref(false);
@@ -158,10 +163,36 @@ const motionStyles = initialWords.map((_, index) => ({
   '--drift-delay': random(-28, -2).toFixed(1) + 's',
 }));
 
+let hoverTimer;
+function enterWord(event, index) {
+  if (event.pointerType === 'touch') return;
+  clearTimeout(hoverTimer);
+  hoveredWord.value = index;
+  if (props.variant === 'auth') {
+    hoverTimer = setTimeout(() => { revealedHover.value = index; }, 130);
+  } else {
+    revealedHover.value = index;
+  }
+}
+
 function leaveWord(event, index) {
-  if (event.type === 'mouseleave' && event.currentTarget.matches(':focus-visible')) return;
-  if (event.type === 'blur' && event.currentTarget.matches(':hover')) return;
-  if (activeWord.value === index) activeWord.value = null;
+  if (event.pointerType === 'touch' || hoveredWord.value !== index) return;
+  clearTimeout(hoverTimer);
+  hoveredWord.value = null;
+  revealedHover.value = null;
+  if (focusedWord.value === index && !event.currentTarget.matches(':focus-visible')) focusedWord.value = null;
+}
+
+function focusWord(index) {
+  clearTimeout(hoverTimer);
+  revealedHover.value = null;
+  focusedWord.value = index;
+}
+
+function dismissWord() {
+  clearTimeout(hoverTimer);
+  revealedHover.value = null;
+  focusedWord.value = null;
 }
 
 function syncVisibility() {
@@ -173,6 +204,7 @@ function syncFocus(event) {
   focused.value = Boolean(target && fieldRef.value?.contains(target));
   formActive.value = props.variant === 'auth' && target instanceof Element
     && Boolean(target.closest('.auth-form-side'));
+  if (formActive.value) dismissWord();
 }
 
 let swapTimer;
@@ -180,7 +212,7 @@ let fadeTimer;
 let slotQueue = [];
 let motionPreference;
 let desktopQuery;
-const canChangeWords = computed(() => activeWord.value === null && !focused.value && !formActive.value
+const canChangeWords = computed(() => hoveredWord.value === null && activeWord.value === null && !focused.value && !formActive.value
   && !sleeping.value && !reducedMotion.value && desktopVisible.value);
 
 function cancelWordChange() {
@@ -238,6 +270,7 @@ onMounted(() => {
   desktopQuery.addEventListener('change', syncPreferences);
 });
 onBeforeUnmount(() => {
+  clearTimeout(hoverTimer);
   cancelWordChange();
   document.removeEventListener('visibilitychange', syncVisibility);
   document.removeEventListener('focusin', syncFocus);
@@ -273,9 +306,23 @@ onBeforeUnmount(() => {
     position: absolute;
     animation: word-light-drift var(--drift-duration) ease-in-out var(--drift-delay) infinite;
   }
-  .word-atmosphere.is-exploring .word-motion,
+  .word-atmosphere:not(.word-atmosphere--auth).is-exploring .word-motion,
+  .word-atmosphere--auth .word-motion:is(.is-near, .is-active),
   .word-atmosphere.is-sleeping .word-motion { animation-play-state: paused; }
   .word-motion.is-active { z-index: 3; }
+  /* The face lifts inside the button, leaving the target under a resting pointer. */
+  .word-hit {
+    position: relative;
+    display: grid;
+    padding: 0;
+    border: 0;
+    border-radius: 17px 6px 17px 6px;
+    background: transparent;
+    pointer-events: auto;
+    cursor: pointer;
+    font: inherit;
+  }
+  .word-atmosphere--auth .word-hit::before { content: ""; position: absolute; inset: -6px; }
   .word-shard {
     --word-ink: #507f99;
     --word-tint: #e1f2fa;
@@ -292,13 +339,15 @@ onBeforeUnmount(() => {
     background: linear-gradient(135deg, #ffffffe6, #ffffff47 58%, var(--word-tint));
     box-shadow: 0 4px 18px #69a1b009, inset 0 0 0 1px #ffffff28;
     backdrop-filter: blur(6px);
-    pointer-events: auto;
-    cursor: pointer;
+    pointer-events: none;
     transform: rotate(var(--word-tilt));
     opacity: .6;
     transition: opacity 350ms ease, background 350ms ease, box-shadow 350ms ease, border-color 350ms ease, transform 500ms var(--ease);
   }
   .word-shard--green { --word-ink: #64854a; --word-tint: #edf7df; }
+  .word-atmosphere--auth .word-motion.is-near .word-shard:not(.is-revealed) {
+    border-color: color-mix(in srgb, var(--word-ink) 58%, white);
+  }
   .word-motion--1 .word-shard { width: 166px; }
   .word-motion--3 .word-shard { width: 116px; }
   .word-shard-glint {
@@ -336,6 +385,25 @@ onBeforeUnmount(() => {
     opacity: 1;
     transform: rotate(0deg) translateY(-2px);
   }
+  .word-atmosphere--auth .word-hit .word-shard {
+    isolation: isolate;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 90%, transparent),
+      color-mix(in srgb, var(--surface) 35%, transparent) 58%, var(--word-tint));
+    transition: transform 320ms cubic-bezier(.2,.75,.25,1), opacity 220ms ease-out,
+      box-shadow 250ms ease-out, border-color 100ms ease-out;
+  }
+  .word-atmosphere--auth .word-shard::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: color-mix(in srgb, var(--surface) 94%, var(--word-tint));
+    opacity: 0;
+    transition: opacity 220ms ease-out;
+  }
+  .word-atmosphere--auth .word-shard.is-revealed::before { opacity: 1; }
+  .word-atmosphere--auth .word-shard.is-revealed { transform: translateY(-4px) rotate(0deg); }
+  .word-atmosphere--auth .word-shard-cn { font-size: 12px; }
   .word-shard.is-revealed .word-shard-en { color: #386980; transform: translateY(-10px); }
   .word-shard--green.is-revealed .word-shard-en { color: #5a7e3d; }
   .word-shard.is-revealed .word-shard-cn { opacity: 1; transform: translateY(0); }
@@ -380,6 +448,8 @@ onBeforeUnmount(() => {
 }
 @media (prefers-reduced-motion: reduce) {
   .word-atmosphere, .word-motion { animation: none; }
-  .word-shard, .word-shard-en, .word-shard-cn { transition: none; }
+  .word-shard, .word-shard-en, .word-shard-cn,
+  .word-atmosphere--auth .word-hit .word-shard, .word-atmosphere--auth .word-shard::before { transition: none; }
+  .word-atmosphere--auth .word-shard.is-revealed { transform: rotate(var(--word-tilt)); }
 }
 </style>
